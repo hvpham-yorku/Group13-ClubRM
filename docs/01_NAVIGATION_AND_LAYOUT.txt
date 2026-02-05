@@ -1,0 +1,174 @@
+================================================================================
+                    CLUBRM - STUDENT ORGANIZATION CRM
+                   PART 1: NAVIGATION & GLOBAL LAYOUT
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1. GLOBAL NAVIGATION BAR STRUCTURE
+2. SIDEBAR NAVIGATION
+3. LAYOUT GRID SYSTEM
+
+================================================================================
+1. GLOBAL NAVIGATION BAR STRUCTURE
+================================================================================
+
+TOP BAR (Always Visible - All Roles)
+------------------------------------
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ [Org Selector ▼]    [🔍 Search (Cmd+K)]           [🔔 Notifications] [👤 Profile] │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+TOP BAR COMPONENTS:
+
+1. ORG SELECTOR (Left)
+   - Dropdown showing current organization name
+   - Allows switching between organizations (if user has multiple memberships)
+   - Shows current term (e.g., "Fall 2026")
+   - Technical: Triggers context switch, reloads dashboard data
+   - API: GET /api/user/organizations
+   - State: Stored in global context/Redux
+
+2. GLOBAL SEARCH (Center)
+   - Command palette style (Cmd+K / Ctrl+K shortcut)
+   - Searches across:
+     * Events (title, description)
+     * Members (name, email)
+     * Tasks (title)
+     * Sponsors (company name)
+     * Documents (title)
+   - Quick actions:
+     * "Create new event"
+     * "Jump to budget"
+     * "Find member [name]"
+   - Technical: Debounced search, PostgreSQL full-text search
+   - API: GET /api/search?q={query}&scope={all|events|members|tasks}
+
+3. NOTIFICATIONS BELL (Right)
+   - Badge count for unread notifications
+   - Dropdown panel showing:
+     * Approvals needed
+     * Tasks assigned/overdue
+     * Event issues
+     * Mentions/assignments
+   - Real-time via WebSocket or polling (every 30s)
+   - API: GET /api/notifications
+   - API: PATCH /api/notifications/{id}/read
+
+4. PROFILE DROPDOWN (Right)
+   - User avatar + name
+   - Current role display
+   - Dropdown contains:
+     * View Profile
+     * Switch Role (if multiple roles)
+     * Switch Organization
+     * Availability settings
+     * Help / Documentation
+     * Log Out
+   - API: GET /api/user/profile
+   - API: POST /api/auth/logout
+
+================================================================================
+2. SIDEBAR NAVIGATION
+================================================================================
+
+LEFT SIDEBAR (Primary Navigation)
+---------------------------------
+┌─────────────────────┐
+│ 🏠 Dashboard        │  ← Always visible (all roles)
+│ ✅ Tasks            │  ← Always visible (all roles)
+│ 📅 Events           │  ← Always visible (all roles)
+│ 👥 Members          │  ← Always visible (all roles)
+│ 💰 Finance*         │  ← Role-gated: Pres, VP Fin, Admin
+│ 🤝 External*        │  ← Role-gated: Pres, VP Ext, Admin
+│ 📣 Marketing*       │  ← Role-gated: Pres, Marketing, Admin
+│ 📊 Reports*         │  ← Role-gated: All VPs, Pres, Admin
+│ 📎 Documents        │  ← Always visible (all roles)
+│ ⚙️ Settings*        │  ← Role-gated: Admin only
+└─────────────────────┘
+
+* Items appear conditionally based on role permissions
+
+SIDEBAR BADGE INDICATORS:
+- Tasks: Shows count of overdue tasks (red badge)
+- Events: Shows count of events with risks (amber badge)
+- Finance: Shows pending approvals count
+- Notifications: Shows unread count
+
+TECHNICAL IMPLEMENTATION:
+- Sidebar state managed in global React context
+- Collapsible on mobile (hamburger menu)
+- Active state highlighted with primary color
+- Permission check on render:
+
+const sidebarItems = [
+  { path: '/dashboard', icon: 'Home', label: 'Dashboard', permission: null },
+  { path: '/tasks', icon: 'CheckSquare', label: 'Tasks', permission: null, badgeKey: 'overdueTasks' },
+  { path: '/events', icon: 'Calendar', label: 'Events', permission: null, badgeKey: 'eventRisks' },
+  { path: '/members', icon: 'Users', label: 'Members', permission: null },
+  { path: '/finance', icon: 'DollarSign', label: 'Finance', permission: 'finance.read' },
+  { path: '/external', icon: 'Handshake', label: 'External', permission: 'sponsor.read' },
+  { path: '/marketing', icon: 'Megaphone', label: 'Marketing', permission: 'marketing.read' },
+  { path: '/reports', icon: 'BarChart', label: 'Reports', permission: 'reports.read' },
+  { path: '/documents', icon: 'FileText', label: 'Documents', permission: null },
+  { path: '/settings', icon: 'Settings', label: 'Settings', permission: 'settings.manage' },
+];
+
+// Filter based on user permissions
+const visibleItems = sidebarItems.filter(item => 
+  !item.permission || userPermissions.includes(item.permission)
+);
+
+================================================================================
+3. LAYOUT GRID SYSTEM
+================================================================================
+
+GLOBAL PAGE STRUCTURE:
+┌──────────────────────────────────────────────────────────────┐
+│ Top Bar (64px height)                                        │
+└──────────────────────────────────────────────────────────────┘
+┌────────────┬─────────────────────────────────────────────────┐
+│            │                                                 │
+│  Sidebar   │         Main Content Area                       │
+│  (240px)   │         (flex: 1)                               │
+│            │                                                 │
+│            │  ┌─────────────────────────────────────────┐   │
+│            │  │ Page Header                             │   │
+│            │  │ [Title]              [Action Buttons]   │   │
+│            │  └─────────────────────────────────────────┘   │
+│            │                                                 │
+│            │  ┌─────────────────────────────────────────┐   │
+│            │  │ Page Content                            │   │
+│            │  │ (scrollable)                            │   │
+│            │  │                                         │   │
+│            │  │                                         │   │
+│            │  └─────────────────────────────────────────┘   │
+│            │                                                 │
+└────────────┴─────────────────────────────────────────────────┘
+
+DASHBOARD WIDGET GRID:
+- 12-column grid system (CSS Grid or Tailwind)
+- Desktop: 2 columns of widgets (6 cols each)
+- Tablet: 2 columns (6 cols each)
+- Mobile: 1 column (12 cols / full width)
+- Full-width widgets span all 12 columns
+- Max 6 widgets per role dashboard
+- Widget gap: 16px (1rem)
+- Widget padding: 24px (1.5rem)
+
+RESPONSIVE BREAKPOINTS:
+- Mobile: < 640px (sm)
+- Tablet: 640px - 1024px (md)
+- Desktop: > 1024px (lg)
+- Large Desktop: > 1280px (xl)
+
+CSS IMPLEMENTATION (Tailwind):
+.dashboard-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+}
+.widget {
+  @apply bg-white rounded-lg shadow p-6;
+}
+.widget-full {
+  @apply col-span-1 md:col-span-2;
+}

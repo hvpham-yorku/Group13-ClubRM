@@ -1,0 +1,296 @@
+================================================================================
+                    CLUBRM - STUDENT ORGANIZATION CRM
+                    PART 2: ROLES & PERMISSIONS
+================================================================================
+
+================================================================================
+1. PREDEFINED ROLES
+================================================================================
+
+ROLE DEFINITIONS (8 Total):
+
+1. PRESIDENT
+   - Purpose: Organization oversight, health monitoring, final approvals
+   - Focus: Big picture, risks, approvals
+   - Dashboard: Organization Health View
+
+2. VP INTERNAL / OPERATIONS
+   - Purpose: Task management, team coordination, internal processes
+   - Focus: Execution, deadlines, team productivity
+   - Dashboard: Execution Control View
+
+3. VP FINANCE
+   - Purpose: Budget management, expense tracking, financial approvals
+   - Focus: Money, spending, reimbursements
+   - Dashboard: Financial Risk & Flow View
+
+4. VP EVENTS
+   - Purpose: Event planning, logistics, volunteer coordination
+   - Focus: Events, registrations, volunteers
+   - Dashboard: Delivery & Readiness View
+
+5. VP EXTERNAL / SPONSORSHIP
+   - Purpose: Sponsor relations, partnership management, funding
+   - Focus: Pipeline, outreach, revenue
+   - Dashboard: Pipeline View
+
+6. MARKETING / COMMUNICATIONS
+   - Purpose: Content creation, social media, engagement
+   - Focus: Posts, campaigns, engagement metrics
+   - Dashboard: Engagement View
+
+7. GENERAL EXECUTIVE
+   - Purpose: Task completion, event support, general duties
+   - Focus: Personal tasks, assigned events
+   - Dashboard: Personal Action View
+
+8. ADMINISTRATOR
+   - Purpose: System management, role configuration, troubleshooting
+   - Focus: System health, permissions, automation
+   - Dashboard: System Oversight View
+
+================================================================================
+2. PERMISSION KEYS (Atomic)
+================================================================================
+
+All permissions follow the pattern: {resource}.{action}
+
+DASHBOARD PERMISSIONS:
+- dashboard.view
+
+TASK PERMISSIONS:
+- tasks.read
+- tasks.write
+- tasks.assign
+- tasks.delete
+
+EVENT PERMISSIONS:
+- events.read
+- events.write
+- events.approve
+- events.delete
+
+MEMBER PERMISSIONS:
+- members.read
+- members.write
+- members.invite
+- members.remove
+
+FINANCE PERMISSIONS:
+- budget.read
+- budget.write
+- budget.approve
+- reimbursements.read
+- reimbursements.write
+- reimbursements.approve
+
+SPONSORSHIP PERMISSIONS:
+- sponsors.read
+- sponsors.write
+- sponsors.delete
+
+MARKETING PERMISSIONS:
+- marketing.read
+- marketing.write
+- marketing.approve
+
+REPORTING PERMISSIONS:
+- reports.read
+- reports.export
+
+SYSTEM PERMISSIONS:
+- settings.manage
+- audit.view
+
+================================================================================
+3. PERMISSION MATRIX
+================================================================================
+
+┌─────────────────────┬──────┬────────┬────────┬──────────┬────────┬──────┬──────┬───────┐
+│ Permission          │ Pres │ VP Int │ VP Fin │ VP Event │ VP Ext │ Mktg │ Exec │ Admin │
+├─────────────────────┼──────┼────────┼────────┼──────────┼────────┼──────┼──────┼───────┤
+│ dashboard.view      │  ✓   │   ✓    │   ✓    │    ✓     │   ✓    │  ✓   │  ✓   │   ✓   │
+├─────────────────────┼──────┼────────┼────────┼──────────┼────────┼──────┼──────┼───────┤
+│ tasks.read          │  ✓   │   ✓    │   ✓    │    ✓     │   ✓    │  ✓   │  ✓   │   ✓   │
+│ tasks.write         │  ✓   │   ✓    │   -    │    ✓     │   ✓    │  ✓   │  ✓   │   ✓   │
+│ tasks.assign        │  ✓   │   ✓    │   -    │    ✓     │   ✓    │  -   │  -   │   ✓   │
+│ tasks.delete        │  ✓   │   ✓    │   -    │    -     │   -    │  -   │  -   │   ✓   │
+├─────────────────────┼──────┼────────┼────────┼──────────┼────────┼──────┼──────┼───────┤
+│ events.read         │  ✓   │   ✓    │   ✓    │    ✓     │   ✓    │  ✓   │  ✓   │   ✓   │
+│ events.write        │  ✓   │   ✓    │   -    │    ✓     │   -    │  -   │  -   │   ✓   │
+│ events.approve      │  ✓   │   ✓    │   -    │    -     │   -    │  -   │  -   │   ✓   │
+│ events.delete       │  ✓   │   ✓    │   -    │    -     │   -    │  -   │  -   │   ✓   │
+├─────────────────────┼──────┼────────┼────────┼──────────┼────────┼──────┼──────┼───────┤
+│ members.read        │  ✓   │   ✓    │   ✓    │    ✓     │   ✓    │  ✓   │  ✓   │   ✓   │
+│ members.write       │  ✓   │   ✓    │   -    │    -     │   -    │  -   │  -   │   ✓   │
+│ members.invite      │  ✓   │   ✓    │   -    │    -     │   -    │  -   │  -   │   ✓   │
+│ members.remove      │  ✓   │   ✓    │   -    │    -     │   -    │  -   │  -   │   ✓   │
+├─────────────────────┼──────┼────────┼────────┼──────────┼────────┼──────┼──────┼───────┤
+│ budget.read         │  ✓   │   -    │   ✓    │    ✓     │   ✓    │  -   │  -   │   ✓   │
+│ budget.write        │  -   │   -    │   ✓    │    -     │   -    │  -   │  -   │   ✓   │
+│ budget.approve      │  -   │   -    │   ✓    │    -     │   -    │  -   │  -   │   ✓   │
+│ reimbursements.read │  ✓   │   -    │   ✓    │    -     │   -    │  -   │  -   │   ✓   │
+│ reimbursements.write│  -   │   -    │   ✓    │    -     │   -    │  -   │  -   │   ✓   │
+│ reimbursements.appr │  -   │   -    │   ✓    │    -     │   -    │  -   │  -   │   ✓   │
+├─────────────────────┼──────┼────────┼────────┼──────────┼────────┼──────┼──────┼───────┤
+│ sponsors.read       │  ✓   │   -    │   ✓    │    -     │   ✓    │  -   │  -   │   ✓   │
+│ sponsors.write      │  -   │   -    │   -    │    -     │   ✓    │  -   │  -   │   ✓   │
+│ sponsors.delete     │  -   │   -    │   -    │    -     │   ✓    │  -   │  -   │   ✓   │
+├─────────────────────┼──────┼────────┼────────┼──────────┼────────┼──────┼──────┼───────┤
+│ marketing.read      │  ✓   │   -    │   -    │    -     │   -    │  ✓   │  -   │   ✓   │
+│ marketing.write     │  -   │   -    │   -    │    -     │   -    │  ✓   │  -   │   ✓   │
+│ marketing.approve   │  ✓   │   -    │   -    │    -     │   -    │  ✓   │  -   │   ✓   │
+├─────────────────────┼──────┼────────┼────────┼──────────┼────────┼──────┼──────┼───────┤
+│ reports.read        │  ✓   │   ✓    │   ✓    │    ✓     │   ✓    │  ✓   │  -   │   ✓   │
+│ reports.export      │  ✓   │   -    │   ✓    │    -     │   -    │  -   │  -   │   ✓   │
+├─────────────────────┼──────┼────────┼────────┼──────────┼────────┼──────┼──────┼───────┤
+│ settings.manage     │  -   │   -    │   -    │    -     │   -    │  -   │  -   │   ✓   │
+│ audit.view          │  ✓   │   -    │   -    │    -     │   -    │  -   │  -   │   ✓   │
+└─────────────────────┴──────┴────────┴────────┴──────────┴────────┴──────┴──────┴───────┘
+
+Legend: ✓ = Has permission, - = No permission
+
+================================================================================
+4. APPROVAL WORKFLOWS
+================================================================================
+
+1. EVENT APPROVAL WORKFLOW
+   Status Flow: Draft → Pending Approval → Approved → Live → Completed
+   
+   - VP Events creates event (status: draft)
+   - VP Events submits for approval (status: pending_approval)
+   - President OR VP Internal approves (status: approved)
+   - Event goes live when start_time approaches (status: live)
+   - System marks completed after end_time (status: completed)
+   
+   API Flow:
+   POST /api/events (creates draft)
+   PATCH /api/events/{id}/submit (pending_approval)
+   PATCH /api/events/{id}/approve (approved) - requires events.approve
+
+2. BUDGET CHANGE WORKFLOW
+   Status Flow: Proposed → Under Review → Approved → Applied
+   
+   - Any VP proposes budget adjustment
+   - VP Finance reviews
+   - VP Finance approves/denies
+   
+   API Flow:
+   POST /api/budget/adjustments (proposed)
+   PATCH /api/budget/adjustments/{id}/approve - requires budget.approve
+
+3. REIMBURSEMENT WORKFLOW
+   Status Flow: Submitted → Pending → Approved/Denied → Paid
+   
+   - Any member submits reimbursement with receipt
+   - VP Finance reviews
+   - VP Finance approves or denies
+   - If approved, marked as paid when processed
+   
+   API Flow:
+   POST /api/reimbursements (submitted)
+   PATCH /api/reimbursements/{id}/approve - requires reimbursements.approve
+   PATCH /api/reimbursements/{id}/deny
+   PATCH /api/reimbursements/{id}/mark-paid
+
+4. CONTENT APPROVAL WORKFLOW
+   Status Flow: Draft → Pending Approval → Approved → Scheduled → Published
+   
+   - Marketing creates post (status: draft)
+   - Marketing submits for approval (status: pending_approval)
+   - Marketing lead OR President approves
+   - Post scheduled for publishing
+   
+   API Flow:
+   POST /api/posts (draft)
+   PATCH /api/posts/{id}/submit
+   PATCH /api/posts/{id}/approve - requires marketing.approve
+
+================================================================================
+5. PERMISSION CHECKING IMPLEMENTATION
+================================================================================
+
+BACKEND MIDDLEWARE (Node.js/Express Example):
+
+// middleware/permissions.js
+const checkPermission = (requiredPermission) => {
+  return async (req, res, next) => {
+    const { userId, organizationId, termId } = req.auth;
+    
+    // Get user's membership and role
+    const membership = await db.memberships.findOne({
+      where: { userId, organizationId, termId, status: 'active' }
+    });
+    
+    if (!membership) {
+      return res.status(403).json({ error: 'No active membership' });
+    }
+    
+    // Get role permissions
+    const permissions = await db.rolePermissions.findAll({
+      where: { roleId: membership.roleId },
+      include: [{ model: db.permissions }]
+    });
+    
+    const permissionKeys = permissions.map(p => p.permission.key);
+    
+    if (!permissionKeys.includes(requiredPermission)) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+    
+    req.permissions = permissionKeys;
+    next();
+  };
+};
+
+// Usage in routes
+router.post('/events', 
+  checkPermission('events.write'), 
+  eventController.create
+);
+
+router.patch('/events/:id/approve', 
+  checkPermission('events.approve'), 
+  eventController.approve
+);
+
+FRONTEND PERMISSION HOOK (React Example):
+
+// hooks/usePermissions.js
+import { useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+
+export const usePermissions = () => {
+  const { user } = useContext(AuthContext);
+  
+  const can = (permission) => {
+    return user?.permissions?.includes(permission) ?? false;
+  };
+  
+  const canAny = (permissions) => {
+    return permissions.some(p => can(p));
+  };
+  
+  const canAll = (permissions) => {
+    return permissions.every(p => can(p));
+  };
+  
+  return { can, canAny, canAll };
+};
+
+// Usage in components
+const EventsPage = () => {
+  const { can } = usePermissions();
+  
+  return (
+    <div>
+      <h1>Events</h1>
+      {can('events.write') && (
+        <button>Create Event</button>
+      )}
+      {can('events.approve') && (
+        <ApprovalQueue />
+      )}
+    </div>
+  );
+};

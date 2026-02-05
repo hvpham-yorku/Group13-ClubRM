@@ -1,0 +1,677 @@
+================================================================================
+                    CLUBRM - STUDENT ORGANIZATION CRM
+                       PART 4: DATABASE SCHEMA
+================================================================================
+
+================================================================================
+1. CORE TABLES
+================================================================================
+
+TABLE: users
+------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+email           VARCHAR(255) UNIQUE, NOT NULL
+password_hash   VARCHAR(255) NOT NULL
+name            VARCHAR(100) NOT NULL
+avatar_url      VARCHAR(500) NULL
+created_at      TIMESTAMP   DEFAULT NOW()
+updated_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE UNIQUE INDEX idx_users_email ON users(email);
+
+-------------------------------------------------------------------------------
+
+TABLE: organizations
+--------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+name            VARCHAR(200) NOT NULL
+school          VARCHAR(200) NULL
+logo_url        VARCHAR(500) NULL
+primary_color   VARCHAR(7)  DEFAULT '#4F46E5'
+status          VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended'))
+created_at      TIMESTAMP   DEFAULT NOW()
+updated_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_organizations_status ON organizations(status);
+
+-------------------------------------------------------------------------------
+
+TABLE: terms
+------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+name            VARCHAR(50) NOT NULL (e.g., 'Fall 2026')
+start_date      DATE        NOT NULL
+end_date        DATE        NOT NULL
+is_active       BOOLEAN     DEFAULT FALSE
+created_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_terms_org_active ON terms(organization_id, is_active);
+- CREATE UNIQUE INDEX idx_terms_org_name ON terms(organization_id, name);
+
+CONSTRAINT: Only one active term per organization
+- CREATE UNIQUE INDEX idx_one_active_term ON terms(organization_id) WHERE is_active = TRUE;
+
+-------------------------------------------------------------------------------
+
+TABLE: roles
+------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+name            VARCHAR(50) NOT NULL
+description     VARCHAR(255) NULL
+is_system       BOOLEAN     DEFAULT FALSE
+created_at      TIMESTAMP   DEFAULT NOW()
+
+DEFAULT DATA:
+INSERT INTO roles (name, description, is_system) VALUES
+('President', 'Organization leader with oversight access', TRUE),
+('VP Internal', 'Operations and internal coordination', TRUE),
+('VP Finance', 'Budget and financial management', TRUE),
+('VP Events', 'Event planning and execution', TRUE),
+('VP External', 'Sponsorship and partnerships', TRUE),
+('Marketing', 'Communications and social media', TRUE),
+('Executive', 'General executive member', TRUE),
+('Administrator', 'System administrator', TRUE);
+
+-------------------------------------------------------------------------------
+
+TABLE: permissions
+------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+key             VARCHAR(50) UNIQUE, NOT NULL
+description     VARCHAR(255) NULL
+category        VARCHAR(30) NULL
+
+DEFAULT DATA:
+INSERT INTO permissions (key, description, category) VALUES
+('dashboard.view', 'View dashboard', 'dashboard'),
+('tasks.read', 'View tasks', 'tasks'),
+('tasks.write', 'Create and edit tasks', 'tasks'),
+('tasks.assign', 'Assign tasks to members', 'tasks'),
+('tasks.delete', 'Delete tasks', 'tasks'),
+('events.read', 'View events', 'events'),
+('events.write', 'Create and edit events', 'events'),
+('events.approve', 'Approve events', 'events'),
+('events.delete', 'Delete events', 'events'),
+('members.read', 'View members', 'members'),
+('members.write', 'Edit member details', 'members'),
+('members.invite', 'Invite new members', 'members'),
+('members.remove', 'Remove members', 'members'),
+('budget.read', 'View budget', 'finance'),
+('budget.write', 'Edit budget', 'finance'),
+('budget.approve', 'Approve budget changes', 'finance'),
+('reimbursements.read', 'View reimbursements', 'finance'),
+('reimbursements.write', 'Submit reimbursements', 'finance'),
+('reimbursements.approve', 'Approve reimbursements', 'finance'),
+('sponsors.read', 'View sponsors', 'external'),
+('sponsors.write', 'Manage sponsors', 'external'),
+('sponsors.delete', 'Delete sponsors', 'external'),
+('marketing.read', 'View marketing content', 'marketing'),
+('marketing.write', 'Create marketing content', 'marketing'),
+('marketing.approve', 'Approve marketing content', 'marketing'),
+('reports.read', 'View reports', 'reports'),
+('reports.export', 'Export reports', 'reports'),
+('settings.manage', 'Manage settings', 'system'),
+('audit.view', 'View audit logs', 'system');
+
+-------------------------------------------------------------------------------
+
+TABLE: role_permissions
+-----------------------
+Column          Type        Constraints
+------          ----        -----------
+role_id         UUID        NOT NULL REFERENCES roles(id) ON DELETE CASCADE
+permission_id   UUID        NOT NULL REFERENCES permissions(id) ON DELETE CASCADE
+PRIMARY KEY (role_id, permission_id)
+
+-------------------------------------------------------------------------------
+
+TABLE: memberships
+------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+user_id         UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+term_id         UUID        NOT NULL REFERENCES terms(id) ON DELETE CASCADE
+role_id         UUID        NOT NULL REFERENCES roles(id)
+status          VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'pending'))
+joined_at       TIMESTAMP   DEFAULT NOW()
+updated_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_memberships_user_org ON memberships(user_id, organization_id);
+- CREATE INDEX idx_memberships_org_term ON memberships(organization_id, term_id);
+- CREATE INDEX idx_memberships_org_term_status ON memberships(organization_id, term_id, status);
+
+UNIQUE CONSTRAINT:
+- CREATE UNIQUE INDEX idx_unique_membership ON memberships(user_id, organization_id, term_id);
+
+================================================================================
+2. TASK TABLES
+================================================================================
+
+TABLE: tasks
+------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+term_id         UUID        NOT NULL REFERENCES terms(id) ON DELETE CASCADE
+created_by      UUID        NOT NULL REFERENCES users(id)
+title           VARCHAR(200) NOT NULL
+description     TEXT        NULL
+status          VARCHAR(20) DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'review', 'done'))
+priority        VARCHAR(10) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent'))
+due_date        TIMESTAMP   NULL
+created_at      TIMESTAMP   DEFAULT NOW()
+updated_at      TIMESTAMP   DEFAULT NOW()
+deleted_at      TIMESTAMP   NULL
+
+INDEXES:
+- CREATE INDEX idx_tasks_org_term ON tasks(organization_id, term_id) WHERE deleted_at IS NULL;
+- CREATE INDEX idx_tasks_status ON tasks(organization_id, status) WHERE deleted_at IS NULL;
+- CREATE INDEX idx_tasks_due ON tasks(organization_id, due_date) WHERE deleted_at IS NULL;
+- CREATE INDEX idx_tasks_overdue ON tasks(organization_id) WHERE due_date < NOW() AND status != 'done' AND deleted_at IS NULL;
+
+COMPUTED COLUMN (for queries):
+- is_overdue: due_date IS NOT NULL AND due_date < NOW() AND status != 'done'
+
+-------------------------------------------------------------------------------
+
+TABLE: task_assignments
+-----------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+task_id         UUID        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE
+user_id         UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE
+assigned_at     TIMESTAMP   DEFAULT NOW()
+assigned_by     UUID        NOT NULL REFERENCES users(id)
+
+INDEXES:
+- CREATE INDEX idx_task_assignments_user ON task_assignments(user_id);
+- CREATE INDEX idx_task_assignments_task ON task_assignments(task_id);
+- CREATE UNIQUE INDEX idx_unique_task_assignment ON task_assignments(task_id, user_id);
+
+================================================================================
+3. EVENT TABLES
+================================================================================
+
+TABLE: events
+-------------
+Column            Type        Constraints
+------            ----        -----------
+id                UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id   UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+term_id           UUID        NOT NULL REFERENCES terms(id) ON DELETE CASCADE
+created_by        UUID        NOT NULL REFERENCES users(id)
+title             VARCHAR(200) NOT NULL
+description       TEXT        NULL
+status            VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'pending_approval', 'approved', 'live', 'completed', 'cancelled'))
+start_time        TIMESTAMP   NOT NULL
+end_time          TIMESTAMP   NOT NULL
+location          VARCHAR(300) NULL
+capacity          INTEGER     NULL
+registration_count INTEGER    DEFAULT 0
+created_at        TIMESTAMP   DEFAULT NOW()
+updated_at        TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_events_org_term ON events(organization_id, term_id);
+- CREATE INDEX idx_events_start ON events(organization_id, start_time);
+- CREATE INDEX idx_events_status ON events(organization_id, status);
+
+-------------------------------------------------------------------------------
+
+TABLE: event_registrations
+--------------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+event_id        UUID        NOT NULL REFERENCES events(id) ON DELETE CASCADE
+user_id         UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE
+registered_at   TIMESTAMP   DEFAULT NOW()
+attended        BOOLEAN     DEFAULT FALSE
+checked_in_at   TIMESTAMP   NULL
+
+INDEXES:
+- CREATE INDEX idx_event_reg_event ON event_registrations(event_id);
+- CREATE INDEX idx_event_reg_user ON event_registrations(user_id);
+- CREATE UNIQUE INDEX idx_unique_registration ON event_registrations(event_id, user_id);
+
+TRIGGERS:
+-- Increment registration_count on INSERT
+CREATE OR REPLACE FUNCTION increment_registration_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE events SET registration_count = registration_count + 1 WHERE id = NEW.event_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_increment_registration
+AFTER INSERT ON event_registrations
+FOR EACH ROW EXECUTE FUNCTION increment_registration_count();
+
+-- Decrement registration_count on DELETE
+CREATE OR REPLACE FUNCTION decrement_registration_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE events SET registration_count = registration_count - 1 WHERE id = OLD.event_id;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_decrement_registration
+AFTER DELETE ON event_registrations
+FOR EACH ROW EXECUTE FUNCTION decrement_registration_count();
+
+-------------------------------------------------------------------------------
+
+TABLE: event_volunteers
+-----------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+event_id        UUID        NOT NULL REFERENCES events(id) ON DELETE CASCADE
+user_id         UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE
+role            VARCHAR(100) NULL
+assigned_at     TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_event_vol_event ON event_volunteers(event_id);
+- CREATE UNIQUE INDEX idx_unique_volunteer ON event_volunteers(event_id, user_id);
+
+================================================================================
+4. FINANCE TABLES
+================================================================================
+
+TABLE: budgets
+--------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+term_id         UUID        NOT NULL REFERENCES terms(id) ON DELETE CASCADE
+total_amount    DECIMAL(12,2) NOT NULL
+spent_amount    DECIMAL(12,2) DEFAULT 0
+created_at      TIMESTAMP   DEFAULT NOW()
+updated_at      TIMESTAMP   DEFAULT NOW()
+
+COMPUTED COLUMN:
+- remaining: total_amount - spent_amount
+
+INDEXES:
+- CREATE UNIQUE INDEX idx_budgets_org_term ON budgets(organization_id, term_id);
+
+-------------------------------------------------------------------------------
+
+TABLE: budget_categories
+------------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+budget_id       UUID        NOT NULL REFERENCES budgets(id) ON DELETE CASCADE
+name            VARCHAR(50) NOT NULL
+allocated       DECIMAL(12,2) NOT NULL
+spent           DECIMAL(12,2) DEFAULT 0
+
+INDEXES:
+- CREATE UNIQUE INDEX idx_budget_cat_name ON budget_categories(budget_id, name);
+
+-------------------------------------------------------------------------------
+
+TABLE: expenses
+---------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+budget_id       UUID        NOT NULL REFERENCES budgets(id) ON DELETE CASCADE
+category_id     UUID        REFERENCES budget_categories(id)
+created_by      UUID        NOT NULL REFERENCES users(id)
+description     VARCHAR(300) NOT NULL
+amount          DECIMAL(12,2) NOT NULL
+status          VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied', 'paid'))
+approved_by     UUID        REFERENCES users(id) NULL
+approved_at     TIMESTAMP   NULL
+created_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_expenses_org ON expenses(organization_id);
+- CREATE INDEX idx_expenses_budget ON expenses(budget_id);
+- CREATE INDEX idx_expenses_status ON expenses(organization_id, status);
+
+TRIGGERS:
+-- Update budget spent_amount when expense approved
+CREATE OR REPLACE FUNCTION update_budget_spent()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.status = 'approved' AND (OLD.status IS NULL OR OLD.status != 'approved') THEN
+    UPDATE budgets SET spent_amount = spent_amount + NEW.amount WHERE id = NEW.budget_id;
+    IF NEW.category_id IS NOT NULL THEN
+      UPDATE budget_categories SET spent = spent + NEW.amount WHERE id = NEW.category_id;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_budget_spent
+AFTER INSERT OR UPDATE ON expenses
+FOR EACH ROW EXECUTE FUNCTION update_budget_spent();
+
+-------------------------------------------------------------------------------
+
+TABLE: reimbursements
+---------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+expense_id      UUID        NOT NULL REFERENCES expenses(id) ON DELETE CASCADE
+submitted_by    UUID        NOT NULL REFERENCES users(id)
+receipt_url     VARCHAR(500) NOT NULL
+notes           TEXT        NULL
+status          VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied', 'paid'))
+processed_by    UUID        REFERENCES users(id) NULL
+processed_at    TIMESTAMP   NULL
+created_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_reimb_status ON reimbursements(status);
+- CREATE INDEX idx_reimb_expense ON reimbursements(expense_id);
+
+================================================================================
+5. SPONSORSHIP TABLES
+================================================================================
+
+TABLE: sponsors
+---------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+term_id         UUID        NOT NULL REFERENCES terms(id) ON DELETE CASCADE
+company_name    VARCHAR(200) NOT NULL
+status          VARCHAR(20) DEFAULT 'lead' CHECK (status IN ('lead', 'contacted', 'negotiating', 'closed_won', 'closed_lost'))
+value           DECIMAL(12,2) NULL
+notes           TEXT        NULL
+created_at      TIMESTAMP   DEFAULT NOW()
+updated_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_sponsors_org_term ON sponsors(organization_id, term_id);
+- CREATE INDEX idx_sponsors_status ON sponsors(organization_id, status);
+
+-------------------------------------------------------------------------------
+
+TABLE: sponsor_contacts
+-----------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+sponsor_id      UUID        NOT NULL REFERENCES sponsors(id) ON DELETE CASCADE
+name            VARCHAR(100) NOT NULL
+email           VARCHAR(255) NULL
+phone           VARCHAR(30) NULL
+role            VARCHAR(100) NULL
+is_primary      BOOLEAN     DEFAULT FALSE
+
+INDEXES:
+- CREATE INDEX idx_sponsor_contacts ON sponsor_contacts(sponsor_id);
+
+-------------------------------------------------------------------------------
+
+TABLE: sponsor_interactions
+---------------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+sponsor_id      UUID        NOT NULL REFERENCES sponsors(id) ON DELETE CASCADE
+user_id         UUID        NOT NULL REFERENCES users(id)
+type            VARCHAR(20) NOT NULL CHECK (type IN ('email', 'call', 'meeting', 'note'))
+content         TEXT        NULL
+occurred_at     TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_sponsor_int ON sponsor_interactions(sponsor_id, occurred_at DESC);
+
+================================================================================
+6. MARKETING TABLES
+================================================================================
+
+TABLE: campaigns
+----------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+term_id         UUID        NOT NULL REFERENCES terms(id) ON DELETE CASCADE
+title           VARCHAR(200) NOT NULL
+status          VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'completed'))
+start_date      DATE        NULL
+end_date        DATE        NULL
+created_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_campaigns_org ON campaigns(organization_id, term_id);
+
+-------------------------------------------------------------------------------
+
+TABLE: posts
+------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+campaign_id     UUID        REFERENCES campaigns(id) ON DELETE SET NULL
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+created_by      UUID        NOT NULL REFERENCES users(id)
+platform        VARCHAR(20) NOT NULL CHECK (platform IN ('instagram', 'facebook', 'twitter', 'linkedin', 'tiktok', 'newsletter'))
+content         TEXT        NOT NULL
+media_urls      JSONB       NULL
+scheduled_at    TIMESTAMP   NULL
+published_at    TIMESTAMP   NULL
+status          VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'pending_approval', 'approved', 'scheduled', 'published', 'failed'))
+created_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_posts_org_scheduled ON posts(organization_id, scheduled_at);
+- CREATE INDEX idx_posts_status ON posts(organization_id, status);
+
+-------------------------------------------------------------------------------
+
+TABLE: engagement_metrics
+-------------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+post_id         UUID        NOT NULL REFERENCES posts(id) ON DELETE CASCADE
+impressions     INTEGER     DEFAULT 0
+reach           INTEGER     DEFAULT 0
+likes           INTEGER     DEFAULT 0
+comments        INTEGER     DEFAULT 0
+shares          INTEGER     DEFAULT 0
+clicks          INTEGER     DEFAULT 0
+recorded_at     DATE        NOT NULL
+
+INDEXES:
+- CREATE INDEX idx_engagement_post ON engagement_metrics(post_id, recorded_at DESC);
+
+================================================================================
+7. SYSTEM TABLES
+================================================================================
+
+TABLE: documents
+----------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+uploaded_by     UUID        NOT NULL REFERENCES users(id)
+folder          VARCHAR(100) NULL
+filename        VARCHAR(255) NOT NULL
+file_url        VARCHAR(500) NOT NULL
+file_type       VARCHAR(50) NULL
+file_size       INTEGER     NULL
+created_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_docs_org_folder ON documents(organization_id, folder);
+
+-------------------------------------------------------------------------------
+
+TABLE: announcements
+--------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+created_by      UUID        NOT NULL REFERENCES users(id)
+title           VARCHAR(200) NOT NULL
+content         TEXT        NOT NULL
+priority        VARCHAR(20) DEFAULT 'normal' CHECK (priority IN ('normal', 'important', 'urgent'))
+expires_at      TIMESTAMP   NULL
+created_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_announce_org ON announcements(organization_id, created_at DESC);
+
+-------------------------------------------------------------------------------
+
+TABLE: notifications
+--------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+user_id         UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+type            VARCHAR(50) NOT NULL
+title           VARCHAR(200) NOT NULL
+message         TEXT        NULL
+link            VARCHAR(500) NULL
+is_read         BOOLEAN     DEFAULT FALSE
+created_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
+
+-------------------------------------------------------------------------------
+
+TABLE: audit_logs
+-----------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+user_id         UUID        REFERENCES users(id) ON DELETE SET NULL
+action          VARCHAR(50) NOT NULL
+entity_type     VARCHAR(50) NOT NULL
+entity_id       UUID        NULL
+changes         JSONB       NULL
+ip_address      VARCHAR(45) NULL
+created_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE INDEX idx_audit_org ON audit_logs(organization_id, created_at DESC);
+- CREATE INDEX idx_audit_entity ON audit_logs(entity_type, entity_id);
+
+================================================================================
+8. DASHBOARD METRICS TABLE (For Optimization)
+================================================================================
+
+TABLE: dashboard_metrics
+------------------------
+Column          Type        Constraints
+------          ----        -----------
+id              UUID        PRIMARY KEY, DEFAULT uuid_generate_v4()
+organization_id UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
+term_id         UUID        NOT NULL REFERENCES terms(id) ON DELETE CASCADE
+metric_key      VARCHAR(50) NOT NULL
+metric_value    DECIMAL(12,2) NOT NULL
+updated_at      TIMESTAMP   DEFAULT NOW()
+
+INDEXES:
+- CREATE UNIQUE INDEX idx_dashboard_metrics ON dashboard_metrics(organization_id, term_id, metric_key);
+
+METRIC KEYS:
+- active_member_count
+- total_member_count
+- active_member_ratio
+- budget_total
+- budget_spent
+- budget_remaining
+- budget_burn_rate
+- overdue_task_count
+- completed_task_count
+- upcoming_event_count
+- event_risk_count
+- pending_approval_count
+- sponsor_pipeline_lead
+- sponsor_pipeline_contacted
+- sponsor_pipeline_negotiating
+- sponsor_pipeline_closed
+- expected_revenue
+- received_revenue
+
+UPDATE STRATEGY:
+- Updated via background job every 5 minutes
+- Updated immediately on critical changes (budget approval, event status change)
+- Dashboard reads from this table for O(1) performance
+
+================================================================================
+9. ENTITY RELATIONSHIP DIAGRAM (Text)
+================================================================================
+
+users ─────────────────┐
+  │                    │
+  │ 1:N                │
+  ▼                    │
+memberships ◄────────── organizations
+  │     │                    │
+  │     │                    │ 1:N
+  │     │                    ▼
+  │     └──────────────► terms
+  │                        │
+  ▼                        │
+roles ◄── role_permissions ─► permissions
+  
+tasks ◄── task_assignments ─► users
+  │
+  └──► organization_id, term_id
+
+events ◄── event_registrations ─► users
+  │    ◄── event_volunteers ────► users
+  │
+  └──► organization_id, term_id
+
+budgets ◄── budget_categories
+  │     ◄── expenses ◄── reimbursements
+  │
+  └──► organization_id, term_id
+
+sponsors ◄── sponsor_contacts
+  │      ◄── sponsor_interactions ─► users
+  │
+  └──► organization_id, term_id
+
+campaigns ◄── posts ◄── engagement_metrics
+  │
+  └──► organization_id, term_id
+
+All major entities are scoped by:
+- organization_id (multi-tenancy)
+- term_id (temporal isolation)

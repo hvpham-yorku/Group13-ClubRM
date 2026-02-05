@@ -1,0 +1,751 @@
+================================================================================
+                    CLUBRM - STUDENT ORGANIZATION CRM
+               PART 6: PAGE BREAKDOWN & IMPLEMENTATION CHECKLIST
+================================================================================
+
+================================================================================
+1. PAGE-BY-PAGE UI BREAKDOWN
+================================================================================
+
+-------------------------------------------------------------------------------
+1.1 TASKS PAGE (/tasks)
+-------------------------------------------------------------------------------
+Permission: tasks.read
+
+HEADER:
+┌─────────────────────────────────────────────────────────────────┐
+│ Tasks                                           [+ New Task]    │
+└─────────────────────────────────────────────────────────────────┘
+
+TOOLBAR:
+┌─────────────────────────────────────────────────────────────────┐
+│ View: [List ▼] [Kanban] [Calendar]    Filter: [Status ▼] [Assignee ▼] [Priority ▼] │
+│ Search: [________________]            Sort: [Due Date ▼]        │
+└─────────────────────────────────────────────────────────────────┘
+
+KANBAN VIEW:
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│   To Do     │ │ In Progress │ │   Review    │ │    Done     │
+│   (8)       │ │    (5)      │ │    (3)      │ │    (24)     │
+├─────────────┤ ├─────────────┤ ├─────────────┤ ├─────────────┤
+│ ┌─────────┐ │ │ ┌─────────┐ │ │ ┌─────────┐ │ │ ┌─────────┐ │
+│ │Task Card│ │ │ │Task Card│ │ │ │Task Card│ │ │ │Task Card│ │
+│ └─────────┘ │ │ └─────────┘ │ │ └─────────┘ │ │ └─────────┘ │
+│ ┌─────────┐ │ │ ┌─────────┐ │ │             │ │             │
+│ │Task Card│ │ │ │Task Card│ │ │             │ │             │
+│ └─────────┘ │ │ └─────────┘ │ │             │ │             │
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+
+TASK CARD COMPONENT:
+┌─────────────────────────────┐
+│ [Priority Indicator]        │
+│ Task Title                  │
+│ ─────────────────────────── │
+│ Due: Feb 10, 2026           │
+│ 👤 John Doe                  │
+│ [Tag: Events] [Tag: Urgent] │
+└─────────────────────────────┘
+
+TASK MODAL (Create/Edit):
+┌─────────────────────────────────────────────────────────────────┐
+│ Create Task                                              [X]    │
+├─────────────────────────────────────────────────────────────────┤
+│ Title *                                                         │
+│ [________________________________________________]              │
+│                                                                 │
+│ Description                                                     │
+│ [________________________________________________]              │
+│ [________________________________________________]              │
+│                                                                 │
+│ ┌─────────────────┐ ┌─────────────────┐                        │
+│ │ Priority        │ │ Due Date        │                        │
+│ │ [Medium    ▼]   │ │ [📅 Select]     │                        │
+│ └─────────────────┘ └─────────────────┘                        │
+│                                                                 │
+│ Assign To                                                       │
+│ [👤 Search members...]                                          │
+│ [John Doe ×] [Sarah Smith ×]                                   │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                              [Cancel]  [Create Task]            │
+└─────────────────────────────────────────────────────────────────┘
+
+INTERACTIONS:
+- Drag-drop cards between columns (updates status)
+- Click card to open detail modal
+- Quick actions on hover (edit, delete, assign)
+- Keyboard shortcuts (n: new task, /: search)
+
+-------------------------------------------------------------------------------
+1.2 EVENTS PAGE (/events)
+-------------------------------------------------------------------------------
+Permission: events.read
+
+HEADER:
+┌─────────────────────────────────────────────────────────────────┐
+│ Events                                         [+ Create Event] │
+└─────────────────────────────────────────────────────────────────┘
+
+TOOLBAR:
+┌─────────────────────────────────────────────────────────────────┐
+│ View: [Calendar ▼] [List] [Timeline]   Filter: [Status ▼] [Upcoming ▼] │
+└─────────────────────────────────────────────────────────────────┘
+
+CALENDAR VIEW:
+┌─────────────────────────────────────────────────────────────────┐
+│              < February 2026 >                                  │
+├─────┬─────┬─────┬─────┬─────┬─────┬─────┤
+│ Sun │ Mon │ Tue │ Wed │ Thu │ Fri │ Sat │
+├─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+│  1  │  2  │  3  │  4  │  5  │  6  │  7  │
+│     │     │     │     │     │ ●   │     │
+├─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+│  8  │  9  │ 10  │ 11  │ 12  │ 13  │ 14  │
+│     │     │ ●●  │     │     │     │ ●   │
+├─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+│ 15  │ 16  │ 17  │ 18  │ 19  │ 20  │ 21  │
+│ ●   │     │     │     │     │ ●   │     │
+└─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+
+LIST VIEW:
+┌─────────────────────────────────────────────────────────────────┐
+│ ┌───────┬────────────────────────┬──────────┬─────────┬───────┐│
+│ │ Date  │ Event                  │ Location │ Status  │ Reg.  ││
+│ ├───────┼────────────────────────┼──────────┼─────────┼───────┤│
+│ │Feb 10 │ Tech Talk: AI in 2026  │ Room 101 │Approved │ 45/50 ││
+│ │Feb 14 │ Valentine Social       │ Main Hall│ Live    │ 80/100││
+│ │Feb 20 │ Workshop: Resume       │ Lab 201  │ Draft   │ 12/30 ││
+│ └───────┴────────────────────────┴──────────┴─────────┴───────┘│
+└─────────────────────────────────────────────────────────────────┘
+
+EVENT DETAIL PAGE (/events/:id):
+┌─────────────────────────────────────────────────────────────────┐
+│ ← Back to Events                                                │
+├─────────────────────────────────────────────────────────────────┤
+│ Tech Talk: AI in 2026                                           │
+│ [Approved ✓]                           [Edit] [Duplicate] [⋮]  │
+├─────────────────────────────────────────────────────────────────┤
+│ 📅 February 10, 2026 • 6:00 PM - 8:00 PM                        │
+│ 📍 Room 101, Engineering Building                               │
+│ 👥 45 / 50 registered                                           │
+├─────────────────────────────────────────────────────────────────┤
+│ DESCRIPTION                                                     │
+│ Join us for an exciting deep dive into AI trends...             │
+├─────────────────────────────────────────────────────────────────┤
+│ VOLUNTEERS (5/5)                              [+ Add Volunteer] │
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ 👤 John - Check-in  │ 👤 Sarah - A/V  │ 👤 Mike - Setup     ││
+│ │ 👤 Lisa - Photos    │ 👤 Tom - Cleanup │                     ││
+│ └─────────────────────────────────────────────────────────────┘│
+├─────────────────────────────────────────────────────────────────┤
+│ REGISTRATIONS                               [Export] [Check-in] │
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ Name              │ Email                │ Attended          ││
+│ │ John Doe          │ john@uni.edu         │ ☐                 ││
+│ │ Sarah Smith       │ sarah@uni.edu        │ ☐                 ││
+│ └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+
+-------------------------------------------------------------------------------
+1.3 MEMBERS PAGE (/members)
+-------------------------------------------------------------------------------
+Permission: members.read
+
+LAYOUT:
+┌─────────────────────────────────────────────────────────────────┐
+│ Members                                        [+ Invite Member]│
+├─────────────────────────────────────────────────────────────────┤
+│ Search: [_______________]   Role: [All ▼]   Status: [Active ▼] │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌───────┬────────────────┬─────────────┬──────────┬──────────┐ │
+│ │ Photo │ Name           │ Role        │ Status   │ Actions  │ │
+│ ├───────┼────────────────┼─────────────┼──────────┼──────────┤ │
+│ │  👤   │ John Doe       │ President   │ Active   │ [⋮]      │ │
+│ │  👤   │ Sarah Smith    │ VP Finance  │ Active   │ [⋮]      │ │
+│ │  👤   │ Mike Johnson   │ VP Events   │ Active   │ [⋮]      │ │
+│ │  👤   │ Alex Brown     │ Executive   │ Inactive │ [⋮]      │ │
+│ └───────┴────────────────┴─────────────┴──────────┴──────────┘ │
+│                                                                 │
+│ Showing 1-25 of 52 members                    [< 1 2 3 >]      │
+└─────────────────────────────────────────────────────────────────┘
+
+MEMBER PROFILE MODAL:
+┌─────────────────────────────────────────────────────────────────┐
+│                                                          [X]    │
+├─────────────────────────────────────────────────────────────────┤
+│    ┌──────┐                                                     │
+│    │      │   John Doe                                          │
+│    │  👤  │   john.doe@university.edu                           │
+│    │      │   President • Active                                │
+│    └──────┘                                                     │
+├─────────────────────────────────────────────────────────────────┤
+│ MEMBERSHIP INFO                                                 │
+│ Joined: September 2025                                          │
+│ Current Term: Fall 2026                                         │
+├─────────────────────────────────────────────────────────────────┤
+│ ACTIVITY STATS                                                  │
+│ Tasks Completed: 24                                             │
+│ Events Attended: 8                                              │
+│ Last Active: 2 hours ago                                        │
+├─────────────────────────────────────────────────────────────────┤
+│                              [Change Role] [Deactivate]         │
+└─────────────────────────────────────────────────────────────────┘
+
+-------------------------------------------------------------------------------
+1.4 FINANCE PAGE (/finance)
+-------------------------------------------------------------------------------
+Permission: budget.read
+
+SUB-NAVIGATION:
+┌─────────────────────────────────────────────────────────────────┐
+│ Finance                                                         │
+│ [Budget Overview] [Expenses] [Reimbursements]                   │
+└─────────────────────────────────────────────────────────────────┘
+
+BUDGET OVERVIEW TAB:
+┌─────────────────────────────────────────────────────────────────┐
+│ Budget Overview - Fall 2026                    [+ Add Expense]  │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ Total: $18,000  │  Spent: $5,600  │  Remaining: $12,400     ││
+│ │ ████████████████████████░░░░░░░░░ 68% remaining             ││
+│ └─────────────────────────────────────────────────────────────┘│
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────┐  ┌─────────────────────────┐       │
+│ │ SPENDING BY CATEGORY    │  │ BUDGET TIMELINE         │       │
+│ │ ┌───────────────────┐   │  │ [Line Chart]            │       │
+│ │ │   [Pie Chart]     │   │  │ Actual vs Projected     │       │
+│ │ │   Events: 45%     │   │  │                         │       │
+│ │ │   Marketing: 25%  │   │  │                         │       │
+│ │ │   Operations: 20% │   │  │                         │       │
+│ │ │   Other: 10%      │   │  │                         │       │
+│ │ └───────────────────┘   │  └─────────────────────────┘       │
+│ └─────────────────────────┘                                    │
+├─────────────────────────────────────────────────────────────────┤
+│ RECENT EXPENSES                                                 │
+│ ┌────────┬──────────────────┬──────────┬─────────┬───────────┐ │
+│ │ Date   │ Description      │ Category │ Amount  │ Status    │ │
+│ ├────────┼──────────────────┼──────────┼─────────┼───────────┤ │
+│ │ Feb 5  │ Venue deposit    │ Events   │ $250    │ Approved  │ │
+│ │ Feb 3  │ Marketing flyers │ Marketing│ $89     │ Pending   │ │
+│ │ Feb 1  │ Snacks for mtg   │ Ops      │ $45     │ Approved  │ │
+│ └────────┴──────────────────┴──────────┴─────────┴───────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+
+REIMBURSEMENTS TAB:
+┌─────────────────────────────────────────────────────────────────┐
+│ Reimbursements                            [+ Submit Reimbursement]│
+├─────────────────────────────────────────────────────────────────┤
+│ Filter: [Pending ▼]                                             │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ PENDING APPROVAL (3)                                        ││
+│ ├─────────────────────────────────────────────────────────────┤│
+│ │ 👤 John Doe • $145                              Feb 5, 2026 ││
+│ │ Food for networking event                                   ││
+│ │ [View Receipt]                    [Approve] [Deny]          ││
+│ ├─────────────────────────────────────────────────────────────┤│
+│ │ 👤 Sarah Smith • $89                            Feb 4, 2026 ││
+│ │ Office supplies                                             ││
+│ │ [View Receipt]                    [Approve] [Deny]          ││
+│ └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+
+-------------------------------------------------------------------------------
+1.5 EXTERNAL/SPONSORSHIP PAGE (/external)
+-------------------------------------------------------------------------------
+Permission: sponsors.read
+
+LAYOUT:
+┌─────────────────────────────────────────────────────────────────┐
+│ Sponsorship Management                         [+ Add Sponsor]  │
+├─────────────────────────────────────────────────────────────────┤
+│ View: [Pipeline ▼] [List]   Filter: [All Statuses ▼]           │
+├─────────────────────────────────────────────────────────────────┤
+│ PIPELINE VIEW:                                                  │
+│ ┌───────────┬───────────┬───────────┬───────────┬───────────┐  │
+│ │   Lead    │ Contacted │Negotiating│Closed Won │Closed Lost│  │
+│ │    (5)    │    (3)    │    (2)    │    (8)    │    (2)    │  │
+│ ├───────────┼───────────┼───────────┼───────────┼───────────┤  │
+│ │┌─────────┐│┌─────────┐│┌─────────┐│┌─────────┐│┌─────────┐│  │
+│ ││TechCorp ││├─────────┤││BigBank  ││├─────────┤││OldCo    ││  │
+│ ││$5,000   ││││StartupX ││││$3,000   ││││TechGiant│││         ││  │
+│ │└─────────┘│││$2,000   │││└─────────┘│││$10,000  ││└─────────┘│  │
+│ │┌─────────┐││└─────────┘││┌─────────┐│││$5,000   ││           │  │
+│ ││NewCo    │││           │││LocalBiz │││└─────────┘││           │  │
+│ ││         │││           │││$1,500   │││           ││           │  │
+│ │└─────────┘││           ││└─────────┘││           ││           │  │
+│ └───────────┴───────────┴───────────┴───────────┴───────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+
+SPONSOR DETAIL MODAL:
+┌─────────────────────────────────────────────────────────────────┐
+│ TechCorp Inc.                                            [X]    │
+│ Status: [Contacted ▼]                          [Edit] [Delete]  │
+├─────────────────────────────────────────────────────────────────┤
+│ Expected Value: $5,000                                          │
+├─────────────────────────────────────────────────────────────────┤
+│ CONTACTS                                          [+ Add Contact]│
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ ⭐ Jane Doe (Primary)                                        ││
+│ │    Marketing Manager                                         ││
+│ │    jane@techcorp.com • (555) 123-4567                       ││
+│ ├─────────────────────────────────────────────────────────────┤│
+│ │ Bob Smith                                                    ││
+│ │    VP Partnerships                                           ││
+│ │    bob@techcorp.com                                          ││
+│ └─────────────────────────────────────────────────────────────┘│
+├─────────────────────────────────────────────────────────────────┤
+│ INTERACTION HISTORY                          [+ Log Interaction]│
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ 📧 Email - Feb 3, 2026                                       ││
+│ │ Sent follow-up about sponsorship package                     ││
+│ ├─────────────────────────────────────────────────────────────┤│
+│ │ 📞 Call - Jan 28, 2026                                       ││
+│ │ Initial outreach call, interested in Gold tier              ││
+│ └─────────────────────────────────────────────────────────────┘│
+├─────────────────────────────────────────────────────────────────┤
+│ NOTES                                                           │
+│ Interested in reaching CS students. Prefers email communication.│
+└─────────────────────────────────────────────────────────────────┘
+
+-------------------------------------------------------------------------------
+1.6 MARKETING PAGE (/marketing)
+-------------------------------------------------------------------------------
+Permission: marketing.read
+
+SUB-NAVIGATION:
+┌─────────────────────────────────────────────────────────────────┐
+│ Marketing                                                       │
+│ [Content Calendar] [Campaigns] [Analytics] [Assets]             │
+└─────────────────────────────────────────────────────────────────┘
+
+CONTENT CALENDAR TAB:
+┌─────────────────────────────────────────────────────────────────┐
+│ Content Calendar - February 2026              [+ Schedule Post] │
+├─────────────────────────────────────────────────────────────────┤
+│              < February 2026 >                                  │
+├─────┬─────┬─────┬─────┬─────┬─────┬─────┤
+│ Sun │ Mon │ Tue │ Wed │ Thu │ Fri │ Sat │
+├─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+│  1  │  2  │  3  │  4  │  5  │  6  │  7  │
+│     │ 📷  │     │ 📧  │     │ 📷📷 │     │
+│     │ IG  │     │News │     │IG+LI│     │
+├─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+│  8  │  9  │ 10  │ 11  │ 12  │ 13  │ 14  │
+│     │ 📷  │     │     │ 📷  │     │ 📷❤️│
+│     │ IG  │     │     │ IG  │     │ IG  │
+└─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+
+Legend: 📷 Social Post  📧 Newsletter  📹 Video
+
+POST CREATION MODAL:
+┌─────────────────────────────────────────────────────────────────┐
+│ Schedule Post                                            [X]    │
+├─────────────────────────────────────────────────────────────────┤
+│ Platform *                                                      │
+│ [Instagram ▼] [Facebook] [Twitter] [LinkedIn] [TikTok]         │
+│                                                                 │
+│ Content *                                                       │
+│ ┌─────────────────────────────────────────────────────────────┐│
+│ │ 🎉 Don't miss our upcoming Tech Talk on AI!                 ││
+│ │                                                              ││
+│ │ 📅 Feb 10 at 6PM                                             ││
+│ │ 📍 Room 101                                                  ││
+│ │                                                              ││
+│ │ Register now: [link]                                         ││
+│ │ #TechTalk #AI #StudentLife                                   ││
+│ └─────────────────────────────────────────────────────────────┘│
+│ 280 characters                                                  │
+│                                                                 │
+│ Media                                                           │
+│ [+ Upload Image/Video]                                          │
+│ ┌─────┐ ┌─────┐                                                │
+│ │ 🖼️  │ │  ×  │                                                │
+│ └─────┘ └─────┘                                                │
+│                                                                 │
+│ Schedule For *                                                  │
+│ [📅 Feb 8, 2026] [🕐 10:00 AM]                                  │
+│                                                                 │
+│ Campaign (Optional)                                             │
+│ [Tech Talk Promo ▼]                                            │
+├─────────────────────────────────────────────────────────────────┤
+│                    [Save Draft]  [Submit for Approval]          │
+└─────────────────────────────────────────────────────────────────┘
+
+-------------------------------------------------------------------------------
+1.7 DOCUMENTS PAGE (/documents)
+-------------------------------------------------------------------------------
+Permission: None (all authenticated users)
+
+LAYOUT:
+┌─────────────────────────────────────────────────────────────────┐
+│ Documents                                      [+ Upload File]  │
+├─────────────────────────────────────────────────────────────────┤
+│ Search: [_______________]   Type: [All Files ▼]                │
+├─────────────────────────────────────────────────────────────────┤
+│ 📁 Constitution & Bylaws                                   [⋮] │
+│    ├── 📄 Club Constitution 2026.pdf           2.3 MB  Jan 15  │
+│    └── 📄 Bylaws Amendment.docx                156 KB  Jan 20  │
+│                                                                 │
+│ 📁 Sponsorship Materials                                   [⋮] │
+│    ├── 📄 Sponsorship Package 2026.pdf         4.1 MB  Feb 1   │
+│    └── 📄 Sponsor Contact Template.docx        89 KB   Feb 1   │
+│                                                                 │
+│ 📁 Event Templates                                         [⋮] │
+│    ├── 📄 Event Planning Checklist.xlsx        234 KB  Jan 10  │
+│    └── 📄 Post-Event Survey.docx               67 KB   Jan 10  │
+│                                                                 │
+│ 📁 Meeting Minutes                                         [⋮] │
+│    ├── 📄 Exec Meeting - Feb 1.pdf             1.2 MB  Feb 2   │
+│    └── 📄 Exec Meeting - Jan 25.pdf            980 KB  Jan 26  │
+└─────────────────────────────────────────────────────────────────┘
+
+-------------------------------------------------------------------------------
+1.8 SETTINGS PAGE (/settings) - Admin Only
+-------------------------------------------------------------------------------
+Permission: settings.manage
+
+SUB-NAVIGATION (Left Sidebar):
+┌─────────────────────────────────────────────────────────────────┐
+│ Settings                                                        │
+├───────────────────┬─────────────────────────────────────────────┤
+│ ▸ Organization    │ ORGANIZATION SETTINGS                       │
+│   Roles & Perms   │                                             │
+│   Integrations    │ Organization Name                           │
+│   Automation      │ [TechClub                               ]   │
+│   Audit Logs      │                                             │
+│                   │ School/University                           │
+│                   │ [University of Example                  ]   │
+│                   │                                             │
+│                   │ Logo                                        │
+│                   │ ┌──────┐                                    │
+│                   │ │  🖼️  │  [Change Logo]                     │
+│                   │ └──────┘                                    │
+│                   │                                             │
+│                   │ Primary Color                               │
+│                   │ [#4F46E5] [████]                            │
+│                   │                                             │
+│                   │ Current Term                                │
+│                   │ [Fall 2026 ▼]                               │
+│                   │                                             │
+│                   │                           [Save Changes]    │
+└───────────────────┴─────────────────────────────────────────────┘
+
+ROLES & PERMISSIONS TAB:
+┌─────────────────────────────────────────────────────────────────┐
+│ Roles & Permissions                           [+ Create Role]   │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌────────────────┬──────────────────────────────┬─────────────┐│
+│ │ Role           │ Permissions                  │ Actions     ││
+│ ├────────────────┼──────────────────────────────┼─────────────┤│
+│ │ President      │ 24 permissions               │ [Edit]      ││
+│ │ VP Internal    │ 18 permissions               │ [Edit]      ││
+│ │ VP Finance     │ 12 permissions               │ [Edit]      ││
+│ │ VP Events      │ 10 permissions               │ [Edit]      ││
+│ │ VP External    │ 8 permissions                │ [Edit]      ││
+│ │ Marketing      │ 8 permissions                │ [Edit]      ││
+│ │ Executive      │ 6 permissions                │ [Edit]      ││
+│ │ Administrator  │ All permissions              │ [Edit]      ││
+│ └────────────────┴──────────────────────────────┴─────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+
+================================================================================
+2. IMPLEMENTATION CHECKLIST
+================================================================================
+
+PHASE 1: FOUNDATION (Week 1-2)
+------------------------------
+[ ] Project Setup
+    [ ] Initialize React project (Vite + TypeScript)
+    [ ] Setup Tailwind CSS
+    [ ] Install shadcn/ui components
+    [ ] Configure ESLint + Prettier
+    [ ] Setup folder structure
+
+[ ] Backend Setup
+    [ ] Initialize Node.js/Express project
+    [ ] Setup PostgreSQL database
+    [ ] Configure Prisma ORM
+    [ ] Setup JWT authentication
+    [ ] Create base middleware
+
+[ ] Database
+    [ ] Create all tables (see 04_DATABASE_SCHEMA.txt)
+    [ ] Setup indexes
+    [ ] Create triggers for computed fields
+    [ ] Seed default roles and permissions
+    [ ] Seed test data
+
+[ ] Authentication
+    [ ] POST /api/auth/login
+    [ ] POST /api/auth/logout
+    [ ] POST /api/auth/refresh
+    [ ] GET /api/auth/me
+    [ ] Auth middleware
+    [ ] Permission middleware
+
+PHASE 2: CORE NAVIGATION (Week 3)
+---------------------------------
+[ ] Global Layout
+    [ ] Top bar component
+    [ ] Sidebar component
+    [ ] Main content area
+    [ ] Responsive layout
+
+[ ] Top Bar
+    [ ] Organization selector
+    [ ] Global search (Cmd+K)
+    [ ] Notifications dropdown
+    [ ] Profile dropdown
+
+[ ] Sidebar
+    [ ] Navigation items
+    [ ] Permission-based visibility
+    [ ] Badge indicators
+    [ ] Collapse on mobile
+
+[ ] Context Management
+    [ ] Auth context (user, token)
+    [ ] Org/Term context
+    [ ] Permission hook (usePermissions)
+    [ ] Context switching
+
+PHASE 3: DASHBOARDS (Week 4-5)
+------------------------------
+[ ] Widget System
+    [ ] Base widget component
+    [ ] Loading state
+    [ ] Error state
+    [ ] Empty state
+
+[ ] Dashboard API Endpoints
+    [ ] GET /api/dashboard/president
+    [ ] GET /api/dashboard/internal
+    [ ] GET /api/dashboard/finance
+    [ ] GET /api/dashboard/events
+    [ ] GET /api/dashboard/external
+    [ ] GET /api/dashboard/marketing
+    [ ] GET /api/dashboard/executive
+    [ ] GET /api/dashboard/admin
+
+[ ] Dashboard Pages
+    [ ] President dashboard (6 widgets)
+    [ ] VP Internal dashboard (5 widgets)
+    [ ] VP Finance dashboard (5 widgets)
+    [ ] VP Events dashboard (4 widgets)
+    [ ] VP External dashboard (4 widgets)
+    [ ] Marketing dashboard (4 widgets)
+    [ ] Executive dashboard (3 widgets)
+    [ ] Admin dashboard (4 widgets)
+
+[ ] Dashboard Features
+    [ ] Auto-refresh (60s interval)
+    [ ] Role-based routing
+    [ ] Widget click navigation
+
+PHASE 4: TASKS MODULE (Week 6)
+------------------------------
+[ ] Backend
+    [ ] GET /api/tasks
+    [ ] POST /api/tasks
+    [ ] GET /api/tasks/:id
+    [ ] PATCH /api/tasks/:id
+    [ ] DELETE /api/tasks/:id
+    [ ] PATCH /api/tasks/:id/status
+    [ ] POST /api/tasks/:id/assign
+
+[ ] Frontend
+    [ ] Tasks page layout
+    [ ] Kanban view
+    [ ] List view
+    [ ] Task card component
+    [ ] Task modal (create/edit)
+    [ ] Drag-and-drop
+    [ ] Filters and search
+
+PHASE 5: EVENTS MODULE (Week 7)
+-------------------------------
+[ ] Backend
+    [ ] CRUD endpoints
+    [ ] Registration endpoints
+    [ ] Volunteer endpoints
+    [ ] Check-in endpoint
+
+[ ] Frontend
+    [ ] Events page layout
+    [ ] Calendar view
+    [ ] List view
+    [ ] Event detail page
+    [ ] Create/edit modal
+    [ ] Registration management
+    [ ] Volunteer management
+
+PHASE 6: MEMBERS MODULE (Week 8)
+--------------------------------
+[ ] Backend
+    [ ] CRUD endpoints
+    [ ] Invite endpoint
+    [ ] Activity tracking
+
+[ ] Frontend
+    [ ] Members page layout
+    [ ] Member table
+    [ ] Member profile modal
+    [ ] Invite flow
+    [ ] Role management
+
+PHASE 7: FINANCE MODULE (Week 9)
+--------------------------------
+[ ] Backend
+    [ ] Budget endpoints
+    [ ] Expense endpoints
+    [ ] Reimbursement endpoints
+
+[ ] Frontend
+    [ ] Finance page layout
+    [ ] Budget overview tab
+    [ ] Expenses tab
+    [ ] Reimbursements tab
+    [ ] Charts (pie, line)
+    [ ] Approval workflow
+
+PHASE 8: REMAINING MODULES (Week 10-11)
+---------------------------------------
+[ ] Sponsorship Module
+    [ ] Pipeline view
+    [ ] Sponsor detail
+    [ ] Contact management
+    [ ] Interaction logging
+
+[ ] Marketing Module
+    [ ] Content calendar
+    [ ] Post scheduling
+    [ ] Campaign management
+    [ ] Analytics display
+
+[ ] Documents Module
+    [ ] File browser
+    [ ] Upload functionality
+    [ ] Folder management
+
+[ ] Settings Module (Admin)
+    [ ] Organization settings
+    [ ] Role management
+    [ ] Audit logs
+
+PHASE 9: POLISH (Week 12)
+-------------------------
+[ ] Performance
+    [ ] Dashboard metrics caching
+    [ ] Query optimization
+    [ ] Image optimization
+    [ ] Code splitting
+
+[ ] UX Improvements
+    [ ] Loading skeletons
+    [ ] Toast notifications
+    [ ] Keyboard shortcuts
+    [ ] Responsive testing
+
+[ ] Testing
+    [ ] Unit tests
+    [ ] Integration tests
+    [ ] E2E tests (critical flows)
+
+[ ] Documentation
+    [ ] API documentation
+    [ ] User guide
+    [ ] Deployment guide
+
+================================================================================
+3. TECHNOLOGY STACK RECOMMENDATION
+================================================================================
+
+FRONTEND:
+- React 18+ with TypeScript
+- Vite (build tool)
+- TailwindCSS (styling)
+- shadcn/ui (component library)
+- Lucide React (icons)
+- TanStack Query (data fetching)
+- React Router v6 (routing)
+- Zustand or Context API (state)
+- React Hook Form + Zod (forms)
+- date-fns (date handling)
+- Recharts (charts)
+- dnd-kit (drag and drop)
+
+BACKEND:
+- Node.js + Express
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- JWT (jsonwebtoken)
+- bcrypt (password hashing)
+- Zod (validation)
+- Winston (logging)
+- Jest (testing)
+
+INFRASTRUCTURE:
+- Vercel or Railway (hosting)
+- Supabase or Railway PostgreSQL (database)
+- Cloudinary or S3 (file storage)
+- Resend or SendGrid (email)
+
+================================================================================
+4. COMPONENT LIBRARY REFERENCE
+================================================================================
+
+SHARED COMPONENTS TO BUILD:
+
+Layout:
+- AppShell (top bar + sidebar + content)
+- PageHeader (title + actions)
+- PageContent (scrollable container)
+
+Navigation:
+- Sidebar
+- TopBar
+- OrgSelector
+- CommandPalette (search)
+- NotificationDropdown
+- ProfileDropdown
+
+Dashboard:
+- Widget (base)
+- StatCard
+- ProgressBar
+- AlertList
+- ApprovalQueue
+
+Data Display:
+- DataTable (sortable, filterable)
+- KanbanBoard
+- Calendar
+- Timeline
+- PipelineView
+
+Forms:
+- FormField
+- Select
+- DatePicker
+- FileUpload
+- MemberSelector
+
+Feedback:
+- Toast
+- Modal
+- ConfirmDialog
+- EmptyState
+- LoadingSkeleton
+
+Charts:
+- PieChart
+- LineChart
+- BarChart
+- Sparkline
+
+================================================================================
+END OF REFERENCE DOCUMENT
+================================================================================

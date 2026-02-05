@@ -1,0 +1,177 @@
+================================================================================
+                    CLUBRM - STUDENT ORGANIZATION CRM
+                         MASTER REFERENCE INDEX
+================================================================================
+
+This folder contains comprehensive wireframe and technical documentation for
+the ClubRM student organization CRM application.
+
+================================================================================
+DOCUMENT INDEX
+================================================================================
+
+01_NAVIGATION_AND_LAYOUT.txt
+----------------------------
+- Global navigation bar structure (top bar + sidebar)
+- Component breakdown for each nav element
+- API endpoints for navigation data
+- Layout grid system and responsive breakpoints
+- Permission-based visibility rules
+
+02_ROLES_AND_PERMISSIONS.txt
+----------------------------
+- 8 predefined roles with descriptions
+- 28 atomic permission keys
+- Full permission matrix (role x permission)
+- Approval workflow definitions
+- Backend/frontend permission implementation code
+
+03_DASHBOARD_LAYOUTS.txt
+------------------------
+- 8 role-specific dashboard layouts with ASCII wireframes
+- Widget specifications per dashboard
+- API endpoints for each dashboard
+- Widget component specifications
+
+04_DATABASE_SCHEMA.txt
+----------------------
+- Complete PostgreSQL schema (15+ tables)
+- Indexes for performance
+- Triggers for computed fields
+- Entity relationship diagram
+- Dashboard metrics optimization table
+
+05_API_AND_ARCHITECTURE.txt
+---------------------------
+- Frontend-backend connection architecture diagram
+- Authentication flow (JWT)
+- 100+ API endpoint definitions organized by module
+- Error handling standards
+- Frontend service layer code examples
+- WebSocket real-time update specifications
+
+06_PAGE_BREAKDOWN_AND_CHECKLIST.txt
+-----------------------------------
+- Detailed UI mockups for every page
+- Component specifications
+- 12-week implementation checklist
+- Recommended technology stack
+- Shared component library reference
+
+================================================================================
+QUICK REFERENCE: ROLES
+================================================================================
+
+1. President          - Organization oversight, approvals, health monitoring
+2. VP Internal        - Task management, team coordination, operations
+3. VP Finance         - Budget management, expense tracking, approvals
+4. VP Events          - Event planning, logistics, volunteer coordination
+5. VP External        - Sponsor relations, partnerships, funding pipeline
+6. Marketing          - Content creation, social media, engagement tracking
+7. General Executive  - Personal tasks, event support, general duties
+8. Administrator      - System management, role configuration, audit
+
+================================================================================
+QUICK REFERENCE: NAVIGATION
+================================================================================
+
+TOP BAR:
+[Org Selector] [Global Search (Cmd+K)] [Notifications 🔔] [Profile 👤]
+
+SIDEBAR:
+- Dashboard        (all roles)
+- Tasks            (all roles)
+- Events           (all roles)
+- Members          (all roles)
+- Finance*         (Pres, VP Fin, Admin)
+- External*        (Pres, VP Ext, Admin)
+- Marketing*       (Pres, Marketing, Admin)
+- Reports*         (VPs, Pres, Admin)
+- Documents        (all roles)
+- Settings*        (Admin only)
+
+* = Permission gated
+
+================================================================================
+QUICK REFERENCE: KEY API PATTERNS
+================================================================================
+
+BASE URL: /api/v1
+
+Authentication:
+POST /auth/login           - Login
+POST /auth/logout          - Logout
+POST /auth/refresh         - Refresh token
+POST /auth/switch-context  - Change org/term
+
+Dashboards:
+GET /dashboard/{role}      - Role-specific dashboard data
+
+Resources (CRUD pattern):
+GET    /resource           - List (with filters)
+POST   /resource           - Create
+GET    /resource/:id       - Read
+PATCH  /resource/:id       - Update
+DELETE /resource/:id       - Delete
+
+All requests include:
+- Authorization: Bearer {token}
+- X-Organization-Id: {org_id}
+
+================================================================================
+QUICK REFERENCE: DATABASE CORE TABLES
+================================================================================
+
+users              - User accounts
+organizations      - Student organizations/clubs
+terms              - Academic terms (Fall 2026, etc.)
+roles              - Role definitions
+permissions        - Permission keys
+role_permissions   - Role-permission mapping
+memberships        - User-org-term-role relationships
+
+tasks              - Task items
+task_assignments   - Task-user assignments
+
+events             - Event definitions
+event_registrations - Event sign-ups
+event_volunteers   - Volunteer assignments
+
+budgets            - Term budgets
+budget_categories  - Spending categories
+expenses           - Expense records
+reimbursements     - Reimbursement requests
+
+sponsors           - Sponsor companies
+sponsor_contacts   - Contact persons
+sponsor_interactions - Communication log
+
+campaigns          - Marketing campaigns
+posts              - Social media posts
+engagement_metrics - Post performance data
+
+================================================================================
+IMPLEMENTATION PRIORITY
+================================================================================
+
+WEEK 1-2:  Foundation (project setup, DB, auth)
+WEEK 3:    Global navigation and layout
+WEEK 4-5:  All 8 dashboard variants
+WEEK 6:    Tasks module
+WEEK 7:    Events module
+WEEK 8:    Members module
+WEEK 9:    Finance module
+WEEK 10-11: Sponsorship, Marketing, Documents, Settings
+WEEK 12:   Polish, testing, documentation
+
+================================================================================
+TECH STACK SUMMARY
+================================================================================
+
+Frontend: React + TypeScript + Vite + TailwindCSS + shadcn/ui
+Backend:  Node.js + Express + TypeScript + Prisma
+Database: PostgreSQL
+Auth:     JWT (access + refresh tokens)
+Hosting:  Vercel/Railway + Supabase/Railway PostgreSQL
+
+================================================================================

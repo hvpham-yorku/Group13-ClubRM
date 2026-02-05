@@ -1,0 +1,795 @@
+================================================================================
+                    CLUBRM - STUDENT ORGANIZATION CRM
+              PART 5: API ENDPOINTS & FRONTEND-BACKEND ARCHITECTURE
+================================================================================
+
+================================================================================
+1. FRONTEND-BACKEND CONNECTION OVERVIEW
+================================================================================
+
+ARCHITECTURE: REST API with JWT Authentication
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              FRONTEND (React)                                │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │   Pages/    │  │  Components │  │   Hooks     │  │   Context   │        │
+│  │   Views     │  │             │  │             │  │   (State)   │        │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘        │
+│         │                │                │                │               │
+│         └────────────────┴────────────────┴────────────────┘               │
+│                                   │                                         │
+│                          ┌────────▼────────┐                               │
+│                          │   API Service   │ (axios/fetch wrapper)         │
+│                          │   Layer         │                               │
+│                          └────────┬────────┘                               │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │ HTTP/HTTPS
+                                   │ (JSON + JWT)
+┌──────────────────────────────────┴──────────────────────────────────────────┐
+│                              BACKEND (Node.js/Express)                       │
+│                          ┌────────▼────────┐                               │
+│                          │   API Routes    │                               │
+│                          └────────┬────────┘                               │
+│                                   │                                         │
+│         ┌─────────────────────────┼─────────────────────────┐              │
+│         │                         │                         │              │
+│  ┌──────▼──────┐  ┌───────────────▼───────────────┐  ┌──────▼──────┐      │
+│  │ Auth        │  │      Permission               │  │ Validation  │      │
+│  │ Middleware  │  │      Middleware               │  │ Middleware  │      │
+│  └──────┬──────┘  └───────────────┬───────────────┘  └──────┬──────┘      │
+│         │                         │                         │              │
+│         └─────────────────────────┼─────────────────────────┘              │
+│                                   │                                         │
+│                          ┌────────▼────────┐                               │
+│                          │   Controllers   │                               │
+│                          └────────┬────────┘                               │
+│                                   │                                         │
+│                          ┌────────▼────────┐                               │
+│                          │    Services     │ (Business Logic)              │
+│                          └────────┬────────┘                               │
+│                                   │                                         │
+│                          ┌────────▼────────┐                               │
+│                          │   Repositories  │ (Data Access)                 │
+│                          └────────┬────────┘                               │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                          ┌────────▼────────┐
+                          │   PostgreSQL    │
+                          │   Database      │
+                          └─────────────────┘
+
+================================================================================
+2. AUTHENTICATION FLOW
+================================================================================
+
+LOGIN FLOW:
+1. User submits email/password
+2. Backend validates credentials
+3. Backend generates JWT (access token + refresh token)
+4. Frontend stores tokens (httpOnly cookie for refresh, memory for access)
+5. Frontend includes access token in Authorization header for all requests
+
+TOKEN STRUCTURE:
+{
+  "sub": "user_id",
+  "email": "user@example.com",
+  "org": "organization_id",
+  "term": "term_id",
+  "role": "role_id",
+  "permissions": ["tasks.read", "tasks.write", ...],
+  "iat": 1706745600,
+  "exp": 1706749200
+}
+
+API HEADERS (Every Request):
+Authorization: Bearer <access_token>
+X-Organization-Id: <organization_id>  (for multi-org users)
+X-Term-Id: <term_id>  (optional, defaults to active term)
+
+CONTEXT SWITCHING:
+- When user switches org/term, frontend calls POST /api/auth/switch-context
+- Backend issues new JWT with updated org/term/role/permissions
+- Frontend updates stored token and reloads dashboard
+
+================================================================================
+3. API ENDPOINT REFERENCE
+================================================================================
+
+BASE URL: /api/v1
+
+-------------------------------------------------------------------------------
+3.1 AUTHENTICATION ENDPOINTS
+-------------------------------------------------------------------------------
+
+POST /api/v1/auth/login
+  Request:  { email, password }
+  Response: { accessToken, refreshToken, user: { id, name, email, organizations } }
+  
+POST /api/v1/auth/logout
+  Request:  (none, uses refresh token cookie)
+  Response: { success: true }
+  
+POST /api/v1/auth/refresh
+  Request:  (uses refresh token cookie)
+  Response: { accessToken }
+  
+POST /api/v1/auth/switch-context
+  Request:  { organizationId, termId? }
+  Response: { accessToken, context: { organization, term, role, permissions } }
+  
+GET /api/v1/auth/me
+  Response: { user: { id, name, email, avatarUrl }, context: { org, term, role, permissions } }
+
+-------------------------------------------------------------------------------
+3.2 DASHBOARD ENDPOINTS
+-------------------------------------------------------------------------------
+
+GET /api/v1/dashboard/president
+  Permission: dashboard.view (President role)
+  Query: org_id, term_id
+  Response: {
+    healthScore: { score, members, events, budget, tasks },
+    budgetSnapshot: { total, spent, remaining, burnRate },
+    memberHealth: { active, total, inactiveWarnings },
+    upcomingEvents: [{ id, title, date, registrations }],
+    riskAlerts: [{ type, message, severity, entityId }],
+    approvalQueue: [{ type, id, title, submittedBy, submittedAt }]
+  }
+
+GET /api/v1/dashboard/internal
+  Permission: dashboard.view (VP Internal role)
+  Query: org_id, term_id
+  Response: {
+    overdueeTasks: [{ id, title, assignedTo, daysOverdue }],
+    upcomingTasks: { monday: [], tuesday: [], ... },
+    completionRate: { completed, total, percentage },
+    execEngagement: [{ userId, name, activityScore }],
+    onboardingStatus: [{ userId, name, progress, totalSteps }]
+  }
+
+GET /api/v1/dashboard/finance
+  Permission: budget.read
+  Query: org_id, term_id
+  Response: {
+    budgetRemaining: { total, spent, remaining, percentage },
+    burnRate: { current, target, status },
+    pendingReimbursements: [{ id, submittedBy, amount, description }],
+    spendByCategory: [{ category, amount, percentage }],
+    financeAlerts: [{ type, message, severity }]
+  }
+
+GET /api/v1/dashboard/events
+  Permission: events.read (VP Events role)
+  Query: org_id, term_id
+  Response: {
+    eventTimeline: [{ id, title, date, status }],
+    registrationHealth: [{ eventId, title, registered, capacity, percentage }],
+    volunteerCoverage: [{ eventId, title, filled, needed }],
+    eventRisks: [{ eventId, type, message, daysUntil }]
+  }
+
+GET /api/v1/dashboard/external
+  Permission: sponsors.read
+  Query: org_id, term_id
+  Response: {
+    pipeline: { lead, contacted, negotiating, closedWon, closedLost },
+    followupsDue: [{ sponsorId, companyName, daysSinceContact }],
+    expectedRevenue: { total, received, pending },
+    activePartners: [{ id, companyName, value }]
+  }
+
+GET /api/v1/dashboard/marketing
+  Permission: marketing.read
+  Query: org_id, term_id
+  Response: {
+    contentCalendar: [{ id, date, platform, preview }],
+    engagementTrend: { current, previous, changePercent },
+    promotionPerformance: [{ eventId, eventTitle, reach, engagement }],
+    contentApprovals: [{ id, type, preview, submittedAt }]
+  }
+
+GET /api/v1/dashboard/executive
+  Permission: dashboard.view
+  Query: org_id, term_id, user_id
+  Response: {
+    myTasks: [{ id, title, dueDate, isOverdue }],
+    myEvents: [{ id, title, date, role }],
+    announcements: [{ id, title, preview, priority, createdAt }]
+  }
+
+GET /api/v1/dashboard/admin
+  Permission: settings.manage
+  Response: {
+    systemUsage: { activeOrgs, activeUsers, growthOrgs, growthUsers },
+    permissionIssues: [{ orgId, orgName, issue }],
+    automationErrors: [{ type, message, occurredAt }]
+  }
+
+-------------------------------------------------------------------------------
+3.3 TASK ENDPOINTS
+-------------------------------------------------------------------------------
+
+GET /api/v1/tasks
+  Permission: tasks.read
+  Query: org_id, term_id, status?, assigned_to?, priority?, due_from?, due_to?, limit?, offset?
+  Response: { tasks: [...], total, hasMore }
+
+POST /api/v1/tasks
+  Permission: tasks.write
+  Request: { title, description?, priority?, dueDate?, assignedTo?: [] }
+  Response: { task: { id, ... } }
+
+GET /api/v1/tasks/:id
+  Permission: tasks.read
+  Response: { task: { id, title, description, status, priority, dueDate, assignments, createdBy } }
+
+PATCH /api/v1/tasks/:id
+  Permission: tasks.write
+  Request: { title?, description?, priority?, dueDate?, status? }
+  Response: { task: { ... } }
+
+DELETE /api/v1/tasks/:id
+  Permission: tasks.delete
+  Response: { success: true }
+
+PATCH /api/v1/tasks/:id/status
+  Permission: tasks.write
+  Request: { status: 'todo' | 'in_progress' | 'review' | 'done' }
+  Response: { task: { ... } }
+
+POST /api/v1/tasks/:id/assign
+  Permission: tasks.assign
+  Request: { userIds: [] }
+  Response: { task: { ... } }
+
+GET /api/v1/tasks/completion-rate
+  Permission: tasks.read
+  Query: org_id, term_id, period (week | month | term)
+  Response: { completed, total, percentage }
+
+-------------------------------------------------------------------------------
+3.4 EVENT ENDPOINTS
+-------------------------------------------------------------------------------
+
+GET /api/v1/events
+  Permission: events.read
+  Query: org_id, term_id, status?, from?, to?, limit?, offset?
+  Response: { events: [...], total, hasMore }
+
+POST /api/v1/events
+  Permission: events.write
+  Request: { title, description?, startTime, endTime, location?, capacity? }
+  Response: { event: { id, ... } }
+
+GET /api/v1/events/:id
+  Permission: events.read
+  Response: { event: { ..., registrations: count, volunteers: [] } }
+
+PATCH /api/v1/events/:id
+  Permission: events.write
+  Request: { title?, description?, startTime?, endTime?, location?, capacity? }
+  Response: { event: { ... } }
+
+DELETE /api/v1/events/:id
+  Permission: events.delete
+  Response: { success: true }
+
+PATCH /api/v1/events/:id/submit
+  Permission: events.write
+  Response: { event: { status: 'pending_approval' } }
+
+PATCH /api/v1/events/:id/approve
+  Permission: events.approve
+  Response: { event: { status: 'approved' } }
+
+POST /api/v1/events/:id/register
+  Permission: (any authenticated user)
+  Response: { registration: { id, eventId, userId } }
+
+DELETE /api/v1/events/:id/register
+  Permission: (own registration)
+  Response: { success: true }
+
+GET /api/v1/events/:id/registrations
+  Permission: events.read
+  Response: { registrations: [{ id, user: { name, email }, registeredAt, attended }] }
+
+POST /api/v1/events/:id/check-in
+  Permission: events.write
+  Request: { userId }
+  Response: { success: true }
+
+POST /api/v1/events/:id/volunteers
+  Permission: events.write
+  Request: { userId, role }
+  Response: { volunteer: { id, ... } }
+
+GET /api/v1/events/my-events
+  Permission: (authenticated)
+  Query: user_id
+  Response: { events: [{ ..., myRole: 'registered' | 'volunteer' }] }
+
+GET /api/v1/events/registration-summary
+  Permission: events.read
+  Query: org_id, term_id
+  Response: { events: [{ id, title, registered, capacity, percentage }] }
+
+GET /api/v1/events/risks
+  Permission: events.read
+  Query: org_id, term_id
+  Response: { risks: [{ eventId, eventTitle, type, message, severity }] }
+
+-------------------------------------------------------------------------------
+3.5 MEMBER ENDPOINTS
+-------------------------------------------------------------------------------
+
+GET /api/v1/members
+  Permission: members.read
+  Query: org_id, term_id, role?, status?, search?, limit?, offset?
+  Response: { members: [{ id, user: { name, email, avatarUrl }, role, status }], total }
+
+GET /api/v1/members/:id
+  Permission: members.read
+  Response: { member: { id, user, role, status, joinedAt, activity } }
+
+PATCH /api/v1/members/:id
+  Permission: members.write
+  Request: { status?, roleId? }
+  Response: { member: { ... } }
+
+POST /api/v1/members/invite
+  Permission: members.invite
+  Request: { email, roleId }
+  Response: { invitation: { id, email, status } }
+
+DELETE /api/v1/members/:id
+  Permission: members.remove
+  Response: { success: true }
+
+GET /api/v1/members/activity-summary
+  Permission: members.read
+  Query: org_id, term_id
+  Response: { active, total, ratio, inactiveMembers: [] }
+
+GET /api/v1/members/engagement
+  Permission: members.read
+  Query: org_id, term_id, role?, period
+  Response: { members: [{ id, name, activityScore, lastActive }] }
+
+-------------------------------------------------------------------------------
+3.6 FINANCE ENDPOINTS
+-------------------------------------------------------------------------------
+
+GET /api/v1/budget
+  Permission: budget.read
+  Query: org_id, term_id
+  Response: { budget: { id, total, spent, remaining, categories: [] } }
+
+PATCH /api/v1/budget
+  Permission: budget.write
+  Request: { totalAmount?, categories?: [] }
+  Response: { budget: { ... } }
+
+GET /api/v1/budget/summary
+  Permission: budget.read
+  Query: org_id, term_id
+  Response: { total, spent, remaining, percentage, burnRate }
+
+GET /api/v1/budget/by-category
+  Permission: budget.read
+  Query: org_id, term_id
+  Response: { categories: [{ name, allocated, spent, percentage }] }
+
+GET /api/v1/budget/burn-rate
+  Permission: budget.read
+  Query: org_id, term_id
+  Response: { current, target, status, projectedEndDate }
+
+GET /api/v1/budget/alerts
+  Permission: budget.read
+  Query: org_id, term_id
+  Response: { alerts: [{ type, message, severity, categoryId? }] }
+
+GET /api/v1/expenses
+  Permission: budget.read
+  Query: org_id, term_id, category?, status?, limit?, offset?
+  Response: { expenses: [...], total }
+
+POST /api/v1/expenses
+  Permission: budget.write
+  Request: { description, amount, categoryId }
+  Response: { expense: { id, ... } }
+
+PATCH /api/v1/expenses/:id/approve
+  Permission: budget.approve
+  Response: { expense: { status: 'approved' } }
+
+PATCH /api/v1/expenses/:id/deny
+  Permission: budget.approve
+  Request: { reason? }
+  Response: { expense: { status: 'denied' } }
+
+GET /api/v1/reimbursements
+  Permission: reimbursements.read
+  Query: org_id, status?, limit?, offset?
+  Response: { reimbursements: [...], total }
+
+POST /api/v1/reimbursements
+  Permission: reimbursements.write
+  Request: { expenseId, receiptUrl, notes? }
+  Response: { reimbursement: { id, ... } }
+
+PATCH /api/v1/reimbursements/:id/approve
+  Permission: reimbursements.approve
+  Response: { reimbursement: { status: 'approved' } }
+
+PATCH /api/v1/reimbursements/:id/deny
+  Permission: reimbursements.approve
+  Request: { reason? }
+  Response: { reimbursement: { status: 'denied' } }
+
+PATCH /api/v1/reimbursements/:id/mark-paid
+  Permission: reimbursements.approve
+  Response: { reimbursement: { status: 'paid' } }
+
+-------------------------------------------------------------------------------
+3.7 SPONSOR ENDPOINTS
+-------------------------------------------------------------------------------
+
+GET /api/v1/sponsors
+  Permission: sponsors.read
+  Query: org_id, term_id, status?, limit?, offset?
+  Response: { sponsors: [...], total }
+
+POST /api/v1/sponsors
+  Permission: sponsors.write
+  Request: { companyName, value?, notes?, contacts?: [] }
+  Response: { sponsor: { id, ... } }
+
+GET /api/v1/sponsors/:id
+  Permission: sponsors.read
+  Response: { sponsor: { ..., contacts: [], recentInteractions: [] } }
+
+PATCH /api/v1/sponsors/:id
+  Permission: sponsors.write
+  Request: { companyName?, value?, status?, notes? }
+  Response: { sponsor: { ... } }
+
+DELETE /api/v1/sponsors/:id
+  Permission: sponsors.delete
+  Response: { success: true }
+
+GET /api/v1/sponsors/pipeline-summary
+  Permission: sponsors.read
+  Query: org_id, term_id
+  Response: { lead, contacted, negotiating, closedWon, closedLost }
+
+GET /api/v1/sponsors/followups-due
+  Permission: sponsors.read
+  Query: org_id, term_id
+  Response: { sponsors: [{ id, companyName, daysSinceContact, lastContactType }] }
+
+GET /api/v1/sponsors/revenue-summary
+  Permission: sponsors.read
+  Query: org_id, term_id
+  Response: { expected, received, pending }
+
+POST /api/v1/sponsors/:id/contacts
+  Permission: sponsors.write
+  Request: { name, email?, phone?, role?, isPrimary? }
+  Response: { contact: { id, ... } }
+
+POST /api/v1/sponsors/:id/interactions
+  Permission: sponsors.write
+  Request: { type, content, occurredAt? }
+  Response: { interaction: { id, ... } }
+
+-------------------------------------------------------------------------------
+3.8 MARKETING ENDPOINTS
+-------------------------------------------------------------------------------
+
+GET /api/v1/campaigns
+  Permission: marketing.read
+  Query: org_id, term_id, status?
+  Response: { campaigns: [...] }
+
+POST /api/v1/campaigns
+  Permission: marketing.write
+  Request: { title, startDate?, endDate? }
+  Response: { campaign: { id, ... } }
+
+GET /api/v1/posts
+  Permission: marketing.read
+  Query: org_id, campaign_id?, platform?, status?, scheduled_from?, scheduled_to?
+  Response: { posts: [...] }
+
+POST /api/v1/posts
+  Permission: marketing.write
+  Request: { platform, content, mediaUrls?, scheduledAt?, campaignId? }
+  Response: { post: { id, ... } }
+
+PATCH /api/v1/posts/:id
+  Permission: marketing.write
+  Request: { content?, mediaUrls?, scheduledAt? }
+  Response: { post: { ... } }
+
+PATCH /api/v1/posts/:id/submit
+  Permission: marketing.write
+  Response: { post: { status: 'pending_approval' } }
+
+PATCH /api/v1/posts/:id/approve
+  Permission: marketing.approve
+  Response: { post: { status: 'approved' } }
+
+GET /api/v1/engagement/trend
+  Permission: marketing.read
+  Query: org_id, period (week | month)
+  Response: { current, previous, changePercent, dataPoints: [] }
+
+-------------------------------------------------------------------------------
+3.9 UTILITY ENDPOINTS
+-------------------------------------------------------------------------------
+
+GET /api/v1/search
+  Permission: (authenticated)
+  Query: q, scope? (all | events | members | tasks | sponsors | documents)
+  Response: { results: [{ type, id, title, preview }] }
+
+GET /api/v1/notifications
+  Permission: (authenticated)
+  Query: user_id, unread_only?, limit?
+  Response: { notifications: [...], unreadCount }
+
+PATCH /api/v1/notifications/:id/read
+  Permission: (own notification)
+  Response: { success: true }
+
+PATCH /api/v1/notifications/read-all
+  Permission: (authenticated)
+  Response: { success: true }
+
+GET /api/v1/announcements
+  Permission: (authenticated)
+  Query: org_id, limit?
+  Response: { announcements: [...] }
+
+POST /api/v1/announcements
+  Permission: members.write
+  Request: { title, content, priority?, expiresAt? }
+  Response: { announcement: { id, ... } }
+
+GET /api/v1/documents
+  Permission: (authenticated)
+  Query: org_id, folder?
+  Response: { documents: [...], folders: [] }
+
+POST /api/v1/documents/upload
+  Permission: (authenticated)
+  Request: (multipart/form-data) { file, folder? }
+  Response: { document: { id, filename, fileUrl } }
+
+DELETE /api/v1/documents/:id
+  Permission: (uploader or admin)
+  Response: { success: true }
+
+-------------------------------------------------------------------------------
+3.10 SETTINGS ENDPOINTS (Admin Only)
+-------------------------------------------------------------------------------
+
+GET /api/v1/settings/organization/:org_id
+  Permission: settings.manage
+  Response: { organization: { name, school, logoUrl, primaryColor, activeTerm } }
+
+PATCH /api/v1/settings/organization/:org_id
+  Permission: settings.manage
+  Request: { name?, school?, logoUrl?, primaryColor? }
+  Response: { organization: { ... } }
+
+GET /api/v1/settings/roles
+  Permission: settings.manage
+  Response: { roles: [{ id, name, description, permissions }] }
+
+POST /api/v1/settings/roles
+  Permission: settings.manage
+  Request: { name, description?, permissionIds: [] }
+  Response: { role: { id, ... } }
+
+PATCH /api/v1/settings/roles/:id
+  Permission: settings.manage
+  Request: { name?, description?, permissionIds?: [] }
+  Response: { role: { ... } }
+
+GET /api/v1/settings/audit
+  Permission: audit.view
+  Query: org_id, from?, to?, user_id?, entity_type?, limit?
+  Response: { logs: [...], total }
+
+-------------------------------------------------------------------------------
+3.11 REPORTS ENDPOINTS
+-------------------------------------------------------------------------------
+
+GET /api/v1/reports/membership
+  Permission: reports.read
+  Query: org_id, term_id
+  Response: { total, active, new, churned, growthChart: [], retentionChart: [] }
+
+GET /api/v1/reports/events
+  Permission: reports.read
+  Query: org_id, term_id
+  Response: { totalEvents, avgAttendance, feedbackScore, eventBreakdown: [] }
+
+GET /api/v1/reports/finance
+  Permission: reports.read
+  Query: org_id, term_id
+  Response: { budgetVsActual: [], categoryBreakdown: [], monthlySpend: [] }
+
+GET /api/v1/reports/engagement
+  Permission: reports.read
+  Query: org_id, term_id
+  Response: { platformMetrics: [], topPosts: [], trendChart: [] }
+
+GET /api/v1/reports/export
+  Permission: reports.export
+  Query: type (membership | events | finance | engagement), format (csv | pdf)
+  Response: (file download)
+
+================================================================================
+4. ERROR HANDLING
+================================================================================
+
+STANDARD ERROR RESPONSE:
+{
+  "error": {
+    "code": "PERMISSION_DENIED",
+    "message": "You do not have permission to perform this action",
+    "details": {}
+  }
+}
+
+ERROR CODES:
+- UNAUTHORIZED (401): Missing or invalid token
+- PERMISSION_DENIED (403): Valid token but insufficient permissions
+- NOT_FOUND (404): Resource not found
+- VALIDATION_ERROR (400): Invalid request data
+- CONFLICT (409): Resource conflict (duplicate, etc.)
+- RATE_LIMITED (429): Too many requests
+- SERVER_ERROR (500): Internal server error
+
+================================================================================
+5. FRONTEND SERVICE LAYER
+================================================================================
+
+API SERVICE (axios wrapper):
+
+// services/api.ts
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: process.env.REACT_APP_API_URL,
+  headers: { 'Content-Type': 'application/json' }
+});
+
+// Request interceptor - add auth token
+api.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  const context = getContext();
+  if (context.organizationId) {
+    config.headers['X-Organization-Id'] = context.organizationId;
+  }
+  return config;
+});
+
+// Response interceptor - handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      const refreshed = await refreshToken();
+      if (refreshed) {
+        return api.request(error.config);
+      }
+      logout();
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+
+DASHBOARD SERVICE:
+
+// services/dashboardService.ts
+import api from './api';
+
+export const dashboardService = {
+  getPresidentDashboard: (orgId: string, termId: string) =>
+    api.get(`/dashboard/president`, { params: { org_id: orgId, term_id: termId } }),
+    
+  getInternalDashboard: (orgId: string, termId: string) =>
+    api.get(`/dashboard/internal`, { params: { org_id: orgId, term_id: termId } }),
+    
+  getFinanceDashboard: (orgId: string, termId: string) =>
+    api.get(`/dashboard/finance`, { params: { org_id: orgId, term_id: termId } }),
+    
+  // ... other dashboard methods
+};
+
+REACT QUERY HOOKS:
+
+// hooks/useDashboard.ts
+import { useQuery } from '@tanstack/react-query';
+import { dashboardService } from '../services/dashboardService';
+import { useAuth } from './useAuth';
+
+export const usePresidentDashboard = () => {
+  const { context } = useAuth();
+  
+  return useQuery({
+    queryKey: ['dashboard', 'president', context.organizationId, context.termId],
+    queryFn: () => dashboardService.getPresidentDashboard(
+      context.organizationId,
+      context.termId
+    ),
+    staleTime: 60000, // 1 minute
+    refetchInterval: 60000, // Auto-refresh every minute
+  });
+};
+
+================================================================================
+6. REAL-TIME UPDATES (WebSocket)
+================================================================================
+
+WEBSOCKET EVENTS:
+
+Connection: ws://api.clubrm.com/ws?token={jwt}
+
+SERVER -> CLIENT EVENTS:
+- notification:new - New notification
+- task:updated - Task status changed
+- event:updated - Event status changed
+- approval:new - New approval needed
+- member:joined - New member joined org
+
+CLIENT -> SERVER EVENTS:
+- subscribe:org - Subscribe to org updates
+- unsubscribe:org - Unsubscribe from org
+- ping - Keep alive
+
+FRONTEND INTEGRATION:
+
+// hooks/useWebSocket.ts
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
+export const useWebSocket = () => {
+  const queryClient = useQueryClient();
+  const { token, context } = useAuth();
+  
+  useEffect(() => {
+    const ws = new WebSocket(`${WS_URL}?token=${token}`);
+    
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'subscribe:org', orgId: context.organizationId }));
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      switch (data.type) {
+        case 'notification:new':
+          queryClient.invalidateQueries(['notifications']);
+          break;
+        case 'task:updated':
+          queryClient.invalidateQueries(['tasks']);
+          queryClient.invalidateQueries(['dashboard']);
+          break;
+        // ... handle other events
+      }
+    };
+    
+    return () => ws.close();
+  }, [token, context.organizationId]);
+};

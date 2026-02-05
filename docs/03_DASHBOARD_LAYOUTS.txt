@@ -1,0 +1,437 @@
+================================================================================
+                    CLUBRM - STUDENT ORGANIZATION CRM
+                   PART 3: ROLE-SPECIFIC DASHBOARD LAYOUTS
+================================================================================
+
+================================================================================
+1. PRESIDENT DASHBOARD - "Organization Health View"
+================================================================================
+
+PURPOSE: "Is the org okay? What needs my attention?"
+
+LAYOUT:
+┌─────────────────────────────────────────────────────────────────┐
+│                    Org Health Score (82%)                       │ ← Full width
+│         [Members: ✓] [Events: ✓] [Budget: ⚠️] [Tasks: ✓]         │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│     💰 Budget Status         │ │      👥 Member Health           │
+│   Remaining: $12,400 (68%)  │ │   Active: 45/52 (87%)           │
+│   Burn Rate: $2,100/mo      │ │   Inactive Warning: 7 members   │
+└─────────────────────────────┘ └─────────────────────────────────┘
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│   📅 Upcoming Events (3)     │ │      ⚠️ Risks & Alerts          │
+│   • Tech Talk - Feb 10      │ │   • Budget cap approaching      │
+│   • Workshop - Feb 15       │ │   • 2 tasks overdue             │
+│   • Social - Feb 20         │ │   • Event venue unconfirmed     │
+└─────────────────────────────┘ └─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                  📋 Pending Approvals (4)                        │ ← Full width
+│   [Event: Hackathon] [Reimb: $250] [Post: IG Story] [Budget+]   │
+└─────────────────────────────────────────────────────────────────┘
+
+WIDGETS (6):
+1. org_health_summary (full-width)
+   - Composite score calculated from: active_members%, events_on_track%, budget_health%, tasks_completed%
+   - Color indicators: green (>80), amber (60-80), red (<60)
+   - API: GET /api/dashboard/health-score
+
+2. budget_snapshot (half-width)
+   - Shows: total, spent, remaining, percentage
+   - Burn rate calculation: spent / months_elapsed
+   - API: GET /api/budget/summary
+
+3. member_activity_ratio (half-width)
+   - Active vs total members
+   - Inactive threshold: no activity in 14 days
+   - API: GET /api/members/activity-summary
+
+4. upcoming_events (half-width)
+   - Next 14 days of events
+   - Shows: title, date, registration count
+   - Max 5 items
+   - API: GET /api/events?from=today&to=+14days&limit=5
+
+5. risk_alerts (half-width)
+   - Aggregated warnings from all systems
+   - Types: budget_warning, task_overdue, event_risk, low_attendance
+   - Sorted by severity
+   - API: GET /api/alerts?severity=high,medium
+
+6. approval_queue (full-width)
+   - Pending items needing president approval
+   - Types: events, reimbursements, posts, budget_changes
+   - Shows: type, title, submitted_by, submitted_at
+   - API: GET /api/approvals/pending
+
+================================================================================
+2. VP INTERNAL / OPERATIONS DASHBOARD - "Execution Control"
+================================================================================
+
+PURPOSE: "What's falling behind? Who needs help?"
+
+LAYOUT:
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│   🔴 Overdue Tasks (5)       │ │     📋 Due This Week (12)       │
+│   • Budget report - 3 days  │ │     • Monday: 2 tasks           │
+│   • Venue booking - 1 day   │ │     • Wednesday: 5 tasks        │
+│   • ... [View All]          │ │     • Friday: 5 tasks           │
+└─────────────────────────────┘ └─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│              📊 Team Task Completion Rate (This Week)            │ ← Full width
+│   ████████████████░░░░ 78% (42/54 completed)                    │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│   🔥 Exec Activity Heatmap   │ │    🆕 Onboarding Progress       │
+│   [Visual: Last 7 days]     │ │   • Sarah: 3/5 steps ████░      │
+│   Most Active: VP Events    │ │   • Mike: 5/5 steps █████       │
+│   Least Active: VP Finance  │ │   • Alex: 1/5 steps █░░░░       │
+└─────────────────────────────┘ └─────────────────────────────────┘
+
+WIDGETS (5):
+1. tasks_overdue (half-width)
+   - Filter: status != 'done' AND due_date < NOW()
+   - Shows: title, assigned_to, days_overdue
+   - Sorted by days_overdue DESC
+   - API: GET /api/tasks?status=overdue&limit=10
+
+2. tasks_upcoming (half-width)
+   - Filter: due_date BETWEEN NOW() AND +7days
+   - Grouped by day
+   - API: GET /api/tasks?due_from=today&due_to=+7days
+
+3. completion_rate (full-width)
+   - Calculation: completed_this_week / total_due_this_week * 100
+   - Progress bar visualization
+   - API: GET /api/tasks/completion-rate?period=week
+
+4. exec_engagement (half-width)
+   - Activity heatmap per exec member
+   - Metrics: tasks_completed, logins, updates
+   - Highlights most/least active
+   - API: GET /api/members/engagement?role=executive&period=7days
+
+5. onboarding_status (half-width)
+   - New members (joined < 30 days)
+   - Onboarding checklist progress
+   - API: GET /api/members/onboarding-status
+
+================================================================================
+3. VP FINANCE DASHBOARD - "Financial Risk & Flow"
+================================================================================
+
+PURPOSE: "Are we overspending? What needs approval?"
+
+LAYOUT:
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│    💰 Budget Remaining       │ │      📉 Burn Rate               │
+│       $12,400 / $18,000     │ │     $2,100/month                │
+│       ████████████░░░░ 68%  │ │     ⚠️ Above target ($1,800)    │
+└─────────────────────────────┘ └─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                 🧾 Pending Reimbursements (3)                    │ ← Full width
+│   • John - $145 - Food for event - [Approve] [Deny]             │
+│   • Sarah - $89 - Supplies - [Approve] [Deny]                   │
+│   • Mike - $250 - Venue deposit - [Approve] [Deny]              │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│  📊 Spending by Category     │ │     ⚠️ Budget Violations        │
+│   Events: 45% ████████░░    │ │   • Marketing over by $200      │
+│   Marketing: 25% █████░░░░  │ │   • Events approaching limit    │
+│   Operations: 20% ████░░░░  │ │                                 │
+│   Other: 10% ██░░░░░░░░     │ │                                 │
+└─────────────────────────────┘ └─────────────────────────────────┘
+
+WIDGETS (5):
+1. budget_remaining (half-width)
+   - Shows: total_budget, spent, remaining, percentage
+   - Color: green (>50%), amber (25-50%), red (<25%)
+   - API: GET /api/budget/summary
+
+2. budget_burn_rate (half-width)
+   - Calculation: total_spent / months_elapsed
+   - Comparison to projected monthly budget
+   - Warning if exceeding target
+   - API: GET /api/budget/burn-rate
+
+3. reimbursements_pending (full-width)
+   - List of pending reimbursements
+   - Inline approve/deny actions
+   - Shows: submitted_by, amount, description, receipt_preview
+   - API: GET /api/reimbursements?status=pending
+
+4. spend_by_category (half-width)
+   - Pie chart or bar chart
+   - Categories: Events, Marketing, Operations, Other
+   - API: GET /api/budget/by-category
+
+5. finance_alerts (half-width)
+   - Budget violations and warnings
+   - Types: over_budget, approaching_limit, unusual_spending
+   - API: GET /api/budget/alerts
+
+================================================================================
+4. VP EVENTS DASHBOARD - "Delivery & Readiness"
+================================================================================
+
+PURPOSE: "Are events on track? What's at risk?"
+
+LAYOUT:
+┌─────────────────────────────────────────────────────────────────┐
+│               📅 Event Timeline (Next 30 Days)                   │ ← Full width
+│   ●──────●─────────●────────────●                               │
+│  Feb 10  Feb 15    Feb 20      Mar 1                            │
+│  Tech    Workshop  Social      Hackathon                        │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│  🎟️ Registration vs Capacity │ │    👥 Volunteer Coverage        │
+│   Tech Talk: 45/50 (90%)    │ │   Tech Talk: 5/5 ✓              │
+│   Workshop: 12/30 (40%) ⚠️   │ │   Workshop: 2/4 ⚠️              │
+│   Social: 80/100 (80%)      │ │   Social: 8/8 ✓                 │
+└─────────────────────────────┘ └─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    🚨 Event Risk Flags (2)                       │ ← Full width
+│   • Workshop: Low registrations (40%) - 5 days until event      │
+│   • Hackathon: Venue not confirmed - 20 days until event        │
+└─────────────────────────────────────────────────────────────────┘
+
+WIDGETS (4):
+1. event_timeline (full-width)
+   - Visual timeline of next 30 days
+   - Shows event dots on timeline
+   - Click to view event details
+   - API: GET /api/events?from=today&to=+30days
+
+2. registration_health (half-width)
+   - Each upcoming event's registration vs capacity
+   - Warning if <50% capacity with <7 days to go
+   - API: GET /api/events/registration-summary
+
+3. volunteer_coverage (half-width)
+   - Volunteer slots filled vs needed
+   - Warning for unfilled slots
+   - API: GET /api/events/volunteer-summary
+
+4. event_risks (full-width)
+   - Aggregated event issues
+   - Types: low_registration, venue_unconfirmed, missing_volunteers, budget_not_approved
+   - API: GET /api/events/risks
+
+================================================================================
+5. VP EXTERNAL / SPONSORSHIP DASHBOARD - "Pipeline View"
+================================================================================
+
+PURPOSE: "Who owes us a response or money?"
+
+LAYOUT:
+┌─────────────────────────────────────────────────────────────────┐
+│                   🤝 Sponsorship Pipeline                        │ ← Full width
+│   Lead (5) → Contacted (3) → Negotiating (2) → Closed (8)       │
+│    ●●●●●       ●●●            ●●              ●●●●●●●●          │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│   ⏳ Follow-Ups Due (4)      │ │    💵 Expected Revenue          │
+│   • TechCorp - 2 days ago   │ │   This Term: $15,000            │
+│   • StartupXYZ - Today      │ │   Received: $8,500 (57%)        │
+│   • BigBank - Tomorrow      │ │   Pending: $6,500               │
+│   [View All]                │ │                                 │
+└─────────────────────────────┘ └─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                   🏷️ Active Partners (8)                         │ ← Full width
+│   [TechCorp $5k] [BigBank $3k] [StartupXYZ $2k] [+5 more]       │
+└─────────────────────────────────────────────────────────────────┘
+
+WIDGETS (4):
+1. sponsor_pipeline (full-width)
+   - Kanban-style stage visualization
+   - Stages: lead, contacted, negotiating, closed_won, closed_lost
+   - Count per stage
+   - API: GET /api/sponsors/pipeline-summary
+
+2. followups_due (half-width)
+   - Sponsors needing follow-up
+   - Based on last_interaction_date + follow_up_interval
+   - Sorted by urgency
+   - API: GET /api/sponsors/followups-due
+
+3. expected_revenue (half-width)
+   - Total expected from closed + negotiating
+   - Amount received vs pending
+   - API: GET /api/sponsors/revenue-summary
+
+4. active_partners (full-width)
+   - Current term's closed sponsors
+   - Shows: company_name, value
+   - Chip/tag style display
+   - API: GET /api/sponsors?status=closed_won&term=current
+
+================================================================================
+6. MARKETING / COMMUNICATIONS DASHBOARD - "Engagement View"
+================================================================================
+
+PURPOSE: "Is anyone paying attention?"
+
+LAYOUT:
+┌─────────────────────────────────────────────────────────────────┐
+│               📅 Content Calendar (Next 7 Days)                  │ ← Full width
+│   Mon: IG Post (Event promo)                                    │
+│   Wed: Newsletter                                               │
+│   Fri: IG Story + LinkedIn post                                 │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│   📈 Engagement Trend        │ │   🎟️ Event Promo Performance    │
+│   This Week: ↑ 15%          │ │   Tech Talk post: 245 reach    │
+│   [Sparkline chart]         │ │   Workshop post: 89 reach ⚠️    │
+│   Avg: 2.4% engagement      │ │   Social post: 312 reach       │
+└─────────────────────────────┘ └─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                  📋 Pending Approvals (2)                        │ ← Full width
+│   • IG Post draft - Event promo - [Preview] [Approve]           │
+│   • Newsletter - February update - [Preview] [Approve]          │
+└─────────────────────────────────────────────────────────────────┘
+
+WIDGETS (4):
+1. content_calendar (full-width)
+   - Next 7 days of scheduled posts
+   - Shows: date, platform icon, content preview
+   - API: GET /api/posts?scheduled_from=today&scheduled_to=+7days
+
+2. engagement_trend (half-width)
+   - Week-over-week engagement comparison
+   - Sparkline visualization
+   - Average engagement rate
+   - API: GET /api/engagement/trend?period=week
+
+3. promotion_performance (half-width)
+   - Event-specific post performance
+   - Shows: event_name, reach, engagement
+   - Warning for low-performing posts
+   - API: GET /api/posts/event-performance
+
+4. content_approvals (full-width)
+   - Pending content needing approval
+   - Preview and approve inline
+   - API: GET /api/posts?status=pending_approval
+
+================================================================================
+7. GENERAL EXECUTIVE DASHBOARD - "Personal Action View"
+================================================================================
+
+PURPOSE: "What do I need to do?"
+
+LAYOUT (Simplified - Single Column Focus):
+┌─────────────────────────────────────────────────────────────────┐
+│                ✅ My Tasks (3 due, 1 overdue)                    │ ← Full width
+│   🔴 Submit event feedback - 2 days overdue                      │
+│   • Help with venue setup - Due tomorrow                        │
+│   • Review workshop slides - Due in 3 days                      │
+│   • Send volunteer confirmation - Due in 5 days                 │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                   📅 My Assigned Events (2)                      │ ← Full width
+│   • Tech Talk (Feb 10) - Volunteer: Check-in desk               │
+│   • Social Night (Feb 20) - Volunteer: Setup crew               │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      📣 Announcements (3)                        │ ← Full width
+│   • New: Exec meeting moved to Thursday                         │
+│   • Budget deadline extended                                    │
+│   • Social event theme voting open                              │
+└─────────────────────────────────────────────────────────────────┘
+
+WIDGETS (3):
+1. my_tasks (full-width)
+   - Filter: assigned_to = current_user
+   - Sorted by due_date, overdue first
+   - API: GET /api/tasks?assigned_to=me&status=!done
+
+2. my_events (full-width)
+   - Events where user is registered or volunteering
+   - Shows: event_title, date, role
+   - API: GET /api/events/my-events
+
+3. announcements (full-width)
+   - Organization announcements
+   - Sorted by created_at DESC
+   - Shows: title, preview, priority indicator
+   - API: GET /api/announcements?limit=5
+
+================================================================================
+8. ADMINISTRATOR DASHBOARD - "System Oversight"
+================================================================================
+
+PURPOSE: "Is the system behaving?"
+
+LAYOUT:
+┌─────────────────────────────┐ ┌─────────────────────────────────┐
+│    🏢 Active Organizations   │ │      👤 Active Users            │
+│          12 orgs            │ │        156 users                │
+│     +2 this month           │ │      +23 this month             │
+└─────────────────────────────┘ └─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                  ⚠️ Permission Conflicts (2)                     │ ← Full width
+│   • Org: TechClub - User has conflicting roles                  │
+│   • Org: FinanceClub - Missing VP Finance assignment            │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                   🤖 Automation Errors (1)                       │ ← Full width
+│   • Email automation failed - SMTP timeout - 2 hours ago        │
+└─────────────────────────────────────────────────────────────────┘
+
+WIDGETS (4):
+1. system_usage (half-width each, 2 cards)
+   - Active organizations count + growth
+   - Active users count + growth
+   - API: GET /api/admin/system-stats
+
+2. permission_issues (full-width)
+   - Role conflicts, missing assignments
+   - API: GET /api/admin/permission-issues
+
+3. automation_failures (full-width)
+   - Recent automation/job failures
+   - Email failures, scheduled task errors
+   - API: GET /api/admin/automation-errors
+
+================================================================================
+9. WIDGET COMPONENT SPECIFICATIONS
+================================================================================
+
+STANDARD WIDGET STRUCTURE:
+┌─────────────────────────────────────────┐
+│ [Icon] Widget Title        [Actions ⋮] │ ← Header (48px)
+├─────────────────────────────────────────┤
+│                                         │
+│           Widget Content                │ ← Body (variable)
+│                                         │
+├─────────────────────────────────────────┤
+│ [View All →]                            │ ← Footer (optional, 40px)
+└─────────────────────────────────────────┘
+
+WIDGET PROPS INTERFACE:
+interface WidgetProps {
+  title: string;
+  icon?: IconName;
+  isLoading: boolean;
+  error?: string;
+  actions?: WidgetAction[];
+  footerLink?: { label: string; href: string };
+  children: React.ReactNode;
+}
+
+LOADING STATE:
+- Skeleton loader matching content shape
+- 300ms minimum display to prevent flash
+
+ERROR STATE:
+- Red border
+- Error message with retry button
+
+EMPTY STATE:
+- Illustration + helpful message
+- Call-to-action if applicable
+
+REFRESH BEHAVIOR:
+- Auto-refresh every 60 seconds (configurable per widget)
+- Manual refresh via action menu
+- Show "Updated X seconds ago" in footer
