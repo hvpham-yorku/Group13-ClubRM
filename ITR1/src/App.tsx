@@ -1,32 +1,53 @@
-import React from 'react';
+import React from 'react'
+import { Routes, Route } from 'react-router-dom'
+import { SidebarProvider } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/layout/sidebar"
+import { TopBar } from "@/components/layout/topbar"
 
-export default function App() {
-  return (
-    <div style={{ 
-      height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      fontFamily: 'sans-serif',
-      backgroundColor: '#0a0a0a',
-      color: 'white'
-    }}>
-      <img src="/logo.webp" alt="Logo" style={{ height: '80px', marginBottom: '20px' }} />
-      <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>ClubRM</h1>
-      <p style={{ color: '#888' }}>Iteration 1: Project Foundation</p>
-      <div style={{ 
-        marginTop: '2rem', 
-        padding: '1.5rem', 
-        border: '1px solid #333', 
-        borderRadius: '12px',
-        backgroundColor: '#111'
-      }}>
-        <h2 style={{ color: '#10b981' }}>Build Successful! ✅</h2>
-        <p style={{ fontSize: '0.875rem', color: '#888' }}>
-          Vite is correctly serving this project foundation.
-        </p>
-      </div>
+const DashboardPlaceholder = () => (
+  <div className="flex flex-col items-center justify-center h-full border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground gap-4">
+    <div className="p-4 bg-muted rounded-full">
+      <span className="text-2xl">📁</span>
     </div>
-  );
+    <div className="text-center">
+       <h3 className="font-semibold text-lg">Layout Shell Loaded</h3>
+       <p className="text-sm text-muted-foreground">The Dashboard widgets will be added in Stage 03.</p>
+    </div>
+  </div>
+);
+
+function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar />
+        <main className="flex-1 flex flex-col h-screen overflow-hidden">
+          <TopBar />
+          <div className="flex-1 overflow-auto bg-background p-4">
+            {children}
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
+  )
 }
+
+function App() {
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<DashboardPlaceholder />} />
+        <Route path="*" element={
+          <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
+            <div className="text-center">
+               <h3 className="font-semibold text-lg">Module Under Construction</h3>
+               <p className="text-sm">Page implemented by fellow teammates in later iterations.</p>
+            </div>
+          </div>
+        } />
+      </Routes>
+    </Layout>
+  )
+}
+
+export default App
