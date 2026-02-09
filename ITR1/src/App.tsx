@@ -3,18 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
-
-const DashboardPlaceholder = () => (
-  <div className="flex flex-col items-center justify-center h-full border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground gap-4">
-    <div className="p-4 bg-muted rounded-full">
-      <span className="text-2xl">📁</span>
-    </div>
-    <div className="text-center">
-       <h3 className="font-semibold text-lg">Layout Shell Loaded</h3>
-       <p className="text-sm text-muted-foreground">The Dashboard widgets will be added in Stage 03.</p>
-    </div>
-  </div>
-);
+import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard"
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -36,12 +25,16 @@ function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<DashboardPlaceholder />} />
+        <Route path="/" element={<PresidentDashboard />} />
+        {/* Placeholder for other routes */}
         <Route path="*" element={
           <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
+            <div className="p-4 bg-muted rounded-full">
+              <span className="text-2xl">⏳</span>
+            </div>
             <div className="text-center">
                <h3 className="font-semibold text-lg">Module Under Construction</h3>
-               <p className="text-sm">Page implemented by fellow teammates in later iterations.</p>
+               <p className="text-sm">This page is currently being implemented as per documentation...</p>
             </div>
           </div>
         } />
