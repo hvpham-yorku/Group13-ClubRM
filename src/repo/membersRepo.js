@@ -1,4 +1,4 @@
-import { members } from "../data/membersStub";
+import { members } from "../data/membersStub.js";
 
 export function getMembers() {
   return members;
