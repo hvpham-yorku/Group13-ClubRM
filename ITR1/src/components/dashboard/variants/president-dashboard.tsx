@@ -3,6 +3,18 @@ import { Widget } from "../widget";
 import { ProgressBar } from "../progress-bar";
 import { DashboardList, DashboardListItem } from "../dashboard-list";
 import { Users, Calendar, AlertTriangle, CheckCircle, Activity } from "lucide-react";
+import { calculateHealthScore, calculateBudgetPercentage, type OrgStats } from "@/lib/dashboard-logic";
+
+const MOCK_STATS: OrgStats = {
+  members: 52,
+  activeMembers: 42,
+  totalBudget: 18000,
+  spentBudget: 5600,
+  onTrackEvents: 4,
+  totalEvents: 5,
+  completedTasks: 18,
+  totalTasks: 22,
+};
 
 export function PresidentDashboard() {
   return (
@@ -10,24 +22,24 @@ export function PresidentDashboard() {
       {/* Row 1: Key Metrics */}
       <StatCard
         title="Org Health Score"
-        value="88/100"
+        value={`${calculateHealthScore(MOCK_STATS)}/100`}
         trend={{ value: 5, label: "vs last month" }}
         icon={<Activity className="h-5 w-5" />}
       />
       <StatCard
         title="Active Members"
-        value="42"
-        description="80% of total roster"
+        value={MOCK_STATS.activeMembers.toString()}
+        description={`${Math.round((MOCK_STATS.activeMembers / MOCK_STATS.members) * 100)}% of total roster`}
         trend={{ value: 12, label: "new this term" }}
         icon={<Users className="h-5 w-5" />}
       />
       <Widget title="Budget Remaining">
         <div className="space-y-4">
-          <div className="text-3xl font-bold">$12,400</div>
+          <div className="text-3xl font-bold">${(MOCK_STATS.totalBudget - MOCK_STATS.spentBudget).toLocaleString()}</div>
           <ProgressBar
-            value={68}
-            label="Total Spent: $5,600"
-            subLabel="68% remaining"
+            value={calculateBudgetPercentage(MOCK_STATS.totalBudget, MOCK_STATS.spentBudget)}
+            label={`Total Spent: $${MOCK_STATS.spentBudget.toLocaleString()}`}
+            subLabel={`${calculateBudgetPercentage(MOCK_STATS.totalBudget, MOCK_STATS.spentBudget)}% remaining`}
             color="pink"
           />
         </div>
