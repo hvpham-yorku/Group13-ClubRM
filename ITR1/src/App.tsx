@@ -4,6 +4,8 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
 import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard"
+// Adding the task page
+import { TasksPage } from "./components/tasks/TaskPage"
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -26,7 +28,11 @@ function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<PresidentDashboard />} />
-        {/* Placeholder for other routes */}
+        
+        {/* Creating the task route */}
+        <Route path="/tasks" element={<TasksPage />} />
+
+        {/* Placeholder  */}
         <Route path="*" element={
           <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
             <div className="p-4 bg-muted rounded-full">
