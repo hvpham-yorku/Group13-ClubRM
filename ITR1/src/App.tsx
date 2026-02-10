@@ -1,9 +1,10 @@
-import React from 'react'
-import { Routes, Route } from 'react-router-dom'
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/layout/sidebar"
-import { TopBar } from "@/components/layout/topbar"
-import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard"
+import MembersPage from "@/components/members/MembersPage";
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/layout/sidebar";
+import { TopBar } from "@/components/layout/topbar";
+import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard";
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,7 +19,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </SidebarProvider>
-  )
+  );
 }
 
 function App() {
@@ -26,21 +27,29 @@ function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<PresidentDashboard />} />
-        {/* Placeholder for other routes */}
-        <Route path="*" element={
-          <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
-            <div className="p-4 bg-muted rounded-full">
-              <span className="text-2xl">⏳</span>
+        <Route path="/members" element={<MembersPage />} />
+        <Route
+          path="*"
+          element={
+            <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
+              <div className="p-4 bg-muted rounded-full">
+                <span className="text-2xl">⏳</span>
+              </div>
+              <div className="text-center">
+                <h3 className="font-semibold text-lg">
+                  Module Under Construction
+                </h3>
+                <p className="text-sm">
+                  This page is currently being implemented as per
+                  documentation...
+                </p>
+              </div>
             </div>
-            <div className="text-center">
-               <h3 className="font-semibold text-lg">Module Under Construction</h3>
-               <p className="text-sm">This page is currently being implemented as per documentation...</p>
-            </div>
-          </div>
-        } />
+          }
+        />
       </Routes>
     </Layout>
-  )
+  );
 }
 
-export default App
+export default App;
