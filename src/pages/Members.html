@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <body>
+    <h1>Members</h1>
+    <ul id="list"></ul>
+
+    <script type="module">
+      import { getMembers } from "../repo/membersRepo.js";
+
+      const list = document.getElementById("list");
+
+      getMembers().forEach((m) => {
+        const li = document.createElement("li");
+        li.textContent = `${m.name} - ${m.role}`;
+        list.appendChild(li);
+      });
+    </script>
+  </body>
+</html>
