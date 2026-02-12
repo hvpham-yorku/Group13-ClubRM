@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Group 13 - Project Log (ITR1)
 
 ## Team Meetings
@@ -136,4 +135,3 @@ Status: In Progress
 * **Original Plan (ITR0):** We had the plan to make our very own CRM (ClubRM) to be able to do everything that other CRMs (like Salesforce, Monday, and Zoho) but built specifically for student associations and clubs, essentially pitching a business tool used in the industry but would be used for students, by students.
 * **Revised Plan (ITR1):** After talking to the customer, we still have the general idea down, but downsized a bit to ensure that we are able to deliver and prioritize an easier time for our users and to also ensure that the simplicity in its design would attract more users.
 * **Reason for Change:** Customer Feedback and Time Considerations.
->>>>>>> fbfafc37a026706eede6a39bc8167fef23e70236
