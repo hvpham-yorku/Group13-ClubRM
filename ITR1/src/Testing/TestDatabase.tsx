@@ -2,50 +2,77 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 function TestDatabase() {
-  const [status, setStatus] = useState<string>('Testing connection...')
-  const [data, setData] = useState<any>(null)
-
-  console.log('TestDatabase component rendered')
-  console.log('Current status:', status)
-  console.log('Current data:', data)
+  const [status, setStatus] = useState<string>('Loading users...')
+  const [users, setUsers] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function testConnection() {
-      console.log('Starting connection test...')
+    async function fetchUsers() {
       try {
         const { data, error } = await supabase
-          .from('Test')
+          .from('Users')
           .select('*')
-          .limit(5)
-
-        console.log('Response:', { data, error })
 
         if (error) {
-          setStatus('Error: ' + error.message)
-          console.error('Supabase error:', error)
+          setError(error.message)
+          setStatus('Failed to load users')
         } else {
-          setStatus('Connected successfully!')
-          setData(data)
-          console.log('Success! Data:', data)
+          setUsers(data || [])
+          setStatus(`Successfully loaded ${data?.length || 0} users`)
         }
       } catch (err) {
-        setStatus('Error: ' + (err as Error).message)
-        console.error('Catch error:', err)
+        setError((err as Error).message)
+        setStatus('Failed to connect to database')
       }
     }
 
-    testConnection()
+    fetchUsers()
   }, [])
 
   return (
     <div style={{ padding: '20px', backgroundColor: 'white', color: 'black' }}>
-      <h2>Database Connection Test</h2>
-      <p>{status}</p>
-      {data && (
-        <div>
-          <h3>Data from database:</h3>
-          <pre>{JSON.stringify(data, null, 2)}</pre>
+      <h1>Users from Supabase</h1>
+      <p><strong>Status:</strong> {status}</p>
+      
+      {error && (
+        <div style={{ padding: '10px', backgroundColor: '#ffcccc', color: 'red', marginBottom: '20px' }}>
+          <strong>Error:</strong> {error}
         </div>
+      )}
+
+      {users.length > 0 ? (
+        <div>
+          <h2>User List ({users.length} total)</h2>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f0f0f0' }}>
+                {Object.keys(users[0]).map(key => (
+                  <th key={key} style={{ border: '1px solid #ddd', padding: '12px', textAlign: 'left' }}>
+                    {key}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user, index) => (
+                <tr key={index} style={{ backgroundColor: index % 2 === 0 ? 'white' : '#f9f9f9' }}>
+                  {Object.values(user).map((value, i) => (
+                    <td key={i} style={{ border: '1px solid #ddd', padding: '12px' }}>
+                      {JSON.stringify(value)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h3 style={{ marginTop: '30px' }}>Raw JSON Data:</h3>
+          <pre style={{ backgroundColor: '#f5f5f5', padding: '15px', borderRadius: '5px', overflow: 'auto' }}>
+            {JSON.stringify(users, null, 2)}
+          </pre>
+        </div>
+      ) : (
+        !error && <p>No users found in the database.</p>
       )}
     </div>
   )

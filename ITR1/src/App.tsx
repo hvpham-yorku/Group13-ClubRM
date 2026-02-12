@@ -4,7 +4,7 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
 import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard"
-import TestDatabase from './Test/TestDatabase'
+import TestDatabase from './Testing/TestDatabase'
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
