@@ -5,6 +5,8 @@ import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
 import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard"
 import { EventsPage } from "@/components/events/events-page"
+import { TasksPage } from "@/components/tasks/tasks-page"
+import { FinancePage } from "@/components/finance/finance-page"
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -28,6 +30,8 @@ function App() {
       <Routes>
         <Route path="/" element={<PresidentDashboard />} />
         <Route path="/events" element={<EventsPage />} />
+        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/finance" element={<FinancePage />} />
         <Route path="*" element={
           <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
             <div className="p-4 bg-muted rounded-full">

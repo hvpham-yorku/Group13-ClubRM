@@ -140,7 +140,7 @@ export function WeekView({ currentDate, onEventClick, onTimeSlotClick }: WeekVie
           {weekDays.map((day) => {
             const dayEvents = getEventsForDay(day)
             return (
-              <div key={day.toISOString()} className={cn("relative border-r border-border/30 last:border-r-0", isToday(day) && "bg-primary/[0.02]")}>
+              <div key={day.toISOString()} className={cn("relative border-r border-border/30 last:border-r-0", isToday(day) && "bg-primary/2")}>
                 {/* Hour grid lines */}
                 {HOURS.map((hour) => (
                   <button

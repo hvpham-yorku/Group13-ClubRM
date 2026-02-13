@@ -4,12 +4,18 @@ import App from './App.tsx'
 import './index.css'
 import { RoleProvider } from './context/role-context.tsx'
 import { EventsProvider } from './context/events-context.tsx'
+import { TasksProvider } from './context/tasks-context.tsx'
+import { FinanceProvider } from './context/finance-context.tsx'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
     <RoleProvider>
       <EventsProvider>
-        <App />
+        <TasksProvider>
+          <FinanceProvider>
+            <App />
+          </FinanceProvider>
+        </TasksProvider>
       </EventsProvider>
     </RoleProvider>
   </BrowserRouter>
