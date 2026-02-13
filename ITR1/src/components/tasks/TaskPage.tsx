@@ -9,7 +9,7 @@ export function TasksPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
 
-  // Form State for new task
+  // New Task Formatting
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newPriority, setNewPriority] = useState('Medium');
@@ -27,7 +27,7 @@ export function TasksPage() {
     };
     setTasks([...tasks, newTask]);
     setIsCreateModalOpen(false);
-    // Reset form
+    
     setNewTitle(''); setNewDesc(''); setNewPriority('Medium'); setNewDate('');
   };
 
@@ -38,7 +38,7 @@ export function TasksPage() {
 
   return (
     <div className="flex flex-col gap-6 p-4 text-foreground">
-      {/* Header */}
+      {/* Configuring the header */}
       <div className="flex justify-between items-center border-b pb-4">
         <h1 className="text-2xl font-bold">Tasks ({tasks.length})</h1>
         <button 
@@ -49,7 +49,7 @@ export function TasksPage() {
         </button>
       </div>
 
-      {/* TOOLBAR */}
+      {/* Configuring the toolbar */}
       <div className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/10">
         <div className="flex justify-between items-center gap-4 flex-wrap">
           <div className="flex gap-2 items-center">
@@ -72,7 +72,7 @@ export function TasksPage() {
         </div>
       </div>
 
-      {/* Task List */}
+      {/* Configuring the task list */}
       <div className="grid gap-3">
         {tasks.map(task => (
           <div 
@@ -99,7 +99,7 @@ export function TasksPage() {
         ))}
       </div>
 
-      {/* CREATE TASK MODAL */}
+      {/* Creating the tasks */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-background border p-6 rounded-lg max-w-md w-full shadow-2xl">
@@ -122,7 +122,7 @@ export function TasksPage() {
         </div>
       )}
 
-      {/* VIEW DETAILS MODAL */}
+      {/* View Task Details*/}
       {selectedTask && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-background border p-6 rounded-lg max-w-md w-full shadow-xl">

@@ -1,4 +1,4 @@
-// test/domain/Task.test.ts
+// testing what is to be expected for the stub database
 import { describe, it, expect } from 'vitest';
 
 describe('Task Logic', () => {

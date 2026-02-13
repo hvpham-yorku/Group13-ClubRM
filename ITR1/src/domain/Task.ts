@@ -1,3 +1,4 @@
+//stub database
 export interface Task {
   id: string;
   title: string;
