@@ -10,10 +10,10 @@ import { FinancePage } from "@/components/finance/finance-page"
 // Ashdeep's Component
 import MembersPage from "@/components/members/MembersPage"
 
-// Your Specific Task Component
+// Your Task Component
 import { TasksPage } from "./components/tasks/TaskPage"
 
-// Database Test Component (Required for ITR1)
+// Database Test Component
 import TestDatabase from './Testing/TestDatabase'
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -36,17 +36,15 @@ function App() {
   return (
     <Layout>
       <Routes>
-        {/* Main Dashboard */}
         <Route path="/" element={<PresidentDashboard />} />
         
-        {/* Integrated Feature Routes */}
+        {/* All Teammate Routes Combined */}
         <Route path="/members" element={<MembersPage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/finance" element={<FinancePage />} />
         <Route path="/test-db" element={<TestDatabase />} />
 
-        {/* Global Catch-all Placeholder */}
         <Route path="*" element={
           <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
             <div className="p-4 bg-muted rounded-full">
