@@ -30,8 +30,8 @@ User Story: Sophisticated Sorting
 Developer: Naeem Baig, Yusuf Garba, and Ashdeep Ashdeep Singh
 Task: Configure the Events Page, Task Page, and Members Page to have a good sorting algorithm that would help in understanding and going through customer and club info seamlessly
 Est. Time: 2 weeks
-Actual Time: Still under construction
-Status: In Progress
+Actual Time: 2 weeks
+Status: Completed (Events, Tasks, Finance pages all have sorting/filtering)
 
 User Story: View Professional Contact
 Developer: Yusuf Garba
@@ -53,6 +53,41 @@ Task: As per the customer's instructions/requests, we would spend the time to ga
 Est. Time: 2 weeks
 Actual Time: Still under construction
 Status: In Progress
+
+User Story: Event & Calendar Management
+Developer: Naeem Baig
+Task: Build the Events Page with Month/Week/Day calendar views, event creation/editing modal, event detail panel, and events context provider
+Est. Time: 4 days
+Actual Time: 3 days
+Status: Completed
+
+User Story: Multi-View Task Board
+Developer: Naeem Baig
+Task: Build the Tasks Page with Board (Kanban drag-and-drop), List (sortable/groupable), Timeline (Gantt chart), Calendar, and Workflow views, plus task modal and tasks context provider
+Est. Time: 5 days
+Actual Time: 5 days
+Status: Completed
+
+User Story: Club Finance Management
+Developer: Naeem Baig
+Task: Build the Finance Page with Budget Overview (charts, stats), Expenses tab (CRUD, approve/deny), Reimbursements tab (submit/approve/deny/paid flow), Income tab (dues, sponsorships, fundraising), and Analytics tab (trends, burn rate, insights)
+Est. Time: 3 days
+Actual Time: 2 days
+Status: Completed
+
+User Story: Reusable UI Components
+Developer: Naeem Baig
+Task: Build shared UI primitives (Dialog, Select, Popover, Tabs, Checkbox, ScrollArea, Label) using Radix UI + TailwindCSS to maintain consistent styling across pages
+Est. Time: 1 day
+Actual Time: 1 day
+Status: Completed
+
+---
+
+## Concerns
+* **Time management:** Some tasks exceeded original estimates due to the complexity of multi-view components (e.g., Kanban drag-and-drop, Gantt timeline). Better upfront planning and breaking tasks into smaller subtasks could help mitigate this in future iterations.
+* **Testing coverage:** Test files were added late in ITR1. For ITR2, tests should be written alongside feature development to catch regressions early.
+* **Coordination:** With each team member working on separate pages, ensuring UI consistency required extra effort. The shared UI primitives helped, but a design system document would further improve this.
 
 ---
 
