@@ -4,8 +4,17 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
 import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard"
-// Adding the task page
+import { EventsPage } from "@/components/events/events-page"
+import { FinancePage } from "@/components/finance/finance-page"
+
+// Ashdeep's Component
+import MembersPage from "@/components/members/MembersPage"
+
+// Your Specific Task Component
 import { TasksPage } from "./components/tasks/TaskPage"
+
+// Database Test Component (Required for ITR1)
+import TestDatabase from './Testing/TestDatabase'
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -27,12 +36,17 @@ function App() {
   return (
     <Layout>
       <Routes>
+        {/* Main Dashboard */}
         <Route path="/" element={<PresidentDashboard />} />
         
-        {/* Creating the task route */}
+        {/* Integrated Feature Routes */}
+        <Route path="/members" element={<MembersPage />} />
         <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/finance" element={<FinancePage />} />
+        <Route path="/test-db" element={<TestDatabase />} />
 
-        {/* Placeholder  */}
+        {/* Global Catch-all Placeholder */}
         <Route path="*" element={
           <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
             <div className="p-4 bg-muted rounded-full">
