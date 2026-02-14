@@ -4,6 +4,7 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
 import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard"
+<<<<<<< HEAD
 import { EventsPage } from "@/components/events/events-page"
 import { FinancePage } from "@/components/finance/finance-page"
 
@@ -14,6 +15,8 @@ import MembersPage from "@/components/members/MembersPage"
 import { TasksPage } from "./components/tasks/TaskPage"
 
 // Database Test Component (Required for ITR1)
+=======
+>>>>>>> origin/database
 import TestDatabase from './Testing/TestDatabase'
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -38,6 +41,7 @@ function App() {
       <Routes>
         {/* Main Dashboard */}
         <Route path="/" element={<PresidentDashboard />} />
+<<<<<<< HEAD
         
         {/* Integrated Feature Routes */}
         <Route path="/members" element={<MembersPage />} />
@@ -47,6 +51,10 @@ function App() {
         <Route path="/test-db" element={<TestDatabase />} />
 
         {/* Global Catch-all Placeholder */}
+=======
+        <Route path="/test-db" element={<TestDatabase />} />
+        {/* Placeholder for other routes */}
+>>>>>>> origin/database
         <Route path="*" element={
           <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
             <div className="p-4 bg-muted rounded-full">
