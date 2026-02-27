@@ -1,11 +1,20 @@
 import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from '@/context/auth-context'
+import { AuthPage } from '@/components/auth/auth-page'
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
-import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard"
-// Adding the task page
-import { TasksPage } from "./components/tasks/TaskPage"
+import { DashboardPage } from "@/components/dashboard/dashboard-page"
+import { EventsPage } from "@/components/events/events-page"
+import { TasksPage } from "@/components/tasks/tasks-page"
+import { MembersPage } from "@/components/members/members-page"
+import { FinancePage } from "@/components/finance/finance-page"
+import { ExternalPage } from "@/components/external/external-page"
+import { MarketingPage } from "@/components/marketing/marketing-page"
+import { DocumentsPage } from "@/components/documents/documents-page"
+import { ReportsPage } from "@/components/reports/reports-page"
+import { SettingsPage } from "@/components/settings/settings-page"
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -24,26 +33,34 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <AuthPage />
+  }
+
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<PresidentDashboard />} />
-        
-        {/* Creating the task route */}
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/events" element={<EventsPage />} />
         <Route path="/tasks" element={<TasksPage />} />
-
-        {/* Placeholder  */}
-        <Route path="*" element={
-          <div className="flex flex-col items-center justify-center h-96 border-2 border-dashed rounded-xl bg-muted/20 text-muted-foreground animate-pulse gap-4">
-            <div className="p-4 bg-muted rounded-full">
-              <span className="text-2xl">⏳</span>
-            </div>
-            <div className="text-center">
-               <h3 className="font-semibold text-lg">Module Under Construction</h3>
-               <p className="text-sm">This page is currently being implemented as per documentation...</p>
-            </div>
-          </div>
-        } />
+        <Route path="/members" element={<MembersPage />} />
+        <Route path="/finance" element={<FinancePage />} />
+        <Route path="/external" element={<ExternalPage />} />
+        <Route path="/marketing" element={<MarketingPage />} />
+        <Route path="/documents" element={<DocumentsPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
   )

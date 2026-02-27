@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/sidebar"
 import { useLocation, Link } from "react-router-dom"
 import { useRole, type Role } from "@/context/role-context"
+import { useTasks } from "@/context/tasks-context"
+import { useEvents } from "@/context/events-context"
+import { useFinance } from "@/context/finance-context"
 import { type LucideIcon } from "lucide-react"
 
 interface SidebarItem {
@@ -63,6 +66,7 @@ const items: SidebarItem[] = [
     url: "/finance",
     icon: DollarSign,
     roles: ["President", "VP Finance", "Administrator"],
+    badge: "pendingExpenses",
   },
   {
     title: "External",
@@ -98,6 +102,9 @@ const items: SidebarItem[] = [
 export function AppSidebar() {
   const { pathname } = useLocation()
   const { role } = useRole()
+  const { tasks } = useTasks()
+  const { expenses } = useFinance()
+  const { events } = useEvents()
 
   // Filter items based on current role
   const filteredItems = items.filter((item) => {
@@ -105,11 +112,23 @@ export function AppSidebar() {
     return item.roles.includes(role)
   })
 
-  // Mock badge data
-  const badges: Record<string, string | number> = {
-    overdueTasks: 3,
-    eventRisks: "!",
-  }
+  // Compute real badge data from context
+  const now = new Date()
+  const overdueTasks = tasks.filter((t) => {
+    const due = t.dueDate ? new Date(t.dueDate) : null
+    return due && due < now && t.status !== "done"
+  }).length
+  const pendingExpenses = expenses.filter((e) => e.status === "pending").length
+  const upcomingEvents = events.filter((e) => {
+    const start = new Date(e.startDate)
+    const diff = start.getTime() - now.getTime()
+    return diff > 0 && diff < 48 * 60 * 60 * 1000 // within 48h
+  }).length
+
+  const badges: Record<string, string | number> = {}
+  if (overdueTasks > 0) badges.overdueTasks = overdueTasks
+  if (upcomingEvents > 0) badges.eventRisks = upcomingEvents
+  if (pendingExpenses > 0) badges.pendingExpenses = pendingExpenses
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
