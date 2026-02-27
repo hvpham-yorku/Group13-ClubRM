@@ -1,3 +1,4 @@
+import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
@@ -9,20 +10,44 @@ import { TasksProvider } from './context/tasks-context.tsx'
 import { FinanceProvider } from './context/finance-context.tsx'
 import { MembersProvider } from './context/members-context.tsx'
 
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { error: null }
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 40, color: '#fff', background: '#111', minHeight: '100vh', fontFamily: 'monospace' }}>
+          <h1 style={{ color: '#f55' }}>Runtime Error</h1>
+          <pre style={{ whiteSpace: 'pre-wrap', marginTop: 16 }}>{this.state.error.message}</pre>
+          <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8, fontSize: 12, opacity: 0.7 }}>{this.state.error.stack}</pre>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <BrowserRouter>
-    <AuthProvider>
-      <RoleProvider>
-        <MembersProvider>
-          <EventsProvider>
-            <TasksProvider>
-              <FinanceProvider>
-                <App />
-              </FinanceProvider>
-            </TasksProvider>
-          </EventsProvider>
-        </MembersProvider>
-      </RoleProvider>
-    </AuthProvider>
-  </BrowserRouter>
+  <ErrorBoundary>
+    <BrowserRouter>
+      <AuthProvider>
+        <RoleProvider>
+          <MembersProvider>
+            <EventsProvider>
+              <TasksProvider>
+                <FinanceProvider>
+                  <App />
+                </FinanceProvider>
+              </TasksProvider>
+            </EventsProvider>
+          </MembersProvider>
+        </RoleProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </ErrorBoundary>
 )
