@@ -10,8 +10,6 @@ import { FinanceProvider } from './context/finance-context.tsx'
 import { MembersProvider } from './context/members-context.tsx'
 import App from './App.tsx'
 
-console.log('[ClubRM] All imports loaded successfully')
-
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
     super(props)
