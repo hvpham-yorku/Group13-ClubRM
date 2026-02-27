@@ -9,3 +9,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+
+// Untyped client for tables not yet in generated Database types (documents, notifications, org_settings)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const supabaseUntyped = createClient(supabaseUrl, supabaseAnonKey) as any

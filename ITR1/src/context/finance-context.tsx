@@ -251,7 +251,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const updateExpenseStatus = useCallback(async (id: string, status: ExpenseStatus, approvedBy?: string) => {
-    const update: Record<string, unknown> = { status }
+    const update: { status: string; approved_by?: string } = { status }
     if (approvedBy) update.approved_by = approvedBy
     const { error } = await supabase.from("expenses").update(update).eq("id", id)
     if (error) { console.error("Failed to update expense:", error); return }
@@ -275,7 +275,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const updateReimbursementStatus = useCallback(
     async (id: string, status: ReimbursementStatus, approvedBy?: string) => {
-      const update: Record<string, unknown> = { status }
+      const update: { status: string; approved_by?: string; paid_date?: string } = { status }
       if (approvedBy) update.approved_by = approvedBy
       if (status === "paid") update.paid_date = new Date().toISOString().split("T")[0]
       const { error } = await supabase.from("reimbursements").update(update).eq("id", id)

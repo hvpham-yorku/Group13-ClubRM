@@ -1,7 +1,12 @@
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Bell, Search, ChevronDown, User, Settings, LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useNavigate } from "react-router-dom";
+import { useEvents } from "@/context/events-context";
+import { useTasks } from "@/context/tasks-context";
+import { useMembers } from "@/context/members-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,12 +38,47 @@ const ROLES: Role[] = [
 export function TopBar() {
   const { role, setRole } = useRole();
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { events } = useEvents();
+  const { tasks } = useTasks();
+  const { members } = useMembers();
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
   const displayEmail = user?.email || "";
   const initials = displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) return [];
+    const q = searchQuery.toLowerCase();
+    const results: { type: string; label: string; sub: string; route: string }[] = [];
+    events.filter((e) => e.title.toLowerCase().includes(q)).slice(0, 3).forEach((e) =>
+      results.push({ type: "Event", label: e.title, sub: e.location || "", route: "/events" })
+    );
+    tasks.filter((t) => t.title.toLowerCase().includes(q)).slice(0, 3).forEach((t) =>
+      results.push({ type: "Task", label: t.title, sub: t.status, route: "/tasks" })
+    );
+    members.filter((m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)).slice(0, 3).forEach((m) =>
+      results.push({ type: "Member", label: m.name, sub: m.role, route: "/members" })
+    );
+    return results;
+  }, [searchQuery, events, tasks, members]);
+
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 w-full bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 sticky top-0 z-50">
       <div className="flex items-center gap-2 mr-4">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
@@ -66,16 +106,43 @@ export function TopBar() {
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 flex max-w-xl items-center gap-2 bg-muted/40 hover:bg-muted/60 px-3 py-1.5 rounded-md border border-border/50 focus-within:border-primary/50 transition-all group">
-        <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-        <input
-          type="text"
-          placeholder="Search events, members, tasks... (Cmd+K)"
-          className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/70"
-        />
-        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 group-focus-within:opacity-0 transition-opacity">
-          <span className="text-xs">⌘</span>K
-        </kbd>
+      <div className="relative flex-1 max-w-xl" ref={searchRef}>
+        <div className="flex items-center gap-2 bg-muted/40 hover:bg-muted/60 px-3 py-1.5 rounded-md border border-border/50 focus-within:border-primary/50 transition-all group">
+          <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <input
+            type="text"
+            placeholder="Search events, members, tasks..."
+            className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/70"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+            onFocus={() => setSearchOpen(true)}
+          />
+          {searchQuery && (
+            <button onClick={() => { setSearchQuery(""); setSearchOpen(false); }} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+          )}
+        </div>
+        {searchOpen && searchResults.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/50 rounded-lg shadow-xl z-50 overflow-hidden">
+            {searchResults.map((r, i) => (
+              <button
+                key={i}
+                className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-left"
+                onClick={() => { navigate(r.route); setSearchQuery(""); setSearchOpen(false); }}
+              >
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold uppercase">{r.type}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{r.label}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{r.sub}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        {searchOpen && searchQuery.length >= 2 && searchResults.length === 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/50 rounded-lg shadow-xl z-50 p-4 text-center text-xs text-muted-foreground">
+            No results found for "{searchQuery}"
+          </div>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-3">
@@ -143,11 +210,11 @@ export function TopBar() {
             </DropdownMenuSub>
 
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/members")}>
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </DropdownMenuItem>

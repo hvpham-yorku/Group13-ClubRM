@@ -11,11 +11,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import {
   type CalendarEvent,
+  type Collaborator,
   getEventColor,
   getTag,
   getCollaborator,
 } from "./types"
 import { cn } from "@/lib/utils"
+import { useMembers } from "@/context/members-context"
 import {
   MapPin,
   Clock,
@@ -45,10 +47,21 @@ export function EventDetailPanel({
   onEdit,
   onDelete,
 }: EventDetailPanelProps) {
+  const { members } = useMembers()
+
+  // Build collaborator list from dynamic members
+  const dynamicCollaborators: Collaborator[] = members.map((m) => ({
+    id: m.id,
+    name: m.name,
+    email: m.email,
+    initials: m.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2),
+    role: m.role,
+  }))
+
   if (!event) return null
 
   const color = getEventColor(event.colorId)
-  const creator = getCollaborator(event.createdBy)
+  const creator = getCollaborator(event.createdBy, dynamicCollaborators)
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -208,7 +221,7 @@ export function EventDetailPanel({
             </div>
             <div className="space-y-1.5">
               {event.collaborators.map((id) => {
-                const member = getCollaborator(id)
+                const member = getCollaborator(id, dynamicCollaborators)
                 if (!member) return null
                 const isCreator = id === event.createdBy
                 return (

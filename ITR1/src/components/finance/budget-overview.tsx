@@ -51,6 +51,7 @@ export function BudgetOverview() {
     })).filter((c) => c.value > 0)
   }, [expenses])
 
+  // @ts-expect-error -- monthlyTrend prepared for future chart use
   const _monthlyTrend = useMemo(() => {
     const months: Record<string, { actual: number; projected: number }> = {}
     const now = new Date()
