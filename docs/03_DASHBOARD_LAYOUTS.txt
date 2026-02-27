@@ -394,7 +394,220 @@ WIDGETS (4):
    - API: GET /api/admin/automation-errors
 
 ================================================================================
-9. WIDGET COMPONENT SPECIFICATIONS
+9. EXPANDABLE INSIGHT TILE SYSTEM
+================================================================================
+
+PURPOSE:
+Every dashboard tile is clickable. Clicking opens a dialog overlay with deep
+insight data, diagnostics, and actionable recommendations. The goal is to let
+a president (or any role) go from "what's the number?" to "what does that
+number mean and what should I do?" in one click.
+
+ARCHITECTURE:
+┌─────────────────────────────────────────┐
+│         ExpandableTile (wrapper)        │
+│  ┌───────────────────────────────────┐  │
+│  │   StatCard / Widget (summary)     │  │  ← Visible on dashboard
+│  │         [expand icon on hover]    │  │
+│  └───────────────────────────────────┘  │
+│  ┌───────────────────────────────────┐  │
+│  │   Dialog (on click)               │  │  ← Opens overlay
+│  │   ┌───────────────────────────┐   │  │
+│  │   │  InsightPanel component   │   │  │
+│  │   │  (role-specific detail)   │   │  │
+│  │   └───────────────────────────┘   │  │
+│  └───────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+
+ExpandableTile PROPS:
+interface ExpandableTileProps {
+  children: React.ReactNode;       // Summary card shown on dashboard
+  title: string;                   // Dialog header title
+  subtitle?: string;               // Dialog header description
+  insightPanel: React.ReactNode;   // Detailed insight component
+}
+
+INTERACTION:
+- Hover: subtle expand icon appears (top-right corner)
+- Click anywhere on tile: opens Dialog with insight panel
+- Dialog: scrollable, max 720px wide, 85vh max height
+- Close: X button or click outside
+
+-------------------------------------------------------------------------------
+9.1 INSIGHT PANELS — WHAT EACH TILE EXPANDS TO
+-------------------------------------------------------------------------------
+
+A) ORG HEALTH SCORE — Deep Dive
+   Panel: OrgHealthPanel
+   Shows:
+   - Overall score ring (88/100) with delta vs last month
+   - 5-month trend mini bar chart
+   - 4 category breakdowns (Member Engagement, Event Delivery,
+     Financial Health, Task Completion) — each with:
+     • Score out of 25 with progress bar
+     • Status indicator (good/warning/critical)
+     • 2-3 specific insight items with detail text
+   - "What's Going Well" list (green indicators)
+   - "Needs Attention" list (red indicators)
+
+   BACKEND LOGIC:
+   Composite score = sum of 4 pillars (each 0-25):
+   - members_score  = (active_members / total_members) * 25
+   - events_score   = (on_track_events / total_upcoming_events) * 25
+   - budget_score   = remaining_pct > 30% ? 25 : remaining_pct * (25/30)
+   - tasks_score    = (completed_on_time / total_due_this_week) * 25
+
+   Each pillar generates insight items by:
+   - Querying memberships, events, budgets, tasks tables
+   - Comparing current values to thresholds and historical averages
+   - Flagging anything below threshold as warning/critical
+
+   API: GET /api/v1/dashboard/president/insights/health
+   Response: OrgHealthInsight (see types.ts)
+
+B) ACTIVE MEMBERS — Full Breakdown
+   Panel: MembersPanel
+   Shows:
+   - Summary stats: total, active, new this term
+   - Retention rate, avg events per member
+   - "Who Joined Recently" — list with names, roles, departments, join dates
+   - Demographics: by department (horizontal bars), by year, by role
+   - Inactive member warnings with last-active dates and reasons
+
+   BACKEND LOGIC:
+   - Total/active: COUNT(*) from memberships WHERE term_id = current
+     AND status = 'active'
+   - New this term: COUNT(*) WHERE joined_at >= term.start_date
+   - Retention: members active BOTH this term AND last term / last term total
+   - Demographics: GROUP BY department, year, role from memberships JOIN users
+   - Inactive: members with no task_assignments completed AND no
+     event_registrations in last 14 days
+
+   API: GET /api/v1/dashboard/president/insights/members
+   Response: MembersInsight (see types.ts)
+
+C) BUDGET — Financial Detail
+   Panel: BudgetPanel
+   Shows:
+   - Total/spent/remaining with percentage badges
+   - Burn rate gauge with target comparison
+   - Monthly spend bar chart (highlights months over target in amber)
+   - Category breakdown with progress bars and status per category
+   - Top 5 biggest expenses with descriptions and dates
+   - Alert items (over-budget, approaching limit, etc.)
+
+   BACKEND LOGIC:
+   - Reads budgets table for total/spent/remaining
+   - burn_rate = spent_amount / months_elapsed_in_term
+   - projected_runway = remaining / burn_rate
+   - Categories from budget_categories table
+   - Top expenses: SELECT TOP 5 FROM expenses ORDER BY amount DESC
+   - Alerts auto-generated when:
+     • Category spent > allocated → critical
+     • burn_rate > target_burn_rate → warning
+     • remaining < 25% → warning
+
+   API: GET /api/v1/dashboard/president/insights/budget
+   Response: BudgetInsight (see types.ts)
+
+D) UPCOMING EVENTS — Detail & Readiness
+   Panel: EventsPanel
+   Shows:
+   - Summary: upcoming count, avg registration rate, volunteer coverage rate
+   - Registration trend mini chart
+   - Per-event cards with:
+     • Registration progress bar (registered/capacity)
+     • Volunteer progress bar (filled/needed)
+     • Status badge (on_track / at_risk / critical)
+     • Risk flags per event
+   - Strengths & concerns summary
+
+   BACKEND LOGIC:
+   - Events from events WHERE start_time > NOW() AND start_time < +30 days
+   - Registration: event_registrations COUNT / capacity
+   - Volunteers: event_volunteers COUNT / needed (needed stored per event)
+   - Status auto-assigned:
+     • critical: registration < 50% AND days_until < 7
+     • at_risk: registration < 70% AND days_until < 14
+     • on_track: everything else
+   - Risk flags generated by checking: low registration, missing volunteers,
+     unconfirmed venue (location IS NULL), no social media post linked
+
+   API: GET /api/v1/dashboard/president/insights/events
+   Response: EventsInsight (see types.ts)
+
+E) RISK ALERTS — Analysis & Recommendations
+   Panel: RisksPanel
+   Shows:
+   - Summary: total risks, high/medium/low counts, resolved this week
+   - Trend indicator (trending up = more risks, down = improving)
+   - Per-risk cards with:
+     • Category icon (budget/events/members/tasks/operations)
+     • Severity badge
+     • Full description with context
+     • Actionable recommendation in highlighted box
+     • Affected entity and detection date
+
+   BACKEND LOGIC:
+   Aggregated from multiple subsystems via background job:
+   - Budget risks: categories over allocation, burn rate exceeding target
+   - Event risks: low registration, missing volunteers, venue issues
+   - Member risks: inactive members (no activity in 14+ days)
+   - Task risks: overdue tasks grouped by priority
+   Recommendations are template-based with entity-specific data filled in.
+   Risk severity auto-assigned by predefined thresholds.
+
+   API: GET /api/v1/dashboard/president/insights/risks
+   Response: RisksInsight (see types.ts)
+
+F) APPROVAL QUEUE — All Pending Items
+   Panel: ApprovalsPanel
+   Shows:
+   - Summary: total pending, avg wait days, oldest item age
+   - Type breakdown chips (Event, Finance, Marketing, Budget Change)
+   - Per-item cards with:
+     • Type icon, title, submitter, date, days waiting
+     • Priority badge
+     • Amount (if financial)
+     • Description with context
+   - Recently approved items for reference
+
+   BACKEND LOGIC:
+   Queries multiple tables:
+   - Events WHERE status = 'pending_approval'
+   - Expenses WHERE status = 'pending'
+   - Posts WHERE status = 'pending_approval'
+   - Budget change requests (manual entries)
+   days_waiting = NOW() - submitted_at
+   Priority auto-set by:
+   - High: amount > $100 OR event within 7 days OR waiting > 3 days
+   - Medium: amount $50-$100 OR event within 14 days
+   - Low: everything else
+
+   API: GET /api/v1/dashboard/president/insights/approvals
+   Response: ApprovalsInsight (see types.ts)
+
+-------------------------------------------------------------------------------
+9.2 NEW DASHBOARD API ENDPOINTS (Insight Expansion)
+-------------------------------------------------------------------------------
+
+All insight endpoints extend the existing dashboard endpoint pattern.
+They are called on-demand when a tile is expanded (not on initial load)
+to keep the main dashboard fast.
+
+GET /api/v1/dashboard/{role}/insights/{tile}
+  Tiles: health, members, budget, events, risks, approvals
+  Permission: same as parent dashboard endpoint
+  Query: org_id, term_id
+  Response: corresponding *Insight type (see types.ts)
+
+CACHING:
+- Insight data cached for 60 seconds server-side
+- Client caches via React Query with staleTime: 60000
+- Critical changes (approval action, budget change) invalidate cache
+
+================================================================================
+10. WIDGET COMPONENT SPECIFICATIONS
 ================================================================================
 
 STANDARD WIDGET STRUCTURE:

@@ -128,7 +128,7 @@ export function IncomeTab() {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "11px" }}
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "11px", color: "hsl(var(--foreground))" }}
                   formatter={(value) => formatCurrency(value as number)}
                 />
               </PieChart>

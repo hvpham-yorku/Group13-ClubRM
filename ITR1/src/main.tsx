@@ -6,17 +6,20 @@ import { RoleProvider } from './context/role-context.tsx'
 import { EventsProvider } from './context/events-context.tsx'
 import { TasksProvider } from './context/tasks-context.tsx'
 import { FinanceProvider } from './context/finance-context.tsx'
+import { MembersProvider } from './context/members-context.tsx'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
     <RoleProvider>
-      <EventsProvider>
-        <TasksProvider>
-          <FinanceProvider>
-            <App />
-          </FinanceProvider>
-        </TasksProvider>
-      </EventsProvider>
+      <MembersProvider>
+        <EventsProvider>
+          <TasksProvider>
+            <FinanceProvider>
+              <App />
+            </FinanceProvider>
+          </TasksProvider>
+        </EventsProvider>
+      </MembersProvider>
     </RoleProvider>
   </BrowserRouter>
 )
