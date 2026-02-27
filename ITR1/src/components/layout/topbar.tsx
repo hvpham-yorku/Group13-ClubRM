@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Bell, Search, ChevronDown, User, Settings, LogOut, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -7,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/context/events-context";
 import { useTasks } from "@/context/tasks-context";
 import { useMembers } from "@/context/members-context";
+import { useFinance } from "@/context/finance-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +44,46 @@ export function TopBar() {
   const { events } = useEvents();
   const { tasks } = useTasks();
   const { members } = useMembers();
+  const { expenses, reimbursements } = useFinance();
+
+  // Build real notifications from context data
+  const notifications = useMemo(() => {
+    const items: { id: string; title: string; sub: string; time: string; route: string; read: boolean }[] = [];
+    const now = new Date();
+
+    // Pending expenses
+    const pendingExp = expenses.filter((e) => e.status === "pending");
+    if (pendingExp.length > 0) {
+      items.push({ id: "n-exp", title: `${pendingExp.length} expense(s) awaiting approval`, sub: `Total: $${pendingExp.reduce((s, e) => s + e.amount, 0).toFixed(0)}`, time: "Now", route: "/finance", read: false });
+    }
+
+    // Pending reimbursements
+    const pendingReim = reimbursements.filter((r) => r.status === "pending");
+    if (pendingReim.length > 0) {
+      items.push({ id: "n-reim", title: `${pendingReim.length} reimbursement(s) pending`, sub: `Total: $${pendingReim.reduce((s, r) => s + r.amount, 0).toFixed(0)}`, time: "Now", route: "/finance", read: false });
+    }
+
+    // Overdue tasks
+    const overdue = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < now && t.status !== "done");
+    if (overdue.length > 0) {
+      items.push({ id: "n-task", title: `${overdue.length} overdue task(s)`, sub: overdue.slice(0, 2).map((t) => t.title).join(", "), time: "Now", route: "/tasks", read: false });
+    }
+
+    // Upcoming events (within 48h)
+    const upcoming = events.filter((e) => {
+      const start = new Date(e.startDate);
+      const diff = start.getTime() - now.getTime();
+      return diff > 0 && diff < 48 * 60 * 60 * 1000;
+    });
+    upcoming.forEach((e) => {
+      items.push({ id: `n-ev-${e.id}`, title: `Upcoming: ${e.title}`, sub: e.location || "No location", time: "Soon", route: "/events", read: false });
+    });
+
+    return items;
+  }, [expenses, reimbursements, tasks, events]);
+
+  const [readNotifs, setReadNotifs] = useState<Set<string>>(new Set());
+  const unreadCount = notifications.filter((n) => !readNotifs.has(n.id)).length;
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
   const displayEmail = user?.email || "";
   const initials = displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -150,18 +192,40 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative hover:bg-accent/50">
               <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-primary border-2 border-background anim-pulse" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[9px] font-bold text-primary-foreground flex items-center justify-center">{unreadCount}</span>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel className="flex justify-between items-center">
-              Notifications
-              <span className="text-[10px] font-normal text-muted-foreground cursor-pointer hover:text-primary">Mark all read</span>
+              Notifications {unreadCount > 0 && `(${unreadCount})`}
+              {unreadCount > 0 && (
+                <span className="text-[10px] font-normal text-muted-foreground cursor-pointer hover:text-primary" onClick={() => setReadNotifs(new Set(notifications.map((n) => n.id)))}>Mark all read</span>
+              )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <div className="py-2 px-1 text-center text-xs text-muted-foreground italic h-24 flex items-center justify-center">
-              No new notifications
-            </div>
+            {notifications.length === 0 ? (
+              <div className="py-2 px-1 text-center text-xs text-muted-foreground italic h-24 flex items-center justify-center">
+                No new notifications
+              </div>
+            ) : (
+              <div className="max-h-72 overflow-y-auto">
+                {notifications.map((n) => (
+                  <DropdownMenuItem
+                    key={n.id}
+                    className={cn("flex flex-col items-start gap-0.5 py-2.5 px-3 cursor-pointer", readNotifs.has(n.id) && "opacity-50")}
+                    onClick={() => { setReadNotifs((prev) => new Set(prev).add(n.id)); navigate(n.route); }}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-semibold">{n.title}</span>
+                      <span className="text-[9px] text-muted-foreground">{n.time}</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">{n.sub}</span>
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
