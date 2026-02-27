@@ -1,14 +1,16 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import App from './App.tsx'
 import './index.css'
+import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './context/auth-context.tsx'
 import { RoleProvider } from './context/role-context.tsx'
 import { EventsProvider } from './context/events-context.tsx'
 import { TasksProvider } from './context/tasks-context.tsx'
 import { FinanceProvider } from './context/finance-context.tsx'
 import { MembersProvider } from './context/members-context.tsx'
+import App from './App.tsx'
+
+console.log('[ClubRM] All imports loaded successfully')
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -17,6 +19,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
   }
   static getDerivedStateFromError(error: Error) {
     return { error }
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[ClubRM] ErrorBoundary caught:', error, info.componentStack)
   }
   render() {
     if (this.state.error) {
