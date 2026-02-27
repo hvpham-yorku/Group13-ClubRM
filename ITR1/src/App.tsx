@@ -13,6 +13,9 @@ import { MarketingPage } from "@/components/marketing/marketing-page"
 import { ReportsPage } from "@/components/reports/reports-page"
 import { DocumentsPage } from "@/components/documents/documents-page"
 import { SettingsPage } from "@/components/settings/settings-page"
+import { AuthPage } from "@/components/auth/auth-page"
+import { useAuth } from "@/context/auth-context"
+import { Loader2 } from "lucide-react"
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -31,6 +34,20 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <AuthPage />
+  }
+
   return (
     <Layout>
       <Routes>

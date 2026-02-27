@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from "react"
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react"
 import {
   type Expense,
   type Reimbursement,
@@ -7,6 +7,7 @@ import {
   type ExpenseStatus,
   type ReimbursementStatus,
 } from "@/components/finance/types"
+import { supabase } from "@/lib/supabase"
 
 const today = new Date()
 const y = today.getFullYear()
@@ -40,7 +41,6 @@ const SEED_EXPENSES: Expense[] = [
   { id: "e16", description: "Networking dinner - 20 people", amount: 380, category: "food", date: d(12), status: "approved", submittedBy: "Alex Brown", approvedBy: "Emily Chen" },
   { id: "e17", description: "Workshop materials - 3D printing", amount: 95, category: "events", date: d(10), status: "approved", submittedBy: "David Park", approvedBy: "Emily Chen" },
   { id: "e18", description: "Volunteer appreciation gifts", amount: 60, category: "operations", date: d(11), status: "pending", submittedBy: "Mike Johnson" },
-  // Older month expenses for trend data
   { id: "e19", description: "January venue rental", amount: 300, category: "events", date: d(15, m - 1), status: "approved", submittedBy: "Sarah Smith", approvedBy: "Emily Chen" },
   { id: "e20", description: "January marketing materials", amount: 110, category: "marketing", date: d(10, m - 1), status: "approved", submittedBy: "Lisa Wang", approvedBy: "Emily Chen" },
   { id: "e21", description: "January catering", amount: 220, category: "food", date: d(20, m - 1), status: "approved", submittedBy: "Emily Chen", approvedBy: "John Doe" },
@@ -71,6 +71,87 @@ const SEED_INCOME: Income[] = [
   { id: "i9", source: "Winter term dues carry-over", amount: 800, type: "dues", date: d(1, m - 2) },
 ]
 
+// ---- Row mappers ----
+function toExpense(row: Record<string, unknown>): Expense {
+  return {
+    id: row.id as string,
+    description: row.description as string,
+    amount: Number(row.amount),
+    category: row.category as string,
+    date: new Date(row.date as string),
+    status: row.status as ExpenseStatus,
+    submittedBy: row.submitted_by as string,
+    approvedBy: (row.approved_by as string) || undefined,
+    receiptUrl: (row.receipt_url as string) || undefined,
+    notes: (row.notes as string) || undefined,
+  }
+}
+function expenseToRow(e: Expense) {
+  return {
+    description: e.description,
+    amount: e.amount,
+    category: e.category,
+    date: new Date(e.date).toISOString().split("T")[0],
+    status: e.status,
+    submitted_by: e.submittedBy,
+    approved_by: e.approvedBy || null,
+    receipt_url: e.receiptUrl || null,
+    notes: e.notes || null,
+  }
+}
+
+function toReimbursement(row: Record<string, unknown>): Reimbursement {
+  return {
+    id: row.id as string,
+    submittedBy: row.submitted_by as string,
+    amount: Number(row.amount),
+    description: row.description as string,
+    category: row.category as string,
+    date: new Date(row.date as string),
+    status: row.status as ReimbursementStatus,
+    receiptUrl: (row.receipt_url as string) || undefined,
+    approvedBy: (row.approved_by as string) || undefined,
+    paidDate: row.paid_date ? new Date(row.paid_date as string) : undefined,
+    notes: (row.notes as string) || undefined,
+  }
+}
+function reimbursementToRow(r: Reimbursement) {
+  return {
+    submitted_by: r.submittedBy,
+    amount: r.amount,
+    description: r.description,
+    category: r.category,
+    date: new Date(r.date).toISOString().split("T")[0],
+    status: r.status,
+    receipt_url: r.receiptUrl || null,
+    approved_by: r.approvedBy || null,
+    paid_date: r.paidDate ? new Date(r.paidDate).toISOString().split("T")[0] : null,
+    notes: r.notes || null,
+  }
+}
+
+function toIncome(row: Record<string, unknown>): Income {
+  return {
+    id: row.id as string,
+    source: row.source as string,
+    amount: Number(row.amount),
+    type: row.type as Income["type"],
+    date: new Date(row.date as string),
+    notes: (row.notes as string) || undefined,
+    recurring: row.recurring as boolean | undefined,
+  }
+}
+function incomeToRow(i: Income) {
+  return {
+    source: i.source,
+    amount: i.amount,
+    type: i.type,
+    date: new Date(i.date).toISOString().split("T")[0],
+    notes: i.notes || null,
+    recurring: i.recurring || false,
+  }
+}
+
 interface FinanceContextType {
   budget: Budget
   expenses: Expense[]
@@ -91,10 +172,61 @@ interface FinanceContextType {
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined)
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
-  const [budget] = useState<Budget>(SEED_BUDGET)
-  const [expenses, setExpenses] = useState<Expense[]>(SEED_EXPENSES)
-  const [reimbursements, setReimbursements] = useState<Reimbursement[]>(SEED_REIMBURSEMENTS)
-  const [income, setIncome] = useState<Income[]>(SEED_INCOME)
+  const [budget, setBudget] = useState<Budget>(SEED_BUDGET)
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [reimbursements, setReimbursements] = useState<Reimbursement[]>([])
+  const [income, setIncome] = useState<Income[]>([])
+
+  // Load all finance data on mount
+  useEffect(() => {
+    async function load() {
+      // Budget
+      const { data: budgetData } = await supabase.from("budgets").select("*").limit(1).single()
+      if (budgetData) {
+        setBudget({ totalBudget: Number(budgetData.total_budget), termLabel: budgetData.term_label as string })
+      }
+
+      // Expenses
+      const { data: expData, error: expErr } = await supabase.from("expenses").select("*").order("date", { ascending: false })
+      if (expErr) {
+        console.error("Failed to load expenses:", expErr)
+        setExpenses(SEED_EXPENSES)
+      } else if (expData && expData.length > 0) {
+        setExpenses(expData.map(toExpense))
+      } else {
+        const rows = SEED_EXPENSES.map(expenseToRow)
+        const { data: seeded } = await supabase.from("expenses").insert(rows).select()
+        setExpenses(seeded ? seeded.map(toExpense) : SEED_EXPENSES)
+      }
+
+      // Reimbursements
+      const { data: reimData, error: reimErr } = await supabase.from("reimbursements").select("*").order("date", { ascending: false })
+      if (reimErr) {
+        console.error("Failed to load reimbursements:", reimErr)
+        setReimbursements(SEED_REIMBURSEMENTS)
+      } else if (reimData && reimData.length > 0) {
+        setReimbursements(reimData.map(toReimbursement))
+      } else {
+        const rows = SEED_REIMBURSEMENTS.map(reimbursementToRow)
+        const { data: seeded } = await supabase.from("reimbursements").insert(rows).select()
+        setReimbursements(seeded ? seeded.map(toReimbursement) : SEED_REIMBURSEMENTS)
+      }
+
+      // Income
+      const { data: incData, error: incErr } = await supabase.from("income").select("*").order("date", { ascending: false })
+      if (incErr) {
+        console.error("Failed to load income:", incErr)
+        setIncome(SEED_INCOME)
+      } else if (incData && incData.length > 0) {
+        setIncome(incData.map(toIncome))
+      } else {
+        const rows = SEED_INCOME.map(incomeToRow)
+        const { data: seeded } = await supabase.from("income").insert(rows).select()
+        setIncome(seeded ? seeded.map(toIncome) : SEED_INCOME)
+      }
+    }
+    load()
+  }, [])
 
   const totalSpent = useMemo(
     () => expenses.filter((e) => e.status === "approved").reduce((sum, e) => sum + e.amount, 0),
@@ -111,26 +243,43 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     [expenses]
   )
 
-  const addExpense = useCallback((expense: Expense) => {
-    setExpenses((prev) => [expense, ...prev])
+  const addExpense = useCallback(async (expense: Expense) => {
+    const row = expenseToRow(expense)
+    const { data, error } = await supabase.from("expenses").insert(row).select().single()
+    if (error) { console.error("Failed to add expense:", error); return }
+    if (data) setExpenses((prev) => [toExpense(data), ...prev])
   }, [])
 
-  const updateExpenseStatus = useCallback((id: string, status: ExpenseStatus, approvedBy?: string) => {
+  const updateExpenseStatus = useCallback(async (id: string, status: ExpenseStatus, approvedBy?: string) => {
+    const update: Record<string, unknown> = { status }
+    if (approvedBy) update.approved_by = approvedBy
+    const { error } = await supabase.from("expenses").update(update).eq("id", id)
+    if (error) { console.error("Failed to update expense:", error); return }
     setExpenses((prev) =>
       prev.map((e) => (e.id === id ? { ...e, status, approvedBy: approvedBy || e.approvedBy } : e))
     )
   }, [])
 
-  const deleteExpense = useCallback((id: string) => {
+  const deleteExpense = useCallback(async (id: string) => {
+    const { error } = await supabase.from("expenses").delete().eq("id", id)
+    if (error) { console.error("Failed to delete expense:", error); return }
     setExpenses((prev) => prev.filter((e) => e.id !== id))
   }, [])
 
-  const addReimbursement = useCallback((reimbursement: Reimbursement) => {
-    setReimbursements((prev) => [reimbursement, ...prev])
+  const addReimbursement = useCallback(async (reimbursement: Reimbursement) => {
+    const row = reimbursementToRow(reimbursement)
+    const { data, error } = await supabase.from("reimbursements").insert(row).select().single()
+    if (error) { console.error("Failed to add reimbursement:", error); return }
+    if (data) setReimbursements((prev) => [toReimbursement(data), ...prev])
   }, [])
 
   const updateReimbursementStatus = useCallback(
-    (id: string, status: ReimbursementStatus, approvedBy?: string) => {
+    async (id: string, status: ReimbursementStatus, approvedBy?: string) => {
+      const update: Record<string, unknown> = { status }
+      if (approvedBy) update.approved_by = approvedBy
+      if (status === "paid") update.paid_date = new Date().toISOString().split("T")[0]
+      const { error } = await supabase.from("reimbursements").update(update).eq("id", id)
+      if (error) { console.error("Failed to update reimbursement:", error); return }
       setReimbursements((prev) =>
         prev.map((r) =>
           r.id === id
@@ -147,11 +296,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     []
   )
 
-  const addIncome = useCallback((inc: Income) => {
-    setIncome((prev) => [inc, ...prev])
+  const addIncome = useCallback(async (inc: Income) => {
+    const row = incomeToRow(inc)
+    const { data, error } = await supabase.from("income").insert(row).select().single()
+    if (error) { console.error("Failed to add income:", error); return }
+    if (data) setIncome((prev) => [toIncome(data), ...prev])
   }, [])
 
-  const deleteIncome = useCallback((id: string) => {
+  const deleteIncome = useCallback(async (id: string) => {
+    const { error } = await supabase.from("income").delete().eq("id", id)
+    if (error) { console.error("Failed to delete income:", error); return }
     setIncome((prev) => prev.filter((i) => i.id !== id))
   }, [])
 

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from "react"
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { type Task, type TaskStatus } from "@/components/tasks/types"
+import { supabase } from "@/lib/supabase"
 
 const today = new Date()
 const y = today.getFullYear()
@@ -310,6 +311,43 @@ const SEED_TASKS: Task[] = [
   },
 ]
 
+function toTask(row: Record<string, unknown>): Task {
+  const subtasks = (row.subtasks as Array<{ id: string; title: string; done: boolean }>) || []
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    description: row.description as string,
+    status: row.status as TaskStatus,
+    priority: row.priority as Task["priority"],
+    assignees: row.assignees as string[],
+    tags: row.tags as string[],
+    dueDate: row.due_date ? new Date(row.due_date as string) : null,
+    startDate: row.start_date ? new Date(row.start_date as string) : null,
+    createdAt: new Date(row.created_at as string),
+    completedAt: row.completed_at ? new Date(row.completed_at as string) : null,
+    dependencies: row.dependencies as string[],
+    subtasks,
+    section: (row.section as string) || undefined,
+  }
+}
+
+function toRow(t: Task) {
+  return {
+    title: t.title,
+    description: t.description,
+    status: t.status,
+    priority: t.priority,
+    assignees: t.assignees,
+    tags: t.tags,
+    due_date: t.dueDate ? new Date(t.dueDate).toISOString() : null,
+    start_date: t.startDate ? new Date(t.startDate).toISOString() : null,
+    completed_at: t.completedAt ? new Date(t.completedAt).toISOString() : null,
+    dependencies: t.dependencies,
+    subtasks: JSON.parse(JSON.stringify(t.subtasks)),
+    section: t.section || null,
+  }
+}
+
 interface TasksContextType {
   tasks: Task[]
   addTask: (task: Task) => void
@@ -322,21 +360,68 @@ interface TasksContextType {
 const TasksContext = createContext<TasksContextType | undefined>(undefined)
 
 export function TasksProvider({ children }: { children: React.ReactNode }) {
-  const [tasks, setTasks] = useState<Task[]>(SEED_TASKS)
+  const [tasks, setTasks] = useState<Task[]>([])
 
-  const addTask = useCallback((task: Task) => {
-    setTasks((prev) => [...prev, task])
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await supabase.from("tasks").select("*").order("created_at", { ascending: true })
+      if (error) {
+        console.error("Failed to load tasks:", error)
+        setTasks(SEED_TASKS)
+        return
+      }
+      if (data && data.length > 0) {
+        setTasks(data.map(toTask))
+      } else {
+        const rows = SEED_TASKS.map(toRow)
+        const { data: seeded, error: seedErr } = await supabase.from("tasks").insert(rows).select()
+        if (seedErr) {
+          console.error("Failed to seed tasks:", seedErr)
+          setTasks(SEED_TASKS)
+        } else if (seeded) {
+          setTasks(seeded.map(toTask))
+        }
+      }
+    }
+    load()
   }, [])
 
-  const updateTask = useCallback((task: Task) => {
+  const addTask = useCallback(async (task: Task) => {
+    const row = toRow(task)
+    const { data, error } = await supabase.from("tasks").insert(row).select().single()
+    if (error) {
+      console.error("Failed to add task:", error)
+      return
+    }
+    if (data) setTasks((prev) => [...prev, toTask(data)])
+  }, [])
+
+  const updateTask = useCallback(async (task: Task) => {
+    const row = toRow(task)
+    const { error } = await supabase.from("tasks").update(row).eq("id", task.id)
+    if (error) {
+      console.error("Failed to update task:", error)
+      return
+    }
     setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)))
   }, [])
 
-  const deleteTask = useCallback((id: string) => {
+  const deleteTask = useCallback(async (id: string) => {
+    const { error } = await supabase.from("tasks").delete().eq("id", id)
+    if (error) {
+      console.error("Failed to delete task:", error)
+      return
+    }
     setTasks((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
-  const moveTask = useCallback((taskId: string, newStatus: TaskStatus) => {
+  const moveTask = useCallback(async (taskId: string, newStatus: TaskStatus) => {
+    const completedAt = newStatus === "done" ? new Date().toISOString() : null
+    const { error } = await supabase.from("tasks").update({ status: newStatus, completed_at: completedAt }).eq("id", taskId)
+    if (error) {
+      console.error("Failed to move task:", error)
+      return
+    }
     setTasks((prev) =>
       prev.map((t) =>
         t.id === taskId
@@ -369,6 +454,14 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
         } else {
           updated.splice(overIndex, 0, task)
         }
+
+        // Persist the status change
+        supabase.from("tasks").update({
+          status: newStatus,
+          completed_at: newStatus === "done" ? new Date().toISOString() : null,
+        }).eq("id", activeId).then(({ error }) => {
+          if (error) console.error("Failed to persist reorder:", error)
+        })
 
         return updated
       })

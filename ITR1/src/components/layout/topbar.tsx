@@ -1,5 +1,3 @@
-import React, { useState } from 'react'
-
 import { Bell, Search, ChevronDown, User, Settings, LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -19,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRole, type Role } from "@/context/role-context";
+import { useAuth } from "@/context/auth-context";
 
 const ROLES: Role[] = [
   "President",
@@ -33,6 +32,10 @@ const ROLES: Role[] = [
 
 export function TopBar() {
   const { role, setRole } = useRole();
+  const { user, signOut } = useAuth();
+  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+  const displayEmail = user?.email || "";
+  const initials = displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
@@ -101,10 +104,10 @@ export function TopBar() {
           <DropdownMenuTrigger className="relative h-9 px-2 gap-2 hover:bg-accent/50 flex items-center rounded-md border border-border/50 outline-none">
               <Avatar className="h-7 w-7 border border-border">
                 <AvatarImage src="/avatars/user.png" alt="User" />
-                <AvatarFallback className="bg-primary/10 text-primary text-[10px]">JD</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary text-[10px]">{initials}</AvatarFallback>
               </Avatar>
               <div className="hidden md:flex flex-col items-start leading-none gap-1">
-                <span className="text-xs font-semibold">John Doe</span>
+                <span className="text-xs font-semibold">{displayName}</span>
                 <span className="text-[10px] text-muted-foreground">{role}</span>
               </div>
               <ChevronDown className="h-3 w-3 text-muted-foreground mr-1" />
@@ -113,11 +116,10 @@ export function TopBar() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center">
-                  <p className="text-sm font-medium leading-none">John Doe</p>
-                  <span className="ml-2 text-[10px] bg-yellow-500/20 text-yellow-500 px-1 rounded font-bold border border-yellow-500/30">VITE</span>
+                  <p className="text-sm font-medium leading-none">{displayName}</p>
                 </div>
                 <p className="text-xs leading-none text-muted-foreground italic">
-                  john.doe@university.edu
+                  {displayEmail}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -150,7 +152,7 @@ export function TopBar() {
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => signOut()}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>
