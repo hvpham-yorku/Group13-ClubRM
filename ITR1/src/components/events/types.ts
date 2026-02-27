@@ -87,6 +87,9 @@ export function getTag(tagId: string): EventTag | undefined {
   return DEFAULT_TAGS.find((t) => t.id === tagId)
 }
 
-export function getCollaborator(id: string): Collaborator | undefined {
+export function getCollaborator(id: string, dynamicMembers?: Collaborator[]): Collaborator | undefined {
+  if (dynamicMembers && dynamicMembers.length > 0) {
+    return dynamicMembers.find((m) => m.id === id)
+  }
   return MOCK_MEMBERS.find((m) => m.id === id)
 }

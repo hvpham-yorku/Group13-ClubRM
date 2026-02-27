@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react"
-import { type Campaign, type PostPlatform, SEED_CAMPAIGNS, CAMPAIGN_STATUS_CONFIG, PLATFORM_CONFIG, POST_STATUS_CONFIG, formatNumber } from "./types"
+import { useState, useMemo, useEffect, useCallback } from "react"
+import { type Campaign, type CampaignStatus, type PostPlatform, SEED_CAMPAIGNS, CAMPAIGN_STATUS_CONFIG, PLATFORM_CONFIG, POST_STATUS_CONFIG, formatNumber } from "./types"
+import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,8 +51,41 @@ import {
 
 const PIE_COLORS = ["#f472b6", "#38bdf8", "#3b82f6", "#a78bfa", "#818cf8"]
 
+function toCampaign(row: Record<string, unknown>): Campaign {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    description: row.description as string,
+    status: row.status as CampaignStatus,
+    startDate: row.start_date as string,
+    endDate: row.end_date as string,
+    posts: (row.posts as Campaign["posts"]) || [],
+    budget: Number(row.budget),
+    spent: Number(row.spent),
+    reach: Number(row.reach),
+    engagement: Number(row.engagement),
+    tags: (row.tags as string[]) || [],
+  }
+}
+
+function toRow(c: Campaign) {
+  return {
+    name: c.name,
+    description: c.description,
+    status: c.status,
+    start_date: c.startDate,
+    end_date: c.endDate,
+    posts: JSON.parse(JSON.stringify(c.posts)),
+    budget: c.budget,
+    spent: c.spent,
+    reach: c.reach,
+    engagement: c.engagement,
+    tags: c.tags,
+  }
+}
+
 export function MarketingPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(SEED_CAMPAIGNS)
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
@@ -109,7 +143,33 @@ export function MarketingPage() {
     setFormEnd("")
   }
 
-  function handleAdd() {
+  // Load campaigns from Supabase
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await supabase.from("campaigns").select("*").order("created_at", { ascending: true })
+      if (error) {
+        console.error("Failed to load campaigns:", error)
+        setCampaigns(SEED_CAMPAIGNS)
+        return
+      }
+      if (data && data.length > 0) {
+        setCampaigns(data.map(toCampaign))
+      } else {
+        const rows = SEED_CAMPAIGNS.map(toRow)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: seeded, error: seedErr } = await supabase.from("campaigns").insert(rows as any).select()
+        if (seedErr) {
+          console.error("Failed to seed campaigns:", seedErr)
+          setCampaigns(SEED_CAMPAIGNS)
+        } else if (seeded) {
+          setCampaigns(seeded.map(toCampaign))
+        }
+      }
+    }
+    load()
+  }, [])
+
+  const handleAdd = useCallback(async () => {
     if (!formName.trim()) return
     const newCampaign: Campaign = {
       id: `camp${Date.now()}`,
@@ -125,10 +185,17 @@ export function MarketingPage() {
       tags: [],
       posts: [],
     }
-    setCampaigns((prev) => [...prev, newCampaign])
+    const row = toRow(newCampaign)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await supabase.from("campaigns").insert(row as any).select().single()
+    if (error) {
+      console.error("Failed to add campaign:", error)
+      return
+    }
+    if (data) setCampaigns((prev) => [...prev, toCampaign(data)])
     resetForm()
     setAddOpen(false)
-  }
+  }, [formName, formDesc, formStart, formEnd, formBudget])
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

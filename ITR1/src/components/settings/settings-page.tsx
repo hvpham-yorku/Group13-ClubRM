@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
+import { supabaseUntyped as db } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -58,6 +59,7 @@ const ROLES_CONFIG = [
 ]
 
 export function SettingsPage() {
+  const [settingsId, setSettingsId] = useState<string | null>(null)
   const [org, setOrg] = useState<OrgSettings>({
     name: "ClubRM",
     slug: "clubrm",
@@ -80,10 +82,59 @@ export function SettingsPage() {
   const [theme, setTheme] = useState<"dark" | "light" | "system">("dark")
   const [saved, setSaved] = useState(false)
 
-  function handleSave() {
+  // Load settings from Supabase
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await db.from("org_settings").select("*").limit(1).single()
+      if (error) {
+        console.error("Failed to load settings:", error)
+        return
+      }
+      if (data) {
+        setSettingsId(data.id)
+        setOrg({
+          name: data.name || "ClubRM",
+          slug: data.slug || "clubrm",
+          description: data.description || "",
+          email: data.email || "",
+          website: data.website || "",
+          university: data.university || "York University",
+          term: data.term || "Fall 2026",
+          timezone: data.timezone || "America/Toronto",
+        })
+        if (data.notification_prefs && typeof data.notification_prefs === "object") {
+          setNotifications((prev) => ({ ...prev, ...data.notification_prefs }))
+        }
+        if (data.theme) setTheme(data.theme as "dark" | "light" | "system")
+      }
+    }
+    load()
+  }, [])
+
+  const handleSave = useCallback(async () => {
+    const payload = {
+      name: org.name,
+      slug: org.slug,
+      description: org.description,
+      email: org.email,
+      website: org.website,
+      university: org.university,
+      term: org.term,
+      timezone: org.timezone,
+      notification_prefs: notifications,
+      theme,
+    }
+    if (settingsId) {
+      const { error } = await db.from("org_settings").update(payload).eq("id", settingsId)
+      if (error) console.error("Failed to save settings:", error)
+    } else {
+      const { data, error } = await db.from("org_settings").insert(payload).select().single()
+      if (error) console.error("Failed to create settings:", error)
+      if (data) setSettingsId(data.id)
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
-  }
+  }, [org, notifications, theme, settingsId])
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">

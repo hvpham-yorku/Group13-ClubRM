@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
 import { useFinance } from "@/context/finance-context"
+import { useAuth } from "@/context/auth-context"
 import {
   type Expense,
   type ExpenseStatus,
@@ -37,6 +38,8 @@ interface ExpensesTabProps {
 
 export function ExpensesTab({}: ExpensesTabProps) {
   const { expenses, addExpense, updateExpenseStatus, deleteExpense } = useFinance()
+  const { user } = useAuth()
+  const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
 
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState<ExpenseStatus | "all">("all")
@@ -69,7 +72,7 @@ export function ExpensesTab({}: ExpensesTabProps) {
       category: newCategory,
       date: new Date(`${newDate}T12:00:00`),
       status: "pending",
-      submittedBy: "John Doe",
+      submittedBy: currentUserName,
       notes: newNotes || undefined,
     }
     addExpense(expense)
@@ -197,7 +200,7 @@ export function ExpensesTab({}: ExpensesTabProps) {
                               variant="ghost"
                               size="icon-xs"
                               className="text-emerald-400 hover:bg-emerald-500/10"
-                              onClick={() => updateExpenseStatus(expense.id, "approved", "John Doe")}
+                              onClick={() => updateExpenseStatus(expense.id, "approved", currentUserName)}
                               title="Approve"
                             >
                               <CheckCircle className="h-3.5 w-3.5" />

@@ -327,8 +327,58 @@ export function ReportsPage() {
   const insightColors = { success: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400", warning: "bg-amber-500/10 border-amber-500/20 text-amber-400", danger: "bg-red-500/10 border-red-500/20 text-red-400", info: "bg-blue-500/10 border-blue-500/20 text-blue-400" }
   const insightIcons = { success: <ArrowUpRight className="h-4 w-4" />, warning: <AlertTriangle className="h-4 w-4" />, danger: <Flame className="h-4 w-4" />, info: <Activity className="h-4 w-4" /> }
 
-  function handleExport(format: string) {
-    alert(`Export as ${format} will be available once the backend is connected.\n\nThis will generate a downloadable ${format.toUpperCase()} file with all current report data.`)
+  function handleExport(exportFormat: string) {
+    if (exportFormat === "csv") {
+      // Build CSV from all modules
+      const lines: string[] = []
+      lines.push("Module,Metric,Value")
+      lines.push(`Members,Total,${memberStats.total}`)
+      lines.push(`Members,Active,${memberStats.active}`)
+      lines.push(`Members,Inactive,${memberStats.inactive}`)
+      lines.push(`Members,Alumni,${memberStats.alumni}`)
+      lines.push(`Members,Retention Rate,${retentionRate}%`)
+      lines.push(`Tasks,Total,${tasks.length}`)
+      lines.push(`Tasks,Completed,${completedTasks}`)
+      lines.push(`Tasks,Completion Rate,${completionRate.toFixed(1)}%`)
+      lines.push(`Tasks,Overdue,${overdueTasks.length}`)
+      lines.push(`Tasks,In Progress,${inProgressTasks}`)
+      lines.push(`Finance,Budget Total,${budget.totalBudget}`)
+      lines.push(`Finance,Total Spent,${totalSpent}`)
+      lines.push(`Finance,Remaining,${budgetRemaining}`)
+      lines.push(`Finance,Total Income,${totalIncome}`)
+      lines.push(`Finance,Net Cash Flow,${netCashFlow}`)
+      lines.push(`Finance,Pending Approvals,${pendingExpenses}`)
+      lines.push(`Events,Total,${events.length}`)
+      lines.push(`Events,Upcoming,${upcomingEvents}`)
+      lines.push(`Events,Past,${pastEvents}`)
+      lines.push(`Events,Avg Fill Rate,${avgFillRate.toFixed(1)}%`)
+      lines.push(`Org Health,Score,${orgHealth}/100`)
+      lines.push("")
+      lines.push("--- Expenses ---")
+      lines.push("Description,Amount,Category,Status,Submitted By,Date")
+      expenses.forEach((e) => {
+        const d = safeDate(e.date)
+        lines.push(`"${e.description}",${e.amount},${e.category},${e.status},"${e.submittedBy}",${d ? format(d, "yyyy-MM-dd") : ""}`)
+      })
+      lines.push("")
+      lines.push("--- Income ---")
+      lines.push("Source,Amount,Type,Date")
+      income.forEach((i) => {
+        const d = safeDate(i.date)
+        lines.push(`"${i.source}",${i.amount},${i.type},${d ? format(d, "yyyy-MM-dd") : ""}`)
+      })
+
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `clubrm-report-${format(new Date(), "yyyy-MM-dd")}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } else {
+      // For PDF, just trigger print as a simple solution
+      window.print()
+    }
   }
 
   return (

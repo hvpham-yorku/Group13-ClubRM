@@ -1,21 +1,20 @@
 import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from '@/context/auth-context'
+import { AuthPage } from '@/components/auth/auth-page'
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
 import { DashboardPage } from "@/components/dashboard/dashboard-page"
 import { EventsPage } from "@/components/events/events-page"
 import { TasksPage } from "@/components/tasks/tasks-page"
-import { FinancePage } from "@/components/finance/finance-page"
 import { MembersPage } from "@/components/members/members-page"
+import { FinancePage } from "@/components/finance/finance-page"
 import { ExternalPage } from "@/components/external/external-page"
 import { MarketingPage } from "@/components/marketing/marketing-page"
-import { ReportsPage } from "@/components/reports/reports-page"
 import { DocumentsPage } from "@/components/documents/documents-page"
+import { ReportsPage } from "@/components/reports/reports-page"
 import { SettingsPage } from "@/components/settings/settings-page"
-import { AuthPage } from "@/components/auth/auth-page"
-import { useAuth } from "@/context/auth-context"
-import { Loader2 } from "lucide-react"
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -38,8 +37,8 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     )
   }
@@ -54,13 +53,14 @@ function App() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/tasks" element={<TasksPage />} />
-        <Route path="/finance" element={<FinancePage />} />
         <Route path="/members" element={<MembersPage />} />
+        <Route path="/finance" element={<FinancePage />} />
         <Route path="/external" element={<ExternalPage />} />
         <Route path="/marketing" element={<MarketingPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
   )

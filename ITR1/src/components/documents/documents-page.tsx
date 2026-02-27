@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
+import { supabaseUntyped as db } from "@/lib/supabase"
+import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -79,7 +81,7 @@ const TYPE_ICONS: Record<DocType, React.ReactNode> = {
   other: <File className="h-5 w-5 text-slate-400" />,
 }
 
-const SEED_DOCUMENTS: Document[] = [
+const SEED_DOCUMENTS: Document[] = [// seed data used as fallback and for initial DB population
   { id: "d1", name: "Club Constitution 2025-26.pdf", category: "governance", type: "pdf", size: "245 KB", uploadedBy: "Naeem Baig", uploadedDate: "2025-09-01", lastModified: "2025-09-01", description: "Official club constitution ratified for the 2025-26 academic year.", tags: ["official", "governance"] },
   { id: "d2", name: "Budget Proposal - Fall 2026.xlsx", category: "finance", type: "spreadsheet", size: "128 KB", uploadedBy: "Marcus Johnson", uploadedDate: "2025-08-20", lastModified: "2026-01-15", description: "Detailed budget breakdown for Fall 2026 term.", tags: ["budget", "fall-2026"] },
   { id: "d3", name: "Event Planning Template.docx", category: "templates", type: "doc", size: "56 KB", uploadedBy: "Priya Sharma", uploadedDate: "2025-09-10", lastModified: "2025-11-20", description: "Reusable template for planning club events.", tags: ["template", "events"] },
@@ -96,8 +98,39 @@ const SEED_DOCUMENTS: Document[] = [
   { id: "d14", name: "Annual Report 2024-25.pdf", category: "governance", type: "pdf", size: "1.2 MB", uploadedBy: "Naeem Baig", uploadedDate: "2025-05-30", lastModified: "2025-05-30", description: "Year-end report summarizing club activities.", tags: ["annual", "report"] },
 ]
 
+function toDoc(row: Record<string, unknown>): Document {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    category: row.category as DocCategory,
+    type: row.type as DocType,
+    size: row.size as string,
+    uploadedBy: row.uploaded_by as string,
+    uploadedDate: row.uploaded_date as string,
+    lastModified: row.last_modified as string,
+    description: (row.description as string) || undefined,
+    tags: (row.tags as string[]) || [],
+  }
+}
+
+function toRow(d: Document) {
+  return {
+    name: d.name,
+    category: d.category,
+    type: d.type,
+    size: d.size,
+    uploaded_by: d.uploadedBy,
+    uploaded_date: d.uploadedDate,
+    last_modified: d.lastModified,
+    description: d.description || null,
+    tags: d.tags,
+  }
+}
+
 export function DocumentsPage() {
-  const [documents, setDocuments] = useState<Document[]>(SEED_DOCUMENTS)
+  const [documents, setDocuments] = useState<Document[]>([])
+  const { user } = useAuth()
+  const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
@@ -144,7 +177,34 @@ export function DocumentsPage() {
     setFormDesc("")
   }
 
-  function handleAdd() {
+  // Load documents from Supabase
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await db.from("documents").select("*").order("created_at", { ascending: false })
+      if (error) {
+        console.error("Failed to load documents:", error)
+        setDocuments(SEED_DOCUMENTS)
+        return
+      }
+      if (data && data.length > 0) {
+        setDocuments(data.map(toDoc))
+      } else {
+        // Seed
+        const rows = SEED_DOCUMENTS.map(toRow)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: seeded, error: seedErr } = await db.from("documents").insert(rows).select()
+        if (seedErr) {
+          console.error("Failed to seed documents:", seedErr)
+          setDocuments(SEED_DOCUMENTS)
+        } else if (seeded) {
+          setDocuments(seeded.map(toDoc))
+        }
+      }
+    }
+    load()
+  }, [])
+
+  const handleAdd = useCallback(async () => {
     if (!formName.trim()) return
     const newDoc: Document = {
       id: `d${Date.now()}`,
@@ -152,20 +212,32 @@ export function DocumentsPage() {
       category: formCategory,
       type: formType,
       size: "0 KB",
-      uploadedBy: "You",
+      uploadedBy: currentUserName,
       uploadedDate: new Date().toISOString().split("T")[0],
       lastModified: new Date().toISOString().split("T")[0],
       description: formDesc.trim() || undefined,
       tags: [],
     }
-    setDocuments((prev) => [newDoc, ...prev])
+    const row = toRow(newDoc)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await db.from("documents").insert(row).select().single()
+    if (error) {
+      console.error("Failed to add document:", error)
+      return
+    }
+    if (data) setDocuments((prev) => [toDoc(data), ...prev])
     resetForm()
     setAddOpen(false)
-  }
+  }, [formName, formCategory, formType, formDesc, currentUserName])
 
-  function handleDelete(id: string) {
+  const handleDelete = useCallback(async (id: string) => {
+    const { error } = await db.from("documents").delete().eq("id", id)
+    if (error) {
+      console.error("Failed to delete document:", error)
+      return
+    }
     setDocuments((prev) => prev.filter((d) => d.id !== id))
-  }
+  }, [])
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

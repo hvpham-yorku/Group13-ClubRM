@@ -27,6 +27,8 @@ import {
   getCollaborator,
 } from "./types"
 import { cn } from "@/lib/utils"
+import { useMembers } from "@/context/members-context"
+import type { Collaborator } from "./types"
 import {
   MapPin,
   Clock,
@@ -60,6 +62,17 @@ export function EventModal({
   onDelete,
 }: EventModalProps) {
   const isEditing = !!event
+  const { members } = useMembers()
+
+  // Build collaborator list from dynamic members
+  const dynamicCollaborators: Collaborator[] = members.map((m) => ({
+    id: m.id,
+    name: m.name,
+    email: m.email,
+    initials: m.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2),
+    role: m.role,
+  }))
+  const collaboratorList = dynamicCollaborators.length > 0 ? dynamicCollaborators : MOCK_MEMBERS
 
   const getDefaultStart = () => {
     if (defaultDate) return defaultDate
@@ -179,7 +192,7 @@ export function EventModal({
     )
   }
 
-  const filteredMembers = MOCK_MEMBERS.filter(
+  const filteredMembers = collaboratorList.filter(
     (m) =>
       m.name.toLowerCase().includes(collaboratorSearch.toLowerCase()) ||
       m.email.toLowerCase().includes(collaboratorSearch.toLowerCase())

@@ -36,6 +36,7 @@ export interface Database {
           avatar_url?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       members: {
         Row: {
@@ -87,6 +88,7 @@ export interface Database {
           bio?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       events: {
         Row: {
@@ -144,6 +146,7 @@ export interface Database {
           status?: string
           updated_at?: string
         }
+        Relationships: []
       }
       tasks: {
         Row: {
@@ -195,6 +198,7 @@ export interface Database {
           section?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       expenses: {
         Row: {
@@ -237,6 +241,7 @@ export interface Database {
           notes?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       reimbursements: {
         Row: {
@@ -282,6 +287,7 @@ export interface Database {
           notes?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       income: {
         Row: {
@@ -315,6 +321,7 @@ export interface Database {
           recurring?: boolean
           updated_at?: string
         }
+        Relationships: []
       }
       budgets: {
         Row: {
@@ -336,6 +343,7 @@ export interface Database {
           term_label?: string
           updated_at?: string
         }
+        Relationships: []
       }
       sponsors: {
         Row: {
@@ -384,6 +392,7 @@ export interface Database {
           industry?: string
           updated_at?: string
         }
+        Relationships: []
       }
       campaigns: {
         Row: {
@@ -432,16 +441,11 @@ export interface Database {
           tags?: string[]
           updated_at?: string
         }
+        Relationships: []
       }
     }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
+    Views: {}
+    Functions: {}
+    Enums: {}
   }
 }

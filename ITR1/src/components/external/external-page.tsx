@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { type Sponsor, type SponsorTier, type SponsorStatus, SEED_SPONSORS, TIER_CONFIG, STATUS_CONFIG, INDUSTRIES, formatCurrency } from "./types"
+import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -77,8 +78,41 @@ const INTERACTION_ICON_MAP: Record<string, React.ReactNode> = {
   proposal: <FileText className="h-3.5 w-3.5" />,
 }
 
+function toSponsor(row: Record<string, unknown>): Sponsor {
+  return {
+    id: row.id as string,
+    company: row.company as string,
+    logo: (row.logo as string) || undefined,
+    tier: row.tier as SponsorTier,
+    status: row.status as SponsorStatus,
+    amount: Number(row.amount),
+    startDate: row.start_date as string,
+    endDate: (row.end_date as string) || undefined,
+    contacts: (row.contacts as Sponsor["contacts"]) || [],
+    interactions: (row.interactions as Sponsor["interactions"]) || [],
+    notes: (row.notes as string) || undefined,
+    industry: row.industry as string,
+  }
+}
+
+function toRow(s: Sponsor) {
+  return {
+    company: s.company,
+    logo: s.logo || null,
+    tier: s.tier,
+    status: s.status,
+    amount: s.amount,
+    start_date: s.startDate,
+    end_date: s.endDate || null,
+    contacts: JSON.parse(JSON.stringify(s.contacts)),
+    interactions: JSON.parse(JSON.stringify(s.interactions)),
+    notes: s.notes || null,
+    industry: s.industry,
+  }
+}
+
 export function ExternalPage() {
-  const [sponsors, setSponsors] = useState<Sponsor[]>(SEED_SPONSORS)
+  const [sponsors, setSponsors] = useState<Sponsor[]>([])
   const [search, setSearch] = useState("")
   const [tierFilter, setTierFilter] = useState<string>("all")
   const [statusFilter] = useState<string>("all")
@@ -120,7 +154,33 @@ export function ExternalPage() {
     setFormNotes("")
   }
 
-  function handleAdd() {
+  // Load sponsors from Supabase
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await supabase.from("sponsors").select("*").order("created_at", { ascending: true })
+      if (error) {
+        console.error("Failed to load sponsors:", error)
+        setSponsors(SEED_SPONSORS)
+        return
+      }
+      if (data && data.length > 0) {
+        setSponsors(data.map(toSponsor))
+      } else {
+        const rows = SEED_SPONSORS.map(toRow)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: seeded, error: seedErr } = await supabase.from("sponsors").insert(rows as any).select()
+        if (seedErr) {
+          console.error("Failed to seed sponsors:", seedErr)
+          setSponsors(SEED_SPONSORS)
+        } else if (seeded) {
+          setSponsors(seeded.map(toSponsor))
+        }
+      }
+    }
+    load()
+  }, [])
+
+  const handleAdd = useCallback(async () => {
     if (!formCompany.trim()) return
     const newSponsor: Sponsor = {
       id: `s${Date.now()}`,
@@ -136,14 +196,26 @@ export function ExternalPage() {
         : [],
       interactions: [],
     }
-    setSponsors((prev) => [...prev, newSponsor])
+    const row = toRow(newSponsor)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await supabase.from("sponsors").insert(row as any).select().single()
+    if (error) {
+      console.error("Failed to add sponsor:", error)
+      return
+    }
+    if (data) setSponsors((prev) => [...prev, toSponsor(data)])
     resetForm()
     setAddOpen(false)
-  }
+  }, [formCompany, formTier, formAmount, formIndustry, formNotes, formContactName, formContactTitle, formContactEmail])
 
-  function handleDelete(id: string) {
+  const handleDelete = useCallback(async (id: string) => {
+    const { error } = await supabase.from("sponsors").delete().eq("id", id)
+    if (error) {
+      console.error("Failed to delete sponsor:", error)
+      return
+    }
     setSponsors((prev) => prev.filter((s) => s.id !== id))
-  }
+  }, [])
 
   // Pipeline view — group by status
   const pipeline: { status: SponsorStatus; sponsors: Sponsor[] }[] = [
