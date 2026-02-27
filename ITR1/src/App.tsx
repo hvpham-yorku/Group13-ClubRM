@@ -1,5 +1,7 @@
 import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from '@/context/auth-context'
+import { AuthPage } from '@/components/auth/auth-page'
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
@@ -30,7 +32,21 @@ function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
-function ProtectedRoutes() {
+function App() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <AuthPage />
+  }
+
   return (
     <Layout>
       <Routes>
@@ -44,6 +60,7 @@ function ProtectedRoutes() {
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
   )
