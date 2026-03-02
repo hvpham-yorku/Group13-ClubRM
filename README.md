@@ -2,7 +2,7 @@
 
 A modern CRM platform built specifically for student clubs and associations. Built with React 18, TypeScript, Vite, and TailwindCSS v4.
 
-> **Iteration:** ITR1 | **Term:** Fall 2026 | **Group:** 13
+> **Iteration:** ITR1 | **Term:** Winter 2026 | **Group:** 13
 
 ---
 
