@@ -31,6 +31,7 @@ import {
   User,
 } from "lucide-react"
 import { format } from "date-fns"
+import { AddToGoogleCalendar } from "@/components/events/add-to-google-calendar"
 
 interface EventDetailPanelProps {
   open: boolean
@@ -258,6 +259,11 @@ export function EventDetailPanel({
               Created by {creator.name}
             </div>
           )}
+
+          <Separator />
+
+          {/* Google Calendar sync */}
+          <AddToGoogleCalendar event={event} />
         </div>
       </DialogContent>
     </Dialog>
