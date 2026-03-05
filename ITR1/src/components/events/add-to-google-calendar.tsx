@@ -1,9 +1,7 @@
-// src/components/events/add-to-google-calendar.tsx
-
 import { useGoogleCalendar } from "@/hooks/use-google-calendar"
 import { type CalendarEvent } from "@/components/events/types"
 
-// Inline Google "G" SVG logo — no external dependency needed
+// Inline Google Icon
 function GoogleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -29,7 +27,7 @@ function GoogleIcon({ className }: { className?: string }) {
 
 interface AddToGoogleCalendarProps {
   event: CalendarEvent
-  /** Optional extra className on the button wrapper */
+  
   className?: string
 }
 
