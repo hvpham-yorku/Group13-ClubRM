@@ -76,6 +76,34 @@ const ROLE_COLORS: Record<string, string> = {
   Administrator: "bg-red-500/20 text-red-400 border-red-500/30",
 }
 
+function MemberAvatar({ 
+  member, 
+  className 
+}: { 
+  member: Member, // Fixed 'any' to 'Member'
+  className?: string 
+}) {
+  return (
+    <div className="relative inline-block">
+      <div className={cn(
+        "rounded-full flex items-center justify-center font-semibold shrink-0 transition-all hover:scale-105", 
+        getAvatarColor(member.name), 
+        className,
+        member.role === "President" && "ring-2 ring-amber-500/50 ring-offset-2 ring-offset-background"
+      )}>
+        {getInitials(member.name)}
+      </div>
+
+      {member.status === "active" && (
+        <span className="absolute bottom-0 right-0 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-background"></span>
+        </span>
+      )}
+    </div>
+  );
+}
+
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -171,7 +199,6 @@ export function MembersPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Members</h1>
@@ -185,7 +212,6 @@ export function MembersPage() {
         </Button>
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-card border border-border/50 rounded-xl p-4 space-y-1">
           <div className="flex items-center gap-2 text-muted-foreground">
@@ -286,14 +312,12 @@ export function MembersPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((member) => (
             <div
-              key={member.id}
-              className="group bg-card border border-border/50 rounded-xl p-5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
-              onClick={() => setDetailMember(member)}
+            key={member.id}
+            className="group bg-card border border-border/50 rounded-xl p-5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
+            onClick={() => setDetailMember(member)}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={cn("h-12 w-12 rounded-full flex items-center justify-center text-sm font-semibold", getAvatarColor(member.name))}>
-                  {getInitials(member.name)}
-                </div>
+                <MemberAvatar member={member} className="h-12 w-12 text-sm" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -337,8 +361,8 @@ export function MembersPage() {
         </div>
       )}
 
-      {/* Table View */}
-      {view === "table" && (
+       {/* Table View */}
+       {view === "table" && (
         <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
           <Table>
             <TableHeader>
@@ -352,59 +376,65 @@ export function MembersPage() {
                 <TableHead className="text-right">Events</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((member) => (
-                <TableRow key={member.id} className="cursor-pointer" onClick={() => setDetailMember(member)}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0", getAvatarColor(member.name))}>
-                        {getInitials(member.name)}
+              </TableHeader>
+              <TableBody>
+                {filtered.map((member) => (
+                  <TableRow
+                  key={member.id} 
+                  className="cursor-pointer" 
+                  onClick={() => setDetailMember(member)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <MemberAvatar member={member} className="h-8 w-8 text-xs" />
+                        <div>
+                          <p className="font-medium text-sm">{member.name}</p>
+                          <p className="text-xs text-muted-foreground">{member.email}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-sm">{member.name}</p>
-                        <p className="text-xs text-muted-foreground">{member.email}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium border", ROLE_COLORS[member.role])}>
-                      {member.role}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", statusMeta(member.status)?.color)}>
-                      {statusMeta(member.status)?.label}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-sm">{member.department}</TableCell>
-                  <TableCell className="text-sm">{member.year}</TableCell>
-                  <TableCell className="text-right text-sm">{member.tasksCompleted}</TableCell>
-                  <TableCell className="text-right text-sm">{member.eventsAttended}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditMember(member) }}>
-                          <Pencil className="h-4 w-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMember(member.id) }}>
-                          <Trash2 className="h-4 w-4 mr-2" /> Remove
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                    </TableCell>
+            
+                    <TableCell>
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium border", ROLE_COLORS[member.role])}>
+                        {member.role}
+                      </span>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", statusMeta(member.status)?.color)}>
+                        {statusMeta(member.status)?.label}
+                      </span>
+                    </TableCell>
+                    
+                    <TableCell className="text-sm">{member.department}</TableCell>
+                    <TableCell className="text-sm">{member.year}</TableCell>
+                    <TableCell className="text-right text-sm">{member.tasksCompleted}</TableCell>
+                    <TableCell className="text-right text-sm">{member.eventsAttended}</TableCell>
+                    
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditMember(member) }}>
+                            <Pencil className="h-4 w-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMember(member.id) }}>
+                            <Trash2 className="h-4 w-4 mr-2" /> Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
       {/* Add Member Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -475,13 +505,13 @@ export function MembersPage() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold", getAvatarColor(detailMember.name))}>
-                    {getInitials(detailMember.name)}
-                  </div>
+                  <MemberAvatar member={detailMember} className="h-10 w-10 text-sm" />
                   {detailMember.name}
                 </DialogTitle>
               </DialogHeader>
+
               <div className="space-y-4 py-2">
+                {/* Status Badges */}
                 <div className="flex items-center gap-2">
                   <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium border", ROLE_COLORS[detailMember.role])}>
                     {detailMember.role}
@@ -491,10 +521,14 @@ export function MembersPage() {
                   </span>
                 </div>
 
+                {/* Bio Section */}
                 {detailMember.bio && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{detailMember.bio}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {detailMember.bio}
+                  </p>
                 )}
 
+                {/* Contact Info Grid */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-muted/30 rounded-lg p-3 space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Mail className="h-3 w-3" /> Email</p>
@@ -514,6 +548,7 @@ export function MembersPage() {
                   </div>
                 </div>
 
+                {/* Activity Stats */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-muted/30 rounded-lg p-3 text-center">
                     <p className="text-lg font-bold">{detailMember.tasksCompleted}</p>
@@ -529,6 +564,7 @@ export function MembersPage() {
                   </div>
                 </div>
               </div>
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => { setDetailMember(null); setEditMember(detailMember) }}>
                   <Pencil className="h-4 w-4 mr-2" /> Edit
