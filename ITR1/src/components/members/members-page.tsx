@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useMembers } from "@/context/members-context"
 import { type Member, MEMBER_STATUSES, DEPARTMENTS, YEARS } from "./types"
 import type { Role } from "@/context/role-context"
@@ -103,7 +104,17 @@ function getAvatarColor(name: string) {
 export function MembersPage() {
   const { members, addMember, updateMember, deleteMember, stats } = useMembers()
 
-  const [search, setSearch] = useState("")
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get("search") || ""
+
+  const handleSearchChange = (val: string) => {
+    setSearchParams(prev => {
+      if (val) prev.set("search", val)
+      else prev.delete("search")
+      return prev
+    }, { replace: true })
+  }
+
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [view, setView] = useState<"grid" | "table">("grid")
@@ -225,7 +236,7 @@ export function MembersPage() {
             <Input
               placeholder="Search members..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-9"
             />
           </div>

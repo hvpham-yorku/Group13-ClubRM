@@ -11,7 +11,8 @@ const statusStyles = {
   critical: { color: "text-destructive", bg: "bg-destructive/10 border-destructive/20", label: "Critical" },
 };
 
-export function EventsPanel({ data }: { data: EventsInsight }) {
+export function EventsPanel({ data }: { data: EventsInsight | null }) {
+  if (!data) return <div className="text-sm text-muted-foreground text-center py-8">Loading events insights…</div>;
   return (
     <div className="space-y-6">
       {/* Summary row */}

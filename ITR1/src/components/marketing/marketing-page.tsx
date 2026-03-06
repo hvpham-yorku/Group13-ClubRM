@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react"
+import { useSearchParams } from "react-router-dom"
 import { type Campaign, type CampaignStatus, type PostPlatform, SEED_CAMPAIGNS, CAMPAIGN_STATUS_CONFIG, PLATFORM_CONFIG, POST_STATUS_CONFIG, formatNumber } from "./types"
 import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
@@ -86,7 +87,18 @@ function toRow(c: Campaign) {
 
 export function MarketingPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [search, setSearch] = useState("")
+  
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get("search") || ""
+  
+  const handleSearchChange = (val: string) => {
+    setSearchParams(prev => {
+      if (val) prev.set("search", val)
+      else prev.delete("search")
+      return prev
+    }, { replace: true })
+  }
+
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [addOpen, setAddOpen] = useState(false)
@@ -268,7 +280,7 @@ export function MarketingPage() {
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search campaigns..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-[200px]" />
+              <Input placeholder="Search campaigns..." value={search} onChange={(e) => handleSearchChange(e.target.value)} className="pl-9 w-[200px]" />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>

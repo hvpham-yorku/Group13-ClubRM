@@ -12,6 +12,7 @@ interface ListViewProps {
   filterAssignee: string | null
   filterPriority: string | null
   groupBy: "status" | "priority" | "assignee" | "section"
+  searchQuery?: string
 }
 
 type SortKey = "title" | "priority" | "dueDate" | "status"
@@ -20,7 +21,7 @@ type SortDir = "asc" | "desc"
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 }
 const STATUS_ORDER: Record<string, number> = { backlog: 0, todo: 1, in_progress: 2, in_review: 3, done: 4 }
 
-export function ListView({ onTaskClick, filterAssignee, filterPriority, groupBy }: ListViewProps) {
+export function ListView({ onTaskClick, filterAssignee, filterPriority, groupBy, searchQuery = "" }: ListViewProps) {
   const { tasks, moveTask } = useTasks()
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [sortKey, setSortKey] = useState<SortKey>("priority")
@@ -30,9 +31,10 @@ export function ListView({ onTaskClick, filterAssignee, filterPriority, groupBy 
     return tasks.filter((t) => {
       if (filterAssignee && !t.assignees.includes(filterAssignee)) return false
       if (filterPriority && t.priority !== filterPriority) return false
+      if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false
       return true
     })
-  }, [tasks, filterAssignee, filterPriority])
+  }, [tasks, filterAssignee, filterPriority, searchQuery])
 
   const sortedTasks = useMemo(() => {
     const sorted = [...filteredTasks].sort((a, b) => {
