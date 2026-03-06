@@ -1,4 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
+import { motion } from "framer-motion"
+import { useAuth } from "@/context/auth-context"
+import { OrgStats } from "@/lib/dashboard-logic";
 import { StatCard } from "../stat-card";
 import { Widget } from "../widget";
 import { ProgressBar } from "../progress-bar";
@@ -26,13 +29,37 @@ import { useTasks } from "@/context/tasks-context";
 import { format } from "date-fns";
 
 export function PresidentDashboard() {
+  const [apiData, setApiData] = useState<{ stats: any; score: number } | null>(null);
+  const { session } = useAuth()
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const headers: Record<string, string> = {}
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`
+        }
+
+        const res = await fetch("/api/dashboard/stats", { headers })
+        const data = await res.json()
+        setApiData(data)
+      } catch (err) {
+        console.error("Failed to fetch stats:", err)
+      }
+    }
+    fetchStats()
+  }, [session?.access_token]);
+
   const { stats: memberStats } = useMembers();
   const { budget, expenses, reimbursements, totalSpent, totalPending } = useFinance();
   const { events } = useEvents();
   const { tasks } = useTasks();
 
-  const remaining = budget.totalBudget - totalSpent;
-  const remainingPct = budget.totalBudget > 0 ? Math.round((remaining / budget.totalBudget) * 100) : 0;
+  const remaining = apiData ? apiData.stats.totalBudget - apiData.stats.spentBudget : budget.totalBudget - totalSpent;
+  const remainingPct = apiData
+    ? apiData.stats.totalBudget > 0 ? Math.round((remaining / apiData.stats.totalBudget) * 100) : 0
+    : budget.totalBudget > 0 ? Math.round((remaining / budget.totalBudget) * 100) : 0;
+  const displaySpent = apiData ? apiData.stats.spentBudget : totalSpent;
 
   // Upcoming events sorted by date
   const upcomingEvents = useMemo(() => {
@@ -84,8 +111,8 @@ export function PresidentDashboard() {
         >
           <StatCard
             title="Org Health Score"
-            value={`${orgHealthInsight.overallScore}/100`}
-            trend={{ value: orgHealthInsight.overallScore - orgHealthInsight.previousScore, label: "vs last month" }}
+            value={apiData ? `${apiData.score}/100` : "..."}
+            trend={{ value: apiData ? apiData.score - orgHealthInsight.previousScore : 0, label: "vs last month" }}
             icon={<Activity className="h-5 w-5" />}
           />
         </ExpandableTile>
@@ -97,8 +124,8 @@ export function PresidentDashboard() {
         >
           <StatCard
             title="Active Members"
-            value={String(memberStats.active)}
-            description={`${memberStats.total > 0 ? Math.round((memberStats.active / memberStats.total) * 100) : 0}% of ${memberStats.total} total`}
+            value={apiData ? String(apiData.stats.activeMembers) : "..."}
+            description={apiData && apiData.stats.members > 0 ? `${Math.round((apiData.stats.activeMembers / apiData.stats.members) * 100)}% of ${apiData.stats.members} total` : "..."}
             icon={<Users className="h-5 w-5" />}
           />
         </ExpandableTile>
@@ -112,12 +139,12 @@ export function PresidentDashboard() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-primary" />
-                <span className="text-3xl font-bold">${remaining.toLocaleString()}</span>
+                <span className="text-3xl font-bold">${apiData ? remaining.toLocaleString() : "..."}</span>
               </div>
               <ProgressBar
-                value={remainingPct}
-                label={`Total Spent: $${totalSpent.toLocaleString()}`}
-                subLabel={`${remainingPct}% remaining`}
+                value={apiData ? remainingPct : 0}
+                label={`Total Spent: $${apiData ? displaySpent.toLocaleString() : "..."}`}
+                subLabel={apiData ? `${remainingPct}% remaining` : "..."}
                 color="pink"
               />
             </div>
