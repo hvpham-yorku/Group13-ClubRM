@@ -1,4 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
+<<<<<<< HEAD
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+=======
 import type { Database } from './database.types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
@@ -14,3 +21,4 @@ export const supabase = createClient<Database>(supabaseUrl || 'https://placehold
 // Uses the SAME instance — no duplicate GoTrue/auth session conflicts
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabaseUntyped = supabase as any
+>>>>>>> 3e82175cbc695093c3747484475bbd7ee4fa9602

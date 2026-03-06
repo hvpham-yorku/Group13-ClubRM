@@ -5,57 +5,19 @@ import { AuthPage } from "@/components/auth/auth-page";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
+import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard";
+import TestDatabase from './Testing/TestDatabase';
 
-const DashboardPage = React.lazy(() =>
-  import("@/components/dashboard/dashboard-page").then((m) => ({
-    default: m.DashboardPage,
-  })),
-);
-const EventsPage = React.lazy(() =>
-  import("@/components/events/events-page").then((m) => ({
-    default: m.EventsPage,
-  })),
-);
-const TasksPage = React.lazy(() =>
-  import("@/components/tasks/tasks-page").then((m) => ({
-    default: m.TasksPage,
-  })),
-);
-const MembersPage = React.lazy(() =>
-  import("@/components/members/members-page").then((m) => ({
-    default: m.MembersPage,
-  })),
-);
-const FinancePage = React.lazy(() =>
-  import("@/components/finance/finance-page").then((m) => ({
-    default: m.FinancePage,
-  })),
-);
-const ExternalPage = React.lazy(() =>
-  import("@/components/external/external-page").then((m) => ({
-    default: m.ExternalPage,
-  })),
-);
-const MarketingPage = React.lazy(() =>
-  import("@/components/marketing/marketing-page").then((m) => ({
-    default: m.MarketingPage,
-  })),
-);
-const DocumentsPage = React.lazy(() =>
-  import("@/components/documents/documents-page").then((m) => ({
-    default: m.DocumentsPage,
-  })),
-);
-const ReportsPage = React.lazy(() =>
-  import("@/components/reports/reports-page").then((m) => ({
-    default: m.ReportsPage,
-  })),
-);
-const SettingsPage = React.lazy(() =>
-  import("@/components/settings/settings-page").then((m) => ({
-    default: m.SettingsPage,
-  })),
-);
+const DashboardPage = React.lazy(() => import("@/components/dashboard/dashboard-page").then((m) => ({ default: m.DashboardPage })));
+const EventsPage = React.lazy(() => import("@/components/events/events-page").then((m) => ({ default: m.EventsPage })));
+const TasksPage = React.lazy(() => import("@/components/tasks/tasks-page").then((m) => ({ default: m.TasksPage })));
+const MembersPage = React.lazy(() => import("@/components/members/members-page").then((m) => ({ default: m.MembersPage })));
+const FinancePage = React.lazy(() => import("@/components/finance/finance-page").then((m) => ({ default: m.FinancePage })));
+const ExternalPage = React.lazy(() => import("@/components/external/external-page").then((m) => ({ default: m.ExternalPage })));
+const MarketingPage = React.lazy(() => import("@/components/marketing/marketing-page").then((m) => ({ default: m.MarketingPage })));
+const DocumentsPage = React.lazy(() => import("@/components/documents/documents-page").then((m) => ({ default: m.DocumentsPage })));
+const ReportsPage = React.lazy(() => import("@/components/reports/reports-page").then((m) => ({ default: m.ReportsPage })));
+const SettingsPage = React.lazy(() => import("@/components/settings/settings-page").then((m) => ({ default: m.SettingsPage })));
 
 function PageLoader() {
   return (
@@ -85,24 +47,7 @@ function App() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          background: "#111",
-          color: "#fff",
-          fontFamily: "monospace",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        <p style={{ color: "#aaa" }}>Checking authentication...</p>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-screen bg-[#111] text-white">Checking authentication...</div>;
   }
 
   if (!user) {
@@ -112,16 +57,18 @@ function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/" element={<PresidentDashboard />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/members" element={<MembersPage />} />
+        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/events" element={<EventsPage />} />
         <Route path="/finance" element={<FinancePage />} />
         <Route path="/external" element={<ExternalPage />} />
         <Route path="/marketing" element={<MarketingPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/test-db" element={<TestDatabase />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
