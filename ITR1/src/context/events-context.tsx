@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from "react"
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { type CalendarEvent } from "@/components/events/types"
+import { supabase } from "@/lib/supabase"
 
 const today = new Date()
 const year = today.getFullYear()
@@ -202,6 +203,45 @@ const SEED_EVENTS: CalendarEvent[] = [
   },
 ]
 
+function toEvent(row: Record<string, unknown>): CalendarEvent {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    description: row.description as string,
+    startDate: new Date(row.start_date as string),
+    endDate: new Date(row.end_date as string),
+    allDay: row.all_day as boolean,
+    location: row.location as string,
+    colorId: row.color_id as string,
+    tags: row.tags as string[],
+    collaborators: row.collaborators as string[],
+    createdBy: row.created_by as string,
+    capacity: row.capacity as number | undefined,
+    registered: row.registered as number | undefined,
+    isPublic: row.is_public as boolean,
+    status: row.status as CalendarEvent["status"],
+  }
+}
+
+function toRow(e: CalendarEvent) {
+  return {
+    title: e.title,
+    description: e.description,
+    start_date: new Date(e.startDate).toISOString(),
+    end_date: new Date(e.endDate).toISOString(),
+    all_day: e.allDay,
+    location: e.location,
+    color_id: e.colorId,
+    tags: e.tags,
+    collaborators: e.collaborators,
+    created_by: e.createdBy,
+    capacity: e.capacity ?? null,
+    registered: e.registered ?? null,
+    is_public: e.isPublic,
+    status: e.status,
+  }
+}
+
 interface EventsContextType {
   events: CalendarEvent[]
   addEvent: (event: CalendarEvent) => void
@@ -214,17 +254,58 @@ interface EventsContextType {
 const EventsContext = createContext<EventsContextType | undefined>(undefined)
 
 export function EventsProvider({ children }: { children: React.ReactNode }) {
-  const [events, setEvents] = useState<CalendarEvent[]>(SEED_EVENTS)
+  const [events, setEvents] = useState<CalendarEvent[]>([])
 
-  const addEvent = useCallback((event: CalendarEvent) => {
-    setEvents((prev) => [...prev, event])
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await supabase.from("events").select("*").order("start_date", { ascending: true })
+      if (error) {
+        console.error("Failed to load events:", error)
+        setEvents(SEED_EVENTS)
+        return
+      }
+      if (data && data.length > 0) {
+        setEvents(data.map(toEvent))
+      } else {
+        const rows = SEED_EVENTS.map(toRow)
+        const { data: seeded, error: seedErr } = await supabase.from("events").insert(rows).select()
+        if (seedErr) {
+          console.error("Failed to seed events:", seedErr)
+          setEvents(SEED_EVENTS)
+        } else if (seeded) {
+          setEvents(seeded.map(toEvent))
+        }
+      }
+    }
+    load()
   }, [])
 
-  const updateEvent = useCallback((event: CalendarEvent) => {
+  const addEvent = useCallback(async (event: CalendarEvent) => {
+    const row = toRow(event)
+    const { data, error } = await supabase.from("events").insert(row).select().single()
+    if (error) {
+      console.error("Failed to add event:", error)
+      return
+    }
+    if (data) setEvents((prev) => [...prev, toEvent(data)])
+  }, [])
+
+  const updateEvent = useCallback(async (event: CalendarEvent) => {
+    const row = toRow(event)
+    const { error } = await supabase.from("events").update(row).eq("id", event.id)
+    if (error) {
+      console.error("Failed to update event:", error)
+      return
+    }
     setEvents((prev) => prev.map((e) => (e.id === event.id ? event : e)))
   }, [])
 
-  const deleteEvent = useCallback((id: string) => {
+  const deleteEvent = useCallback(async (id: string) => {
+    const { error } = await supabase.from("events").delete().eq("id", id)
+    if (error) {
+      console.error("Failed to delete event:", error)
+      return
+    }
     setEvents((prev) => prev.filter((e) => e.id !== id))
   }, [])
 

@@ -51,7 +51,7 @@ export function BudgetOverview() {
     })).filter((c) => c.value > 0)
   }, [expenses])
 
-  const monthlyTrend = useMemo(() => {
+  const _monthlyTrend = useMemo(() => {
     const months: Record<string, { actual: number; projected: number }> = {}
     const now = new Date()
     for (let i = 3; i >= 0; i--) {
@@ -213,6 +213,7 @@ export function BudgetOverview() {
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
                       fontSize: "12px",
+                      color: "#fff",
                     }}
                     formatter={(value) => formatCurrency(value as number)}
                   />
@@ -247,12 +248,12 @@ export function BudgetOverview() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 10, fill: "#94a3b8" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 10, fill: "#94a3b8" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => `$${v}`}
@@ -263,6 +264,7 @@ export function BudgetOverview() {
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "8px",
                     fontSize: "12px",
+                    color: "hsl(var(--foreground))",
                   }}
                   formatter={(value) => formatCurrency(value as number)}
                 />

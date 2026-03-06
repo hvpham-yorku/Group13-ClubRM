@@ -169,6 +169,7 @@ export function AnalyticsTab() {
     background: "hsl(var(--card))",
     border: "1px solid hsl(var(--border))",
     borderRadius: "8px",
+    color: "hsl(var(--foreground))",
     fontSize: "12px",
   }
 
@@ -211,8 +212,8 @@ export function AnalyticsTab() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyData} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(value) => formatCurrency(value as number)} />
                 <Legend wrapperStyle={{ fontSize: "11px" }} />
                 <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" />
@@ -229,8 +230,8 @@ export function AnalyticsTab() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={cumulativeData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(value) => formatCurrency(value as number)} />
                 <Legend wrapperStyle={{ fontSize: "11px" }} />
                 <Area type="monotone" dataKey="cumIncome" stroke="#10b981" fill="#10b981" fillOpacity={0.1} name="Cumulative Income" />

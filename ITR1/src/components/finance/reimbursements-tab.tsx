@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
 import { useFinance } from "@/context/finance-context"
+import { useAuth } from "@/context/auth-context"
 import {
   type Reimbursement,
   type ReimbursementStatus,
@@ -34,6 +35,8 @@ import {
 
 export function ReimbursementsTab() {
   const { reimbursements, addReimbursement, updateReimbursementStatus } = useFinance()
+  const { user } = useAuth()
+  const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
 
   const [filterStatus, setFilterStatus] = useState<ReimbursementStatus | "all">("all")
   const [modalOpen, setModalOpen] = useState(false)
@@ -69,7 +72,7 @@ export function ReimbursementsTab() {
     if (!newDesc.trim() || !newAmount) return
     const r: Reimbursement = {
       id: `r-${Date.now()}`,
-      submittedBy: "John Doe",
+      submittedBy: currentUserName,
       amount: parseFloat(newAmount),
       description: newDesc.trim(),
       category: newCategory,
@@ -201,7 +204,7 @@ export function ReimbursementsTab() {
                               variant="outline"
                               size="xs"
                               className="gap-1 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
-                              onClick={() => updateReimbursementStatus(r.id, "approved", "John Doe")}
+                              onClick={() => updateReimbursementStatus(r.id, "approved", currentUserName)}
                             >
                               <CheckCircle className="h-3.5 w-3.5" />
                               Approve
