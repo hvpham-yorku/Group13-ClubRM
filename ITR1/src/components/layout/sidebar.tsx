@@ -133,9 +133,9 @@ export function AppSidebar() {
   return (
     <Sidebar variant="sidebar" collapsible="icon">
       <SidebarHeader className="h-16 flex items-center px-4 border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <img src="/logo.webp" alt="ClubRM Logo" className="h-8 w-8 object-contain" />
-          <span className="font-bold text-lg tracking-tight group-data-[collapsible=icon]:hidden">
+        <div className="flex items-center gap-3 transition-all duration-300">
+          <img src="/logo.webp" alt="ClubRM Logo" className="h-8 w-8 object-contain shrink-0" />
+          <span className="font-bold text-lg tracking-tight transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:hidden overflow-hidden whitespace-nowrap">
             Club<span className="text-primary">RM</span>
           </span>
         </div>
@@ -153,15 +153,17 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === item.url}
                     tooltip={item.title}
-                    className="h-11 px-3 group/btn hover:bg-primary/5 data-[active=true]:bg-primary data-[active=true]:text-black transition-all duration-200"
+                    className="group/btn hover:bg-primary/5 data-[active=true]:bg-primary data-[active=true]:text-black transition-all duration-300"
                   >
                     <Link to={item.url} className="flex items-center gap-3">
-                      <item.icon className="h-4 w-4 shrink-0 group-data-[active=true]/btn:text-black" />
-                      <span className="font-medium">{item.title}</span>
+                      <item.icon className="h-5 w-5 shrink-0 group-data-[active=true]/btn:text-black transition-transform duration-300" />
+                      <span className="font-medium transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:hidden overflow-hidden whitespace-nowrap">
+                        {item.title}
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                   {item.badge && badges[item.badge] && (
-                    <SidebarMenuBadge className="bg-destructive text-destructive-foreground">
+                    <SidebarMenuBadge className="bg-destructive text-destructive-foreground transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
                       {badges[item.badge]}
                     </SidebarMenuBadge>
                   )}
