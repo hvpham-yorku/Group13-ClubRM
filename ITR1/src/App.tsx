@@ -1,20 +1,32 @@
-import React from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from '@/context/auth-context'
-import { AuthPage } from '@/components/auth/auth-page'
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/layout/sidebar"
-import { TopBar } from "@/components/layout/topbar"
-import { DashboardPage } from "@/components/dashboard/dashboard-page"
-import { EventsPage } from "@/components/events/events-page"
-import { TasksPage } from "@/components/tasks/tasks-page"
-import { MembersPage } from "@/components/members/members-page"
-import { FinancePage } from "@/components/finance/finance-page"
-import { ExternalPage } from "@/components/external/external-page"
-import { MarketingPage } from "@/components/marketing/marketing-page"
-import { DocumentsPage } from "@/components/documents/documents-page"
-import { ReportsPage } from "@/components/reports/reports-page"
-import { SettingsPage } from "@/components/settings/settings-page"
+import React, { Suspense } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "@/context/auth-context";
+import { AuthPage } from "@/components/auth/auth-page";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/layout/sidebar";
+import { TopBar } from "@/components/layout/topbar";
+import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard";
+import TestDatabase from './Testing/TestDatabase';
+
+// Lazy loaded pages
+const DashboardPage = React.lazy(() => import("@/components/dashboard/dashboard-page").then((m) => ({ default: m.DashboardPage })));
+const EventsPage = React.lazy(() => import("@/components/events/events-page").then((m) => ({ default: m.EventsPage })));
+const TasksPage = React.lazy(() => import("@/components/tasks/tasks-page").then((m) => ({ default: m.TasksPage })));
+const MembersPage = React.lazy(() => import("@/components/members/members-page").then((m) => ({ default: m.MembersPage })));
+const FinancePage = React.lazy(() => import("@/components/finance/finance-page").then((m) => ({ default: m.FinancePage })));
+const ExternalPage = React.lazy(() => import("@/components/external/external-page").then((m) => ({ default: m.ExternalPage })));
+const MarketingPage = React.lazy(() => import("@/components/marketing/marketing-page").then((m) => ({ default: m.MarketingPage })));
+const DocumentsPage = React.lazy(() => import("@/components/documents/documents-page").then((m) => ({ default: m.DocumentsPage })));
+const ReportsPage = React.lazy(() => import("@/components/reports/reports-page").then((m) => ({ default: m.ReportsPage })));
+const SettingsPage = React.lazy(() => import("@/components/settings/settings-page").then((m) => ({ default: m.SettingsPage })));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
+}
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -24,46 +36,44 @@ function Layout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 flex flex-col h-screen overflow-hidden">
           <TopBar />
           <div className="flex-1 overflow-auto bg-background p-4">
-            {children}
+            <Suspense fallback={<PageLoader />}>{children}</Suspense>
           </div>
         </main>
       </div>
     </SidebarProvider>
-  )
+  );
 }
 
 function App() {
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    )
+    return <div className="flex items-center justify-center h-screen bg-[#111] text-white">Checking authentication...</div>;
   }
 
   if (!user) {
-    return <AuthPage />
+    return <AuthPage />;
   }
 
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/" element={<PresidentDashboard />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/members" element={<MembersPage />} />
+        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/events" element={<EventsPage />} />
         <Route path="/finance" element={<FinancePage />} />
         <Route path="/external" element={<ExternalPage />} />
         <Route path="/marketing" element={<MarketingPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/test-db" element={<TestDatabase />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
-  )
+  );
 }
 
-export default App
+export default App;

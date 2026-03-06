@@ -29,6 +29,7 @@ interface BoardViewProps {
   onCreateTask: (status: TaskStatus) => void
   filterAssignee: string | null
   filterPriority: string | null
+  searchQuery?: string
 }
 
 function SortableTask({
@@ -113,7 +114,7 @@ function DroppableColumn({
   )
 }
 
-export function BoardView({ onTaskClick, onCreateTask, filterAssignee, filterPriority }: BoardViewProps) {
+export function BoardView({ onTaskClick, onCreateTask, filterAssignee, filterPriority, searchQuery = "" }: BoardViewProps) {
   const { tasks, moveTask } = useTasks()
   const [activeId, setActiveId] = useState<string | null>(null)
 
@@ -126,9 +127,10 @@ export function BoardView({ onTaskClick, onCreateTask, filterAssignee, filterPri
     return tasks.filter((t) => {
       if (filterAssignee && !t.assignees.includes(filterAssignee)) return false
       if (filterPriority && t.priority !== filterPriority) return false
+      if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false
       return true
     })
-  }, [tasks, filterAssignee, filterPriority])
+  }, [tasks, filterAssignee, filterPriority, searchQuery])
 
   const columnTasks = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = {

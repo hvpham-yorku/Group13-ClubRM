@@ -8,18 +8,20 @@ interface WorkflowViewProps {
   onTaskClick: (task: Task) => void
   filterAssignee: string | null
   filterPriority: string | null
+  searchQuery?: string
 }
 
-export function WorkflowView({ onTaskClick, filterAssignee, filterPriority }: WorkflowViewProps) {
+export function WorkflowView({ onTaskClick, filterAssignee, filterPriority, searchQuery = "" }: WorkflowViewProps) {
   const { tasks } = useTasks()
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
       if (filterAssignee && !t.assignees.includes(filterAssignee)) return false
       if (filterPriority && t.priority !== filterPriority) return false
+      if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false
       return true
     })
-  }, [tasks, filterAssignee, filterPriority])
+  }, [tasks, filterAssignee, filterPriority, searchQuery])
 
   const statusCounts = useMemo(() => {
     const counts: Record<TaskStatus, number> = {

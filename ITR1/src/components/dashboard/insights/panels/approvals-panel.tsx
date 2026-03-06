@@ -18,7 +18,8 @@ const priorityStyles = {
   low: { color: "text-muted-foreground", badge: "outline" as const },
 };
 
-export function ApprovalsPanel({ data }: { data: ApprovalsInsight }) {
+export function ApprovalsPanel({ data }: { data: ApprovalsInsight | null }) {
+  if (!data) return <div className="text-sm text-muted-foreground text-center py-8">Loading approvals…</div>;
   return (
     <div className="space-y-6">
       {/* Summary stats */}

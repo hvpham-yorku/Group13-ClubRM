@@ -2,86 +2,210 @@ import { StatCard } from "../stat-card"
 import { Widget } from "../widget"
 import { ProgressBar } from "../progress-bar"
 import { DashboardList, DashboardListItem } from "../dashboard-list"
-import { DollarSign, TrendingUp, AlertTriangle, CheckCircle, Wallet } from "lucide-react"
+import { DollarSign, TrendingUp, AlertTriangle, CheckCircle, Wallet, Settings2, RotateCcw, Save, Plus } from "lucide-react"
+import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider"
+import { SortableWidget } from "../customization/sortable-widget"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
+import { useFinance } from "@/context/finance-context"
+import { useMemo } from "react"
+
+const WIDGET_TITLES: Record<string, string> = {
+  "budget-remaining": "Budget Remaining",
+  "pending-approvals": "Pending Approvals",
+  "total-income": "Total Income",
+  "budget-category": "Budget by Category",
+  "pending-reimbursements": "Pending Reimbursements",
+  "recent-transactions": "Recent Transactions"
+}
+
+const DEFAULT_WIDGETS = [
+  "budget-remaining",
+  "pending-approvals",
+  "total-income",
+  "budget-category",
+  "pending-reimbursements",
+  "recent-transactions"
+]
 
 export function VPFinanceDashboard() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <StatCard
-        title="Budget Remaining"
-        value="$12,400"
-        description="68% of $18,000 total"
-        trend={{ value: -12, label: "burn rate this month", inverse: true }}
-        icon={<Wallet className="h-5 w-5" />}
-      />
-      <StatCard
-        title="Pending Approvals"
-        value="5"
-        trend={{ value: 3, label: "new this week", inverse: true }}
-        icon={<AlertTriangle className="h-5 w-5" />}
-      />
-      <StatCard
-        title="Total Income"
-        value="$22,350"
-        trend={{ value: 15, label: "vs last term" }}
-        icon={<TrendingUp className="h-5 w-5" />}
-      />
+    <DashboardLayoutProvider role="VP Finance" defaultWidgets={DEFAULT_WIDGETS}>
+      <VPFinanceDashboardContent />
+    </DashboardLayoutProvider>
+  )
+}
 
-      <Widget title="Budget by Category">
-        <div className="space-y-3">
-          <ProgressBar value={72} max={100} label="Events" subLabel="$3,600 / $5,000" color="pink" />
-          <ProgressBar value={55} max={100} label="Marketing" subLabel="$1,650 / $3,000" color="amber" />
-          <ProgressBar value={40} max={100} label="Food & Beverage" subLabel="$1,600 / $4,000" color="emerald" />
-          <ProgressBar value={30} max={100} label="Equipment" subLabel="$750 / $2,500" color="default" />
-          <ProgressBar value={20} max={100} label="Travel" subLabel="$400 / $2,000" color="default" />
+function VPFinanceDashboardContent() {
+  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout()
+  const { budget, expenses, income, reimbursements } = useFinance()
+
+  const totalSpent = useMemo(() => expenses.filter(e => e.status === 'approved').reduce((sum, e) => sum + e.amount, 0), [expenses])
+  const budgetRemaining = useMemo(() => budget.totalBudget - totalSpent, [budget.totalBudget, totalSpent])
+  const pendingApprovals = useMemo(() => expenses.filter(e => e.status === 'pending').length, [expenses])
+  const totalIncomeValue = useMemo(() => income.reduce((sum, i) => sum + i.amount, 0), [income])
+  const pendingReimbursements = useMemo(() => reimbursements.filter(r => r.status === 'pending'), [reimbursements])
+
+  const expensesByCategory = useMemo(() => {
+    const categories: Record<string, number> = {}
+    expenses.forEach(e => {
+      categories[e.category] = (categories[e.category] || 0) + e.amount
+    })
+    return categories
+  }, [expenses])
+
+  const renderWidget = (id: string) => {
+    if (!visibleWidgets.has(id)) return null
+
+    switch (id) {
+      case "budget-remaining":
+        return (
+          <StatCard
+            title="Budget Remaining"
+            value={`$${budgetRemaining.toLocaleString()}`}
+            description={`${Math.round((budgetRemaining / budget.totalBudget) * 100)}% of $${budget.totalBudget.toLocaleString()} total`}
+            trend={{ value: Math.round((totalSpent / budget.totalBudget) * 100), label: "budget utilization", inverse: true }}
+            icon={<Wallet className="h-5 w-5" />}
+          />
+        )
+      case "pending-approvals":
+        return (
+          <StatCard
+            title="Pending Approvals"
+            value={pendingApprovals.toString()}
+            description="Expense requests"
+            trend={{ value: expenses.filter(e => new Date(e.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length, label: "new this week", inverse: true }}
+            icon={<AlertTriangle className="h-5 w-5" />}
+          />
+        )
+      case "total-income":
+        return (
+          <StatCard
+            title="Total Income"
+            value={`$${totalIncomeValue.toLocaleString()}`}
+            trend={{ value: income.filter(i => new Date(i.date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length, label: "new entries this month" }}
+            icon={<TrendingUp className="h-5 w-5" />}
+          />
+        )
+      case "budget-category":
+        return (
+          <Widget title="Spending by Category">
+            <div className="space-y-3">
+              {Object.entries(expensesByCategory).map(([cat, amount], i) => (
+                <ProgressBar 
+                  key={cat}
+                  value={amount} 
+                  max={totalSpent || 1} 
+                  label={cat.charAt(0).toUpperCase() + cat.slice(1)} 
+                  subLabel={`$${amount.toLocaleString()}`} 
+                  color={i % 2 === 0 ? "pink" : "emerald"} 
+                />
+              ))}
+              {Object.keys(expensesByCategory).length === 0 && <p className="text-sm text-muted-foreground italic">No expenses recorded</p>}
+            </div>
+          </Widget>
+        )
+      case "pending-reimbursements":
+        return (
+          <Widget title="Pending Reimbursements" footer={<span className="cursor-pointer hover:text-primary transition-colors italic">View all reimbursements →</span>}>
+            <DashboardList>
+              {pendingReimbursements.slice(0, 3).map(r => (
+                <DashboardListItem
+                  key={r.id}
+                  title={`${r.submittedBy} — ${r.description}`}
+                  subtitle={`Submitted ${new Date(r.date).toLocaleDateString()} • $${r.amount}`}
+                  metadata="Pending"
+                  icon={<DollarSign className="h-4 w-4 text-amber-500" />}
+                />
+              ))}
+              {pendingReimbursements.length === 0 && <p className="text-sm text-muted-foreground italic p-4 text-center">No pending reimbursements</p>}
+            </DashboardList>
+          </Widget>
+        )
+      case "recent-transactions":
+        return (
+          <Widget title="Recent Approved Expenses">
+            <DashboardList>
+              {expenses.filter(e => e.status === 'approved').slice(0, 3).map(e => (
+                <DashboardListItem
+                  key={e.id}
+                  title={e.description}
+                  subtitle={`${e.submittedBy} — $${e.amount}`}
+                  metadata="Approved"
+                  icon={<CheckCircle className="h-4 w-4 text-emerald-500" />}
+                />
+              ))}
+              {expenses.filter(e => e.status === 'approved').length === 0 && <p className="text-sm text-muted-foreground italic p-4 text-center">No recent approved expenses</p>}
+            </DashboardList>
+          </Widget>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold tracking-tight">Financial Status</h2>
+          <p className="text-sm text-muted-foreground">Monitor budget allocation and reimbursement requests.</p>
         </div>
-      </Widget>
+        <div className="flex items-center gap-2">
+          {isCustomizing ? (
+            <>
+              {Array.from(visibleWidgets).length < DEFAULT_WIDGETS.length && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 border-dashed text-primary hover:text-primary/80">
+                      <Plus className="h-4 w-4" />
+                      Add Widget
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {DEFAULT_WIDGETS.filter(id => !visibleWidgets.has(id)).map(id => (
+                      <DropdownMenuItem key={id} onClick={() => toggleWidgetVisibility(id)}>
+                        {WIDGET_TITLES[id] || id}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              <Button variant="outline" size="sm" onClick={resetLayout} className="gap-2 transition-all duration-300">
+                <RotateCcw className="h-4 w-4" /> Reset layout
+              </Button>
+              <Button variant="default" size="sm" onClick={() => setIsCustomizing(false)} className="gap-2 bg-primary text-black hover:bg-primary/90 transition-all duration-300">
+                <Save className="h-4 w-4" /> Stop customizing
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => setIsCustomizing(true)} className="gap-2 transition-all duration-300">
+              <Settings2 className="h-4 w-4" /> Customize
+            </Button>
+          )}
+        </div>
+      </div>
 
-      <Widget title="Pending Reimbursements" footer={<span className="cursor-pointer hover:text-primary transition-colors italic">View all reimbursements →</span>}>
-        <DashboardList>
-          <DashboardListItem
-            title="John Doe — Food for networking event"
-            subtitle="Submitted Feb 5 • $145"
-            metadata="Pending"
-            icon={<DollarSign className="h-4 w-4 text-amber-500" />}
-          />
-          <DashboardListItem
-            title="Sarah Smith — Office supplies"
-            subtitle="Submitted Feb 4 • $89"
-            metadata="Pending"
-            icon={<DollarSign className="h-4 w-4 text-amber-500" />}
-          />
-          <DashboardListItem
-            title="Alex Brown — Uber to sponsor meeting"
-            subtitle="Submitted Feb 6 • $35"
-            metadata="Pending"
-            icon={<DollarSign className="h-4 w-4 text-amber-500" />}
-          />
-        </DashboardList>
-      </Widget>
-
-      <Widget title="Recent Transactions">
-        <DashboardList>
-          <DashboardListItem
-            title="Venue deposit approved"
-            subtitle="Main Hall — $250"
-            metadata="Approved"
-            icon={<CheckCircle className="h-4 w-4 text-emerald-500" />}
-          />
-          <DashboardListItem
-            title="Marketing flyers — pending"
-            subtitle="200 copies — $89"
-            metadata="Pending"
-            icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
-          />
-          <DashboardListItem
-            title="Photography approved"
-            subtitle="Tech Talk event — $150"
-            metadata="Approved"
-            icon={<CheckCircle className="h-4 w-4 text-emerald-500" />}
-          />
-        </DashboardList>
-      </Widget>
+      <div className={cn(
+        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-all duration-500",
+        isCustomizing && "scale-[0.98] blur-[0.5px]"
+      )}>
+        {layout.map((id) => (
+          <SortableWidget key={id} id={id} isCustomizing={isCustomizing}>
+            {renderWidget(id)}
+          </SortableWidget>
+        ))}
+      </div>
     </div>
   )
 }

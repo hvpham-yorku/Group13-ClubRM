@@ -9,14 +9,21 @@ interface DayViewProps {
   currentDate: Date
   onEventClick: (event: CalendarEvent) => void
   onTimeSlotClick: (date: Date) => void
+  searchQuery?: string
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
-export function DayView({ currentDate, onEventClick, onTimeSlotClick }: DayViewProps) {
+export function DayView({ currentDate, onEventClick, onTimeSlotClick, searchQuery = "" }: DayViewProps) {
   const { getEventsForDate } = useEvents()
 
-  const dayEvents = useMemo(() => getEventsForDate(currentDate), [currentDate, getEventsForDate])
+  const dayEvents = useMemo(() => {
+    return getEventsForDate(currentDate).filter(e => {
+      if (!searchQuery) return true
+      const q = searchQuery.toLowerCase()
+      return e.title.toLowerCase().includes(q) || (e.description?.toLowerCase().includes(q) ?? false)
+    })
+  }, [currentDate, getEventsForDate, searchQuery])
 
   const timedEvents = dayEvents.filter((e) => !e.allDay)
   const allDayEvents = dayEvents.filter((e) => e.allDay)

@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useEvents } from "@/context/events-context"
 import { type CalendarEvent, type CalendarView } from "./types"
 import { CalendarHeader } from "./calendar-header"
@@ -10,10 +11,48 @@ import { EventDetailPanel } from "./event-detail-panel"
 import { addMonths, addWeeks, addDays } from "date-fns"
 
 export function EventsPage() {
-  const { addEvent, updateEvent, deleteEvent } = useEvents()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const searchQuery = searchParams.get("search") || ""
+
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchParams(prev => {
+      if (query) {
+        prev.set("search", query)
+      } else {
+        prev.delete("search")
+      }
+      return prev
+    }, { replace: true })
+  }, [setSearchParams])
 
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<CalendarView>("month")
+  const { events, addEvent, updateEvent, deleteEvent } = useEvents()
+  const prevSearchRef = useRef<string>("")
+
+  // Auto-navigate to first match when search query changes
+  useEffect(() => {
+    // Only attempt to navigate if we have a query and it's different from the last processed one
+    if (searchQuery && searchQuery !== prevSearchRef.current) {
+      // Only process if events have loaded (avoid race condition on mount)
+      if (events.length > 0) {
+        const q = searchQuery.toLowerCase()
+        const match = events.find(e => 
+          e.title.toLowerCase().includes(q) || 
+          (e.description && e.description.toLowerCase().includes(q))
+        )
+        
+        if (match) {
+          setCurrentDate(new Date(match.startDate))
+        }
+        // Mark this query as processed regardless of whether a match was found
+        // to prevent getting stuck in a loop if no match exists.
+        prevSearchRef.current = searchQuery
+      }
+    } else if (!searchQuery) {
+       prevSearchRef.current = ""
+    }
+  }, [searchQuery, events])
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
@@ -106,6 +145,8 @@ export function EventsPage() {
         onViewChange={setView}
         onNavigate={handleNavigate}
         onCreateEvent={handleCreateEvent}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
       />
 
       <div className="flex-1 min-h-0">
@@ -114,6 +155,7 @@ export function EventsPage() {
             currentDate={currentDate}
             onDayClick={handleDayClick}
             onEventClick={handleEventClick}
+            searchQuery={searchQuery}
           />
         )}
         {view === "week" && (
@@ -121,6 +163,7 @@ export function EventsPage() {
             currentDate={currentDate}
             onEventClick={handleEventClick}
             onTimeSlotClick={handleTimeSlotClick}
+            searchQuery={searchQuery}
           />
         )}
         {view === "day" && (
@@ -128,6 +171,7 @@ export function EventsPage() {
             currentDate={currentDate}
             onEventClick={handleEventClick}
             onTimeSlotClick={handleTimeSlotClick}
+            searchQuery={searchQuery}
           />
         )}
       </div>

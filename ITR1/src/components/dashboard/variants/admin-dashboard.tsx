@@ -2,88 +2,240 @@ import { StatCard } from "../stat-card"
 import { Widget } from "../widget"
 import { ProgressBar } from "../progress-bar"
 import { DashboardList, DashboardListItem } from "../dashboard-list"
-import { Shield, Users, Server, Activity, CheckCircle, AlertTriangle } from "lucide-react"
+import { Shield, Users, Server, Activity, CheckCircle, AlertTriangle, Settings2, RotateCcw, Save, Plus } from "lucide-react"
+import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider"
+import { SortableWidget } from "../customization/sortable-widget"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
+import { useMembers } from "@/context/members-context"
+import { useTasks } from "@/context/tasks-context"
+import { useEvents } from "@/context/events-context"
+import { useMemo } from "react"
+
+const WIDGET_TITLES: Record<string, string> = {
+  "system-health": "System Health",
+  "total-users": "Total Users",
+  "active-roles": "Active Roles",
+  "role-distribution": "Role Distribution",
+  "system-activity": "System Activity",
+  "system-alerts": "System Alerts"
+}
+
+const DEFAULT_WIDGETS = [
+  "system-health",
+  "total-users",
+  "active-roles",
+  "role-distribution",
+  "system-activity",
+  "system-alerts"
+]
 
 export function AdminDashboard() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <StatCard
-        title="System Health"
-        value="99.8%"
-        trend={{ value: 0.2, label: "uptime this month" }}
-        icon={<Server className="h-5 w-5" />}
-      />
-      <StatCard
-        title="Total Users"
-        value="42"
-        trend={{ value: 8, label: "new this term" }}
-        icon={<Users className="h-5 w-5" />}
-      />
-      <StatCard
-        title="Active Roles"
-        value="8"
-        description="All roles configured"
-        icon={<Shield className="h-5 w-5" />}
-      />
+    <DashboardLayoutProvider role="Administrator" defaultWidgets={DEFAULT_WIDGETS}>
+      <AdminDashboardContent />
+    </DashboardLayoutProvider>
+  )
+}
 
-      <Widget title="Role Distribution">
-        <div className="space-y-3">
-          <ProgressBar value={1} max={14} label="President" subLabel="1 member" color="amber" />
-          <ProgressBar value={1} max={14} label="VP Internal" subLabel="1 member" color="default" />
-          <ProgressBar value={1} max={14} label="VP Finance" subLabel="1 member" color="emerald" />
-          <ProgressBar value={1} max={14} label="VP Events" subLabel="1 member" color="pink" />
-          <ProgressBar value={1} max={14} label="VP External" subLabel="1 member" color="default" />
-          <ProgressBar value={1} max={14} label="Marketing" subLabel="1 member" color="amber" />
-          <ProgressBar value={6} max={14} label="Executive" subLabel="6 members" color="default" />
-          <ProgressBar value={1} max={14} label="Administrator" subLabel="1 member" color="destructive" />
+function AdminDashboardContent() {
+  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout()
+  const { members, stats: memberStats } = useMembers()
+  const { tasks } = useTasks()
+  const { events } = useEvents()
+
+  const roleCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    members.forEach(m => {
+      counts[m.role] = (counts[m.role] || 0) + 1
+    })
+    return counts
+  }, [members])
+
+  const activeRolesCount = useMemo(() => Object.keys(roleCounts).length, [roleCounts])
+
+  const recentActivity = useMemo(() => {
+    const allActivities = [
+      ...tasks.map(t => ({ title: "Task updated", subtitle: t.title, date: t.createdAt, icon: <Activity className="h-4 w-4 text-blue-400" /> })),
+      ...events.map(e => ({ title: "Event scheduled", subtitle: e.title, date: e.startDate, icon: <CheckCircle className="h-4 w-4 text-emerald-500" /> }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    return allActivities.slice(0, 3)
+  }, [tasks, events])
+
+  const renderWidget = (id: string) => {
+    if (!visibleWidgets.has(id)) return null
+
+    switch (id) {
+      case "system-health":
+        return (
+          <StatCard
+            title="System Health"
+            value="99.8%"
+            trend={{ value: 0.2, label: "uptime this month" }}
+            icon={<Server className="h-5 w-5" />}
+          />
+        )
+      case "total-users":
+        return (
+          <StatCard
+            title="Total Users"
+            value={memberStats.total.toString()}
+            trend={{ value: members.filter(m => new Date(m.joinDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length, label: "new this month" }}
+            icon={<Users className="h-5 w-5" />}
+          />
+        )
+      case "active-roles":
+        return (
+          <StatCard
+            title="Active Roles"
+            value={activeRolesCount.toString()}
+            description="Across all club departments"
+            icon={<Shield className="h-5 w-5" />}
+          />
+        )
+      case "role-distribution":
+        return (
+          <Widget title="Role Distribution">
+            <div className="space-y-3">
+              {Object.entries(roleCounts).map(([role, count], index) => (
+                <ProgressBar 
+                  key={role}
+                  value={count} 
+                  max={members.length} 
+                  label={role} 
+                  subLabel={`${count} member${count > 1 ? 's' : ''}`} 
+                  color={index % 2 === 0 ? "default" : "amber"} 
+                />
+              ))}
+            </div>
+          </Widget>
+        )
+      case "system-activity":
+        return (
+          <Widget title="Recent System Activity" footer={<span className="cursor-pointer hover:text-primary transition-colors italic">View audit log →</span>}>
+            <DashboardList>
+              {recentActivity.map((activity, i) => (
+                <DashboardListItem
+                  key={i}
+                  title={activity.title}
+                  subtitle={activity.subtitle}
+                  metadata={new Date(activity.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  icon={activity.icon}
+                />
+              ))}
+            </DashboardList>
+          </Widget>
+        )
+      case "system-alerts":
+        return (
+          <Widget title="System Alerts">
+            <DashboardList>
+              <DashboardListItem
+                title="Database backup"
+                subtitle="Last backup: 2 hours ago"
+                metadata="OK"
+                icon={<CheckCircle className="h-4 w-4 text-emerald-500" />}
+              />
+              <DashboardListItem
+                title="Storage usage"
+                subtitle="2.1 GB of 10 GB used (21%)"
+                metadata="OK"
+                icon={<CheckCircle className="h-4 w-4 text-emerald-500" />}
+              />
+              <DashboardListItem
+                title="1 inactive member"
+                subtitle="Lisa Park — inactive since Nov 2025"
+                metadata="Review"
+                icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
+              />
+            </DashboardList>
+          </Widget>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold tracking-tight">System Status</h2>
+          <p className="text-sm text-muted-foreground">Monitor platform health and user activity.</p>
         </div>
-      </Widget>
+        <div className="flex items-center gap-2">
+          {isCustomizing ? (
+            <>
+              {Array.from(visibleWidgets).length < DEFAULT_WIDGETS.length && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 border-dashed text-primary hover:text-primary/80">
+                      <Plus className="h-4 w-4" />
+                      Add Widget
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {DEFAULT_WIDGETS.filter(id => !visibleWidgets.has(id)).map(id => (
+                      <DropdownMenuItem key={id} onClick={() => toggleWidgetVisibility(id)}>
+                        {WIDGET_TITLES[id] || id}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={resetLayout}
+                className="gap-2 transition-all duration-300"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Layout
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={() => setIsCustomizing(false)}
+                className="gap-2 bg-primary text-black hover:bg-primary/90 transition-all duration-300"
+              >
+                <Save className="h-4 w-4" />
+                Stop Customizing
+              </Button>
+            </>
+          ) : (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsCustomizing(true)}
+              className="gap-2 transition-all duration-300"
+            >
+              <Settings2 className="h-4 w-4" />
+              Customize Workspace
+            </Button>
+          )}
+        </div>
+      </div>
 
-      <Widget title="Recent System Activity" footer={<span className="cursor-pointer hover:text-primary transition-colors italic">View audit log →</span>}>
-        <DashboardList>
-          <DashboardListItem
-            title="New member added"
-            subtitle="Nina Patel joined as Executive"
-            metadata="Jan 15"
-            icon={<CheckCircle className="h-4 w-4 text-emerald-500" />}
-          />
-          <DashboardListItem
-            title="Role updated"
-            subtitle="Jordan Lee → Marketing role"
-            metadata="Jan 10"
-            icon={<Activity className="h-4 w-4 text-blue-400" />}
-          />
-          <DashboardListItem
-            title="Permission change"
-            subtitle="Finance module access expanded"
-            metadata="Jan 5"
-            icon={<Shield className="h-4 w-4 text-amber-400" />}
-          />
-        </DashboardList>
-      </Widget>
-
-      <Widget title="System Alerts">
-        <DashboardList>
-          <DashboardListItem
-            title="Database backup"
-            subtitle="Last backup: 2 hours ago"
-            metadata="OK"
-            icon={<CheckCircle className="h-4 w-4 text-emerald-500" />}
-          />
-          <DashboardListItem
-            title="Storage usage"
-            subtitle="2.1 GB of 10 GB used (21%)"
-            metadata="OK"
-            icon={<CheckCircle className="h-4 w-4 text-emerald-500" />}
-          />
-          <DashboardListItem
-            title="1 inactive member"
-            subtitle="Lisa Park — inactive since Nov 2025"
-            metadata="Review"
-            icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
-          />
-        </DashboardList>
-      </Widget>
+      <div className={cn(
+        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-all duration-500",
+        isCustomizing && "scale-[0.98] blur-[0.5px]"
+      )}>
+        {layout.map((id) => (
+          <SortableWidget key={id} id={id} isCustomizing={isCustomizing}>
+            {renderWidget(id)}
+          </SortableWidget>
+        ))}
+      </div>
     </div>
   )
 }

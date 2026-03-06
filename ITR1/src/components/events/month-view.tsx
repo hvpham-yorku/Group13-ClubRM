@@ -18,11 +18,12 @@ interface MonthViewProps {
   currentDate: Date
   onDayClick: (date: Date) => void
   onEventClick: (event: CalendarEvent) => void
+  searchQuery?: string
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-export function MonthView({ currentDate, onDayClick, onEventClick }: MonthViewProps) {
+export function MonthView({ currentDate, onDayClick, onEventClick, searchQuery = "" }: MonthViewProps) {
   const { getEventsForDate } = useEvents()
 
   const calendarDays = useMemo(() => {
@@ -60,7 +61,11 @@ export function MonthView({ currentDate, onDayClick, onEventClick }: MonthViewPr
         {weeks.map((week, weekIdx) => (
           <div key={weekIdx} className="grid grid-cols-7 border-b border-border/30 last:border-b-0">
             {week.map((day) => {
-              const dayEvents = getEventsForDate(day)
+              const dayEvents = getEventsForDate(day).filter(e => {
+                if (!searchQuery) return true
+                const q = searchQuery.toLowerCase()
+                return e.title.toLowerCase().includes(q) || (e.description?.toLowerCase().includes(q) ?? false)
+              })
               const isCurrentMonth = isSameMonth(day, currentDate)
               const isCurrentDay = isToday(day)
               const maxVisible = weeks.length > 5 ? 2 : 3
