@@ -169,7 +169,7 @@ export function TopBar() {
               <button
                 key={i}
                 className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-left"
-                onClick={() => { navigate(r.route); setSearchQuery(""); setSearchOpen(false); }}
+                onClick={() => { navigate({ pathname: r.route, search: `?search=${encodeURIComponent(r.label)}` }); setSearchQuery(""); setSearchOpen(false); }}
               >
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold uppercase">{r.type}</span>
                 <div className="flex-1 min-w-0">

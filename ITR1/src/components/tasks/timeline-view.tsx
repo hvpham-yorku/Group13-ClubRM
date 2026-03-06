@@ -19,6 +19,7 @@ interface TimelineViewProps {
   onTaskClick: (task: Task) => void
   filterAssignee: string | null
   filterPriority: string | null
+  searchQuery?: string
 }
 
 export function TimelineView({
@@ -26,6 +27,7 @@ export function TimelineView({
   onTaskClick,
   filterAssignee,
   filterPriority,
+  searchQuery = "",
 }: TimelineViewProps) {
   const { tasks } = useTasks()
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -40,6 +42,7 @@ export function TimelineView({
       .filter((t) => {
         if (filterAssignee && !t.assignees.includes(filterAssignee)) return false
         if (filterPriority && t.priority !== filterPriority) return false
+        if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false
         if (!t.startDate && !t.dueDate) return false
         return true
       })
@@ -48,7 +51,7 @@ export function TimelineView({
         const bStart = b.startDate || b.dueDate || new Date()
         return aStart.getTime() - bStart.getTime()
       })
-  }, [tasks, filterAssignee, filterPriority])
+  }, [tasks, filterAssignee, filterPriority, searchQuery])
 
   const getBarPosition = (task: Task) => {
     const start = task.startDate || task.dueDate || monthStart

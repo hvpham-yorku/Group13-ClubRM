@@ -19,6 +19,7 @@ interface CalendarViewProps {
   onTaskClick: (task: Task) => void
   filterAssignee: string | null
   filterPriority: string | null
+  searchQuery?: string
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -28,6 +29,7 @@ export function TaskCalendarView({
   onTaskClick,
   filterAssignee,
   filterPriority,
+  searchQuery = "",
 }: CalendarViewProps) {
   const { tasks } = useTasks()
 
@@ -35,9 +37,10 @@ export function TaskCalendarView({
     return tasks.filter((t) => {
       if (filterAssignee && !t.assignees.includes(filterAssignee)) return false
       if (filterPriority && t.priority !== filterPriority) return false
+      if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false
       return true
     })
-  }, [tasks, filterAssignee, filterPriority])
+  }, [tasks, filterAssignee, filterPriority, searchQuery])
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentDate)

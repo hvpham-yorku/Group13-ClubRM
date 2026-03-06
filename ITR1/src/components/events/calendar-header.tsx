@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { type CalendarView } from "./types"
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, LayoutGrid, Clock } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, LayoutGrid, Clock, Search } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -10,6 +11,8 @@ interface CalendarHeaderProps {
   onViewChange: (view: CalendarView) => void
   onNavigate: (direction: "prev" | "next" | "today") => void
   onCreateEvent: () => void
+  searchQuery?: string
+  onSearchChange?: (query: string) => void
 }
 
 export function CalendarHeader({
@@ -18,6 +21,8 @@ export function CalendarHeader({
   onViewChange,
   onNavigate,
   onCreateEvent,
+  searchQuery = "",
+  onSearchChange,
 }: CalendarHeaderProps) {
   const getTitle = () => {
     switch (view) {
@@ -77,6 +82,17 @@ export function CalendarHeader({
       </div>
 
       <div className="flex items-center gap-3">
+        <div className="relative w-48 sm:w-64">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search events..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
+
         <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border/50">
           {views.map((v) => (
             <button
