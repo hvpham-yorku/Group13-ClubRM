@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
+import { useAuth } from "@/context/auth-context";
 import { StatCard } from "../stat-card";
 import { Widget } from "../widget";
 import { ProgressBar } from "../progress-bar";
@@ -11,30 +12,107 @@ import { BudgetPanel } from "../insights/panels/budget-panel";
 import { EventsPanel } from "../insights/panels/events-panel";
 import { RisksPanel } from "../insights/panels/risks-panel";
 import { ApprovalsPanel } from "../insights/panels/approvals-panel";
-import {
-  orgHealthInsight,
-  membersInsight,
-  budgetInsight,
-  eventsInsight,
-  risksInsight,
-  approvalsInsight,
-} from "../insights/mock-data";
-import { useMembers } from "@/context/members-context";
-import { useFinance } from "@/context/finance-context";
 import { useEvents } from "@/context/events-context";
+import { useFinance } from "@/context/finance-context";
 import { useTasks } from "@/context/tasks-context";
 import { format } from "date-fns";
+import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider";
+import { SortableWidget } from "../customization/sortable-widget";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Settings2, RotateCcw, Save } from "lucide-react";
+
+const WIDGET_TITLES: Record<string, string> = {
+  "org-health": "Org Health Score",
+  "active-members": "Active Members",
+  "budget": "Budget Remaining",
+  "upcoming-events": "Upcoming Events",
+  "risk-alerts": "Risk Alerts",
+  "approval-queue": "Approval Queue",
+};
+
+// Full API response type shape
+interface DashboardAPIResponse {
+  stats: {
+    members: number;
+    activeMembers: number;
+    totalBudget: number;
+    spentBudget: number;
+    onTrackEvents: number;
+    totalEvents: number;
+    completedTasks: number;
+    totalTasks: number;
+  };
+  score: number;
+  insights: {
+    orgHealth: any;
+    members: any;
+    budget: any;
+    events: any;
+    risks: any;
+    approvals: any;
+  };
+}
+
+const DEFAULT_WIDGETS = [
+  "org-health",
+  "active-members",
+  "budget",
+  "upcoming-events",
+  "risk-alerts",
+  "approval-queue"
+];
 
 export function PresidentDashboard() {
-  const { stats: memberStats } = useMembers();
-  const { budget, expenses, reimbursements, totalSpent, totalPending } = useFinance();
+  return (
+    <DashboardLayoutProvider role="President" defaultWidgets={DEFAULT_WIDGETS}>
+      <PresidentDashboardContent />
+    </DashboardLayoutProvider>
+  );
+}
+
+function PresidentDashboardContent() {
+  const [apiData, setApiData] = useState<DashboardAPIResponse | null>(null);
+  const { session } = useAuth();
+  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout();
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const headers: Record<string, string> = {};
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+        const res = await fetch("/api/dashboard/stats", { headers });
+        const data = await res.json();
+        setApiData(data);
+      } catch (err) {
+        console.error("Failed to fetch stats:", err);
+      }
+    }
+    fetchStats();
+  }, [session?.access_token]);
+
+  const { expenses, reimbursements, budget, totalSpent, totalPending } = useFinance();
   const { events } = useEvents();
   const { tasks } = useTasks();
 
-  const remaining = budget.totalBudget - totalSpent;
-  const remainingPct = budget.totalBudget > 0 ? Math.round((remaining / budget.totalBudget) * 100) : 0;
+  const remaining = apiData
+    ? apiData.stats.totalBudget - apiData.stats.spentBudget
+    : budget.totalBudget - totalSpent;
+  const remainingPct = apiData
+    ? apiData.stats.totalBudget > 0 ? Math.round((remaining / apiData.stats.totalBudget) * 100) : 0
+    : budget.totalBudget > 0 ? Math.round((remaining / budget.totalBudget) * 100) : 0;
+  const displaySpent = apiData ? apiData.stats.spentBudget : totalSpent;
 
-  // Upcoming events sorted by date
   const upcomingEvents = useMemo(() => {
     const now = new Date();
     return events
@@ -43,26 +121,30 @@ export function PresidentDashboard() {
       .slice(0, 3);
   }, [events]);
 
-  // Risk alerts from real data
   const risks = useMemo(() => {
+    if (apiData?.insights?.risks?.risks && apiData.insights.risks.risks.length > 0) {
+      return apiData.insights.risks.risks.slice(0, 3).map((r: any) => ({
+        title: r.title,
+        sub: r.description,
+        severity: r.severity === "high" ? "High" : r.severity === "medium" ? "Medium" : "Low",
+      }));
+    }
     const items: { title: string; sub: string; severity: string }[] = [];
     const now = new Date();
-    // Overdue tasks
     const overdue = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < now && t.status !== "done");
     if (overdue.length > 0) items.push({ title: `${overdue.length} overdue task(s)`, sub: overdue[0].title, severity: "High" });
-    // Pending expenses
     if (totalPending > 500) items.push({ title: "High pending expenses", sub: `$${totalPending.toFixed(0)} awaiting approval`, severity: "Medium" });
-    // Under-registered events
-    upcomingEvents.forEach((e) => {
-      if (e.capacity && e.registered && e.registered / e.capacity < 0.5) {
-        items.push({ title: `${e.title} under-registered`, sub: `${e.registered}/${e.capacity} (${Math.round((e.registered / e.capacity) * 100)}%)`, severity: "High" });
-      }
-    });
     return items.slice(0, 3);
-  }, [tasks, totalPending, upcomingEvents]);
+  }, [apiData, tasks, totalPending]);
 
-  // Pending approvals from real data
   const pendingApprovals = useMemo(() => {
+    if (apiData?.insights?.approvals?.items && apiData.insights.approvals.items.length > 0) {
+      return apiData.insights.approvals.items.slice(0, 4).map((a: any) => ({
+        title: a.title,
+        sub: `${a.submittedBy} • $${a.amount ?? ""}`,
+        type: a.type === "finance" ? "Finance" : "Reimbursement",
+      }));
+    }
     const items: { title: string; sub: string; type: string }[] = [];
     expenses.filter((e) => e.status === "pending").slice(0, 2).forEach((e) =>
       items.push({ title: e.description, sub: `${e.submittedBy} • $${e.amount}`, type: "Finance" })
@@ -71,67 +153,76 @@ export function PresidentDashboard() {
       items.push({ title: r.description, sub: `${r.submittedBy} • $${r.amount}`, type: "Reimbursement" })
     );
     return items;
-  }, [expenses, reimbursements]);
+  }, [apiData, expenses, reimbursements]);
 
-  return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Row 1: Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <ExpandableTile
-          title="Org Health Score — Deep Dive"
-          subtitle="Composite score from member engagement, events, budget & tasks"
-          insightPanel={<OrgHealthPanel data={orgHealthInsight} />}
-        >
-          <StatCard
-            title="Org Health Score"
-            value={`${orgHealthInsight.overallScore}/100`}
-            trend={{ value: orgHealthInsight.overallScore - orgHealthInsight.previousScore, label: "vs last month" }}
-            icon={<Activity className="h-5 w-5" />}
-          />
-        </ExpandableTile>
+  const renderWidget = (id: string) => {
+    if (!visibleWidgets.has(id)) return null;
 
-        <ExpandableTile
-          title="Active Members — Full Breakdown"
-          subtitle="Demographics, recent joiners, retention & engagement stats"
-          insightPanel={<MembersPanel data={membersInsight} />}
-        >
-          <StatCard
-            title="Active Members"
-            value={String(memberStats.active)}
-            description={`${memberStats.total > 0 ? Math.round((memberStats.active / memberStats.total) * 100) : 0}% of ${memberStats.total} total`}
-            icon={<Users className="h-5 w-5" />}
-          />
-        </ExpandableTile>
-
-        <ExpandableTile
-          title="Budget — Financial Detail"
-          subtitle="Spending categories, burn rate, top expenses & alerts"
-          insightPanel={<BudgetPanel data={budgetInsight} />}
-        >
-          <Widget title="Budget Remaining">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-primary" />
-                <span className="text-3xl font-bold">${remaining.toLocaleString()}</span>
-              </div>
-              <ProgressBar
-                value={remainingPct}
-                label={`Total Spent: $${totalSpent.toLocaleString()}`}
-                subLabel={`${remainingPct}% remaining`}
-                color="pink"
-              />
-            </div>
-          </Widget>
-        </ExpandableTile>
-      </div>
-
-      {/* Row 2: Events + Risks */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3">
+    switch (id) {
+      case "org-health":
+        return (
           <ExpandableTile
+            title="Org Health Score — Deep Dive"
+            subtitle="Composite score from member engagement, events, budget & tasks"
+            insightPanel={<OrgHealthPanel data={apiData?.insights?.orgHealth || null} />}
+          >
+            <StatCard
+              title="Org Health Score"
+              value={apiData ? `${apiData.score}/100` : "..."}
+              trend={{ value: apiData ? apiData.score - (apiData.insights?.orgHealth?.previousScore ?? apiData.score) : 0, label: "vs last month" }}
+              icon={<Activity className="h-5 w-5" />}
+            />
+          </ExpandableTile>
+        );
+      case "active-members":
+        return (
+          <ExpandableTile
+            title="Active Members — Full Breakdown"
+            subtitle="Demographics, recent joiners, retention & engagement stats"
+            insightPanel={<MembersPanel data={apiData?.insights?.members || null} />}
+          >
+            <StatCard
+              title="Active Members"
+              value={apiData ? String(apiData.stats.activeMembers) : "..."}
+              description={
+                apiData && apiData.stats.members > 0
+                  ? `${Math.round((apiData.stats.activeMembers / apiData.stats.members) * 100)}% of ${apiData.stats.members} total`
+                  : "..."
+              }
+              icon={<Users className="h-5 w-5" />}
+            />
+          </ExpandableTile>
+        );
+      case "budget":
+        return (
+          <ExpandableTile
+            title="Budget — Financial Detail"
+            subtitle="Spending categories, burn rate, top expenses & alerts"
+            insightPanel={<BudgetPanel data={apiData?.insights?.budget || null} />}
+          >
+            <Widget title="Budget Remaining">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  <span className="text-3xl font-bold">${apiData ? remaining.toLocaleString() : "..."}</span>
+                </div>
+                <ProgressBar
+                  value={apiData ? remainingPct : 0}
+                  label={`Total Spent: $${apiData ? displaySpent.toLocaleString() : "..."}`}
+                  subLabel={apiData ? `${remainingPct}% remaining` : "..."}
+                  color="pink"
+                />
+              </div>
+            </Widget>
+          </ExpandableTile>
+        );
+      case "upcoming-events":
+        return (
+          <ExpandableTile
+            className="lg:col-span-2"
             title="Upcoming Events — Detail & Readiness"
             subtitle="Registration health, volunteer coverage & risk flags per event"
-            insightPanel={<EventsPanel data={eventsInsight} />}
+            insightPanel={<EventsPanel data={apiData?.insights?.events || null} />}
           >
             <Widget
               title="Upcoming Events"
@@ -156,18 +247,18 @@ export function PresidentDashboard() {
               </DashboardList>
             </Widget>
           </ExpandableTile>
-        </div>
-
-        <div className="lg:col-span-2">
+        );
+      case "risk-alerts":
+        return (
           <ExpandableTile
             title="Risk Alerts — Analysis & Recommendations"
             subtitle="All active risks with severity, context & recommended actions"
-            insightPanel={<RisksPanel data={risksInsight} />}
+            insightPanel={<RisksPanel data={apiData?.insights?.risks || null} />}
           >
             <Widget title="Risk Alerts" className="h-full">
               <DashboardList>
                 {risks.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No active risks</p>}
-                {risks.map((r, i) => (
+                {risks.map((r: { title: string; sub: string; severity: string }, i: number) => (
                   <DashboardListItem
                     key={i}
                     title={r.title}
@@ -179,53 +270,131 @@ export function PresidentDashboard() {
               </DashboardList>
             </Widget>
           </ExpandableTile>
+        );
+      case "approval-queue":
+        return (
+          <ExpandableTile
+            className="md:col-span-2 lg:col-span-3"
+            title="Approval Queue — All Pending Items"
+            subtitle="Events, finance, marketing & budget changes awaiting your review"
+            insightPanel={<ApprovalsPanel data={apiData?.insights?.approvals || null} />}
+          >
+            <Widget
+              title="Approval Queue"
+              fullWidth
+              footer={
+                <span className="cursor-pointer hover:text-primary transition-colors italic">
+                  Click to expand — {pendingApprovals.length} items pending review →
+                </span>
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                <DashboardList>
+                  {pendingApprovals.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No pending approvals</p>}
+                  {pendingApprovals.slice(0, 2).map((a: { title: string; sub: string; type: string }, i: number) => (
+                    <DashboardListItem
+                      key={i}
+                      title={a.title}
+                      subtitle={a.sub}
+                      metadata={a.type}
+                      icon={<CheckCircle className="h-4 w-4 text-primary" />}
+                    />
+                  ))}
+                </DashboardList>
+                {pendingApprovals.length > 2 && (
+                  <DashboardList>
+                    {pendingApprovals.slice(2, 4).map((a: { title: string; sub: string; type: string }, i: number) => (
+                      <DashboardListItem
+                        key={i}
+                        title={a.title}
+                        subtitle={a.sub}
+                        metadata={a.type}
+                        icon={<CheckCircle className="h-4 w-4 text-amber-500" />}
+                      />
+                    ))}
+                  </DashboardList>
+                )}
+              </div>
+            </Widget>
+          </ExpandableTile>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold tracking-tight">Executive Summary</h2>
+          <p className="text-sm text-muted-foreground">High-level insights across all club operations.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {isCustomizing ? (
+            <>
+              {Array.from(visibleWidgets).length < DEFAULT_WIDGETS.length && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 border-dashed">
+                      <Plus className="h-4 w-4" />
+                      Add Widget
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {DEFAULT_WIDGETS.filter(id => !visibleWidgets.has(id)).map(id => (
+                      <DropdownMenuItem key={id} onClick={() => toggleWidgetVisibility(id)}>
+                        {WIDGET_TITLES[id] || id}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={resetLayout}
+                className="gap-2 transition-all duration-300"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Layout
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={() => setIsCustomizing(false)}
+                className="gap-2 bg-primary text-black hover:bg-primary/90 transition-all duration-300"
+              >
+                <Save className="h-4 w-4" />
+                Stop Customizing
+              </Button>
+            </>
+          ) : (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsCustomizing(true)}
+              className="gap-2 transition-all duration-300"
+            >
+              <Settings2 className="h-4 w-4" />
+              Customize Workspace
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Row 3: Approval Queue */}
-      <ExpandableTile
-        title="Approval Queue — All Pending Items"
-        subtitle="Events, finance, marketing & budget changes awaiting your review"
-        insightPanel={<ApprovalsPanel data={approvalsInsight} />}
-      >
-        <Widget
-          title="Approval Queue"
-          fullWidth
-          footer={
-            <span className="cursor-pointer hover:text-primary transition-colors italic">
-              Click to expand — {pendingApprovals.length} items pending review →
-            </span>
-          }
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-            <DashboardList>
-              {pendingApprovals.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No pending approvals</p>}
-              {pendingApprovals.slice(0, 2).map((a, i) => (
-                <DashboardListItem
-                  key={i}
-                  title={a.title}
-                  subtitle={a.sub}
-                  metadata={a.type}
-                  icon={<CheckCircle className="h-4 w-4 text-primary" />}
-                />
-              ))}
-            </DashboardList>
-            {pendingApprovals.length > 2 && (
-              <DashboardList>
-                {pendingApprovals.slice(2, 4).map((a, i) => (
-                  <DashboardListItem
-                    key={i}
-                    title={a.title}
-                    subtitle={a.sub}
-                    metadata={a.type}
-                    icon={<CheckCircle className="h-4 w-4 text-amber-500" />}
-                  />
-                ))}
-              </DashboardList>
-            )}
-          </div>
-        </Widget>
-      </ExpandableTile>
+      <div className={cn(
+        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 transition-all duration-500",
+        isCustomizing && "scale-[0.98] blur-[0.5px]"
+      )}>
+        {layout.map((id) => (
+          <SortableWidget key={id} id={id} isCustomizing={isCustomizing}>
+            {renderWidget(id)}
+          </SortableWidget>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useTasks } from "@/context/tasks-context"
 import {
   type Task,
@@ -15,6 +16,7 @@ import { TaskCalendarView } from "./calendar-view"
 import { WorkflowView } from "./workflow-view"
 import { TaskModal } from "./task-modal"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import {
   Plus,
@@ -30,6 +32,7 @@ import {
   Users,
   Flag,
   LayoutGrid,
+  Search,
 } from "lucide-react"
 import { format, addMonths } from "date-fns"
 
@@ -38,6 +41,17 @@ export function TasksPage() {
 
   const [view, setView] = useState<TaskView>("board")
   const [currentDate, setCurrentDate] = useState(new Date())
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const searchQuery = searchParams.get("search") || ""
+
+  const handleSearchChange = (val: string) => {
+    setSearchParams(prev => {
+      if (val) prev.set("search", val)
+      else prev.delete("search")
+      return prev
+    }, { replace: true })
+  }
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false)
@@ -123,6 +137,17 @@ export function TasksPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Search bar */}
+          <div className="relative w-48 hidden sm:block">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-8 h-9 text-xs"
+            />
+          </div>
+
           {/* Group by (list view only) */}
           {view === "list" && (
             <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5 border border-border/50">
@@ -285,6 +310,7 @@ export function TasksPage() {
             onCreateTask={handleCreateTask}
             filterAssignee={filterAssignee}
             filterPriority={filterPriority}
+            searchQuery={searchQuery}
           />
         )}
         {view === "list" && (
@@ -293,6 +319,7 @@ export function TasksPage() {
             filterAssignee={filterAssignee}
             filterPriority={filterPriority}
             groupBy={groupBy}
+            searchQuery={searchQuery}
           />
         )}
         {view === "timeline" && (
@@ -301,6 +328,7 @@ export function TasksPage() {
             onTaskClick={handleTaskClick}
             filterAssignee={filterAssignee}
             filterPriority={filterPriority}
+            searchQuery={searchQuery}
           />
         )}
         {view === "calendar" && (
@@ -309,6 +337,7 @@ export function TasksPage() {
             onTaskClick={handleTaskClick}
             filterAssignee={filterAssignee}
             filterPriority={filterPriority}
+            searchQuery={searchQuery}
           />
         )}
         {view === "workflow" && (
@@ -316,6 +345,7 @@ export function TasksPage() {
             onTaskClick={handleTaskClick}
             filterAssignee={filterAssignee}
             filterPriority={filterPriority}
+            searchQuery={searchQuery}
           />
         )}
       </div>

@@ -2,7 +2,7 @@
 
 A modern CRM platform built specifically for student clubs and associations. Built with React 18, TypeScript, Vite, and TailwindCSS v4.
 
-> **Iteration:** ITR1 | **Term:** Fall 2026 | **Group:** 13
+> **Iteration:** ITR1 | **Term:** Winter 2026 | **Group:** 13
 
 ---
 
@@ -61,11 +61,25 @@ cd ITR1
 # 2. Install dependencies
 npm install
 
-# 3. Start the development server
+# 3. Set up environment variables (REQUIRED)
+#    Copy the provided template to create your .env file:
+cp .env.bak .env
+
+# 4. Start the development server
 npm run dev
 ```
 
+> **⚠️ Important:** The `.env` file is **not** checked into Git. Every team member must create their own by copying `.env.bak`. Without it, the app will show a **"Failed to fetch"** error on login because the Supabase connection credentials are missing.
+
 The app will be available at **http://localhost:5173**
+
+### Supabase Database Setup
+
+If this is a fresh environment or new tables are missing, run the migration scripts in the **Supabase SQL Editor** (https://supabase.com/dashboard):
+
+1. Open your Supabase project dashboard → **SQL Editor**
+2. Run `supabase/migration.sql` — creates the core tables (profiles, members, events, tasks, expenses, reimbursements, income, budgets, sponsors, campaigns)
+3. Run `supabase/migration-add-tables.sql` — creates additional tables (documents, notifications, org_settings)
 
 ### Other Commands
 

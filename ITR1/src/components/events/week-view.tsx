@@ -18,11 +18,12 @@ interface WeekViewProps {
   currentDate: Date
   onEventClick: (event: CalendarEvent) => void
   onTimeSlotClick: (date: Date) => void
+  searchQuery?: string
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
-export function WeekView({ currentDate, onEventClick, onTimeSlotClick }: WeekViewProps) {
+export function WeekView({ currentDate, onEventClick, onTimeSlotClick, searchQuery = "" }: WeekViewProps) {
   const { getEventsForRange } = useEvents()
 
   const weekDays = useMemo(() => {
@@ -34,8 +35,12 @@ export function WeekView({ currentDate, onEventClick, onTimeSlotClick }: WeekVie
   const weekEvents = useMemo(() => {
     const start = startOfWeek(currentDate)
     const end = endOfWeek(currentDate)
-    return getEventsForRange(start, end)
-  }, [currentDate, getEventsForRange])
+    return getEventsForRange(start, end).filter(e => {
+      if (!searchQuery) return true
+      const q = searchQuery.toLowerCase()
+      return e.title.toLowerCase().includes(q) || (e.description?.toLowerCase().includes(q) ?? false)
+    })
+  }, [currentDate, getEventsForRange, searchQuery])
 
   const getEventsForDay = (day: Date) => {
     return weekEvents.filter((event) => {

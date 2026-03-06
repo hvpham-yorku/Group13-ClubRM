@@ -19,7 +19,8 @@ const categoryIcons: Record<string, string> = {
   operations: "⚙️",
 };
 
-export function RisksPanel({ data }: { data: RisksInsight }) {
+export function RisksPanel({ data }: { data: RisksInsight | null }) {
+  if (!data) return <div className="text-sm text-muted-foreground text-center py-8">Loading risk insights…</div>;
   return (
     <div className="space-y-6">
       {/* Summary */}
