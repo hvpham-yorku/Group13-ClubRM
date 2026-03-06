@@ -206,6 +206,115 @@ GET /api/v1/dashboard/admin
   }
 
 -------------------------------------------------------------------------------
+3.2.1 DASHBOARD INSIGHT ENDPOINTS (Expandable Tile Deep-Dives)
+-------------------------------------------------------------------------------
+
+These endpoints are called on-demand when a user clicks a dashboard tile
+to expand it. They return detailed analytics, diagnostics, and recommendations.
+Not called on initial dashboard load to keep the main view fast.
+
+GET /api/v1/dashboard/{role}/insights/health
+  Permission: dashboard.view
+  Query: org_id, term_id
+  Response: {
+    overallScore: number,
+    previousScore: number,
+    trend: [{ label, value }],
+    breakdowns: [{
+      category: string,
+      score: number,
+      maxScore: number,
+      status: 'good' | 'warning' | 'critical',
+      insights: [{ label, status, detail }]
+    }],
+    topStrengths: string[],
+    topConcerns: string[]
+  }
+  Backend: Composite score from 4 pillars (members, events, budget, tasks),
+           each querying respective tables and comparing to thresholds.
+
+GET /api/v1/dashboard/{role}/insights/members
+  Permission: members.read
+  Query: org_id, term_id
+  Response: {
+    totalMembers, activeMembers, newThisTerm, retentionRate,
+    avgTasksCompleted, avgEventsAttended,
+    recentJoiners: [{ name, role, department, joinDate }],
+    byDepartment: [{ label, count, percentage }],
+    byYear: [{ label, count, percentage }],
+    byRole: [{ label, count, percentage }],
+    inactiveWarnings: [{ name, lastActive, reason }]
+  }
+  Backend: Aggregates memberships JOIN users. Retention = members active
+           both current and previous term / previous term total.
+           Inactive = no task completions or event attendance in 14+ days.
+
+GET /api/v1/dashboard/{role}/insights/budget
+  Permission: budget.read
+  Query: org_id, term_id
+  Response: {
+    totalBudget, spent, remaining, percentRemaining,
+    burnRate, targetBurnRate, projectedRunway,
+    monthlySpend: [{ label, value }],
+    categories: [{ name, allocated, spent, status }],
+    biggestExpenses: [{ description, amount, date, category }],
+    alerts: [{ label, status, detail }]
+  }
+  Backend: Reads budgets + budget_categories + expenses.
+           burn_rate = spent / months_elapsed. Alerts auto-generated
+           from threshold comparisons.
+
+GET /api/v1/dashboard/{role}/insights/events
+  Permission: events.read
+  Query: org_id, term_id
+  Response: {
+    totalUpcoming, avgRegistrationRate, volunteerCoverageRate,
+    events: [{
+      title, date, registered, capacity,
+      volunteersFilled, volunteersNeeded,
+      status: 'on_track' | 'at_risk' | 'critical',
+      risks: string[]
+    }],
+    trend: [{ label, value }],
+    strengths: string[],
+    concerns: string[]
+  }
+  Backend: events + event_registrations + event_volunteers.
+           Status auto-assigned: critical if <50% reg within 7 days,
+           at_risk if <70% within 14 days.
+
+GET /api/v1/dashboard/{role}/insights/risks
+  Permission: dashboard.view
+  Query: org_id, term_id
+  Response: {
+    totalRisks, highCount, mediumCount, lowCount,
+    resolvedThisWeek, trendingUp: boolean,
+    risks: [{
+      title, category, severity, description,
+      recommendation, affectedEntity, detectedAt
+    }]
+  }
+  Backend: Aggregated from budget alerts, overdue tasks, event risk
+           flags, and member inactivity scans. Runs every 5 min via
+           background job writing to dashboard_metrics.
+
+GET /api/v1/dashboard/{role}/insights/approvals
+  Permission: dashboard.view
+  Query: org_id, term_id
+  Response: {
+    totalPending, avgWaitDays, oldestItem,
+    byType: [{ type, count }],
+    items: [{
+      id, type, title, submittedBy, submittedAt,
+      daysWaiting, priority, amount?, description
+    }],
+    recentlyApproved: [{ title, approvedAt, type }]
+  }
+  Backend: Unions events(pending_approval) + expenses(pending) +
+           posts(pending_approval). Priority auto-set by amount
+           thresholds and event proximity.
+
+-------------------------------------------------------------------------------
 3.3 TASK ENDPOINTS
 -------------------------------------------------------------------------------
 
