@@ -17,7 +17,8 @@ const statusIcon = {
   critical: <XCircle className="h-3.5 w-3.5 text-destructive" />,
 };
 
-export function BudgetPanel({ data }: { data: BudgetInsight }) {
+export function BudgetPanel({ data }: { data: BudgetInsight | null }) {
+  if (!data) return <div className="text-sm text-muted-foreground text-center py-8">Loading budget insights…</div>;
   const maxMonthly = Math.max(...data.monthlySpend.map((m) => m.value));
 
   return (

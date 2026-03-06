@@ -1,7 +1,5 @@
 import { useMemo, useEffect, useState } from "react";
-import { motion } from "framer-motion"
-import { useAuth } from "@/context/auth-context"
-import { OrgStats } from "@/lib/dashboard-logic";
+import { useAuth } from "@/context/auth-context";
 import { StatCard } from "../stat-card";
 import { Widget } from "../widget";
 import { ProgressBar } from "../progress-bar";
@@ -14,54 +12,70 @@ import { BudgetPanel } from "../insights/panels/budget-panel";
 import { EventsPanel } from "../insights/panels/events-panel";
 import { RisksPanel } from "../insights/panels/risks-panel";
 import { ApprovalsPanel } from "../insights/panels/approvals-panel";
-import {
-  orgHealthInsight,
-  membersInsight,
-  budgetInsight,
-  eventsInsight,
-  risksInsight,
-  approvalsInsight,
-} from "../insights/mock-data";
-import { useMembers } from "@/context/members-context";
-import { useFinance } from "@/context/finance-context";
 import { useEvents } from "@/context/events-context";
+import { useFinance } from "@/context/finance-context";
 import { useTasks } from "@/context/tasks-context";
 import { format } from "date-fns";
 
+// Full API response type shape
+interface DashboardAPIResponse {
+  stats: {
+    members: number;
+    activeMembers: number;
+    totalBudget: number;
+    spentBudget: number;
+    onTrackEvents: number;
+    totalEvents: number;
+    completedTasks: number;
+    totalTasks: number;
+  };
+  score: number;
+  insights: {
+    orgHealth: any;
+    members: any;
+    budget: any;
+    events: any;
+    risks: any;
+    approvals: any;
+  };
+}
+
 export function PresidentDashboard() {
-  const [apiData, setApiData] = useState<{ stats: any; score: number } | null>(null);
-  const { session } = useAuth()
+  const [apiData, setApiData] = useState<DashboardAPIResponse | null>(null);
+  const { session } = useAuth();
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const headers: Record<string, string> = {}
+        const headers: Record<string, string> = {};
         if (session?.access_token) {
-          headers["Authorization"] = `Bearer ${session.access_token}`
+          headers["Authorization"] = `Bearer ${session.access_token}`;
         }
-
-        const res = await fetch("/api/dashboard/stats", { headers })
-        const data = await res.json()
-        setApiData(data)
+        const res = await fetch("/api/dashboard/stats", { headers });
+        const data = await res.json();
+        setApiData(data);
       } catch (err) {
-        console.error("Failed to fetch stats:", err)
+        console.error("Failed to fetch stats:", err);
       }
     }
-    fetchStats()
+    fetchStats();
   }, [session?.access_token]);
 
-  const { stats: memberStats } = useMembers();
-  const { budget, expenses, reimbursements, totalSpent, totalPending } = useFinance();
+  // Fallback to context data for UI widgets not served by API
+  const { expenses, reimbursements, budget, totalSpent, totalPending } = useFinance();
   const { events } = useEvents();
   const { tasks } = useTasks();
 
-  const remaining = apiData ? apiData.stats.totalBudget - apiData.stats.spentBudget : budget.totalBudget - totalSpent;
+  // Budget display — prefer API data, fall back to context
+  const remaining = apiData
+    ? apiData.stats.totalBudget - apiData.stats.spentBudget
+    : budget.totalBudget - totalSpent;
   const remainingPct = apiData
     ? apiData.stats.totalBudget > 0 ? Math.round((remaining / apiData.stats.totalBudget) * 100) : 0
     : budget.totalBudget > 0 ? Math.round((remaining / budget.totalBudget) * 100) : 0;
   const displaySpent = apiData ? apiData.stats.spentBudget : totalSpent;
 
-  // Upcoming events sorted by date
+  // Upcoming events list — use context (already filtered by current session)
   const upcomingEvents = useMemo(() => {
     const now = new Date();
     return events
@@ -70,26 +84,34 @@ export function PresidentDashboard() {
       .slice(0, 3);
   }, [events]);
 
-  // Risk alerts from real data
+  // Risk alerts — prefer API, fall back to local calculation
   const risks = useMemo(() => {
+    if (apiData?.insights?.risks?.risks?.length > 0) {
+      return apiData.insights.risks.risks.slice(0, 3).map((r: any) => ({
+        title: r.title,
+        sub: r.description,
+        severity: r.severity === "high" ? "High" : r.severity === "medium" ? "Medium" : "Low",
+      }));
+    }
+    // Fallback local calculation
     const items: { title: string; sub: string; severity: string }[] = [];
     const now = new Date();
-    // Overdue tasks
     const overdue = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < now && t.status !== "done");
     if (overdue.length > 0) items.push({ title: `${overdue.length} overdue task(s)`, sub: overdue[0].title, severity: "High" });
-    // Pending expenses
     if (totalPending > 500) items.push({ title: "High pending expenses", sub: `$${totalPending.toFixed(0)} awaiting approval`, severity: "Medium" });
-    // Under-registered events
-    upcomingEvents.forEach((e) => {
-      if (e.capacity && e.registered && e.registered / e.capacity < 0.5) {
-        items.push({ title: `${e.title} under-registered`, sub: `${e.registered}/${e.capacity} (${Math.round((e.registered / e.capacity) * 100)}%)`, severity: "High" });
-      }
-    });
     return items.slice(0, 3);
-  }, [tasks, totalPending, upcomingEvents]);
+  }, [apiData, tasks, totalPending]);
 
-  // Pending approvals from real data
+  // Pending approvals — prefer API, fall back to context
   const pendingApprovals = useMemo(() => {
+    if (apiData?.insights?.approvals?.items?.length > 0) {
+      return apiData.insights.approvals.items.slice(0, 4).map((a: any) => ({
+        title: a.title,
+        sub: `${a.submittedBy} • $${a.amount ?? ""}`,
+        type: a.type === "finance" ? "Finance" : "Reimbursement",
+      }));
+    }
+    // Fallback
     const items: { title: string; sub: string; type: string }[] = [];
     expenses.filter((e) => e.status === "pending").slice(0, 2).forEach((e) =>
       items.push({ title: e.description, sub: `${e.submittedBy} • $${e.amount}`, type: "Finance" })
@@ -98,7 +120,7 @@ export function PresidentDashboard() {
       items.push({ title: r.description, sub: `${r.submittedBy} • $${r.amount}`, type: "Reimbursement" })
     );
     return items;
-  }, [expenses, reimbursements]);
+  }, [apiData, expenses, reimbursements]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -107,12 +129,12 @@ export function PresidentDashboard() {
         <ExpandableTile
           title="Org Health Score — Deep Dive"
           subtitle="Composite score from member engagement, events, budget & tasks"
-          insightPanel={<OrgHealthPanel data={orgHealthInsight} />}
+          insightPanel={<OrgHealthPanel data={apiData?.insights?.orgHealth || null} />}
         >
           <StatCard
             title="Org Health Score"
             value={apiData ? `${apiData.score}/100` : "..."}
-            trend={{ value: apiData ? apiData.score - orgHealthInsight.previousScore : 0, label: "vs last month" }}
+            trend={{ value: apiData ? apiData.score - (apiData.insights?.orgHealth?.previousScore ?? apiData.score) : 0, label: "vs last month" }}
             icon={<Activity className="h-5 w-5" />}
           />
         </ExpandableTile>
@@ -120,12 +142,16 @@ export function PresidentDashboard() {
         <ExpandableTile
           title="Active Members — Full Breakdown"
           subtitle="Demographics, recent joiners, retention & engagement stats"
-          insightPanel={<MembersPanel data={membersInsight} />}
+          insightPanel={<MembersPanel data={apiData?.insights?.members || null} />}
         >
           <StatCard
             title="Active Members"
             value={apiData ? String(apiData.stats.activeMembers) : "..."}
-            description={apiData && apiData.stats.members > 0 ? `${Math.round((apiData.stats.activeMembers / apiData.stats.members) * 100)}% of ${apiData.stats.members} total` : "..."}
+            description={
+              apiData && apiData.stats.members > 0
+                ? `${Math.round((apiData.stats.activeMembers / apiData.stats.members) * 100)}% of ${apiData.stats.members} total`
+                : "..."
+            }
             icon={<Users className="h-5 w-5" />}
           />
         </ExpandableTile>
@@ -133,7 +159,7 @@ export function PresidentDashboard() {
         <ExpandableTile
           title="Budget — Financial Detail"
           subtitle="Spending categories, burn rate, top expenses & alerts"
-          insightPanel={<BudgetPanel data={budgetInsight} />}
+          insightPanel={<BudgetPanel data={apiData?.insights?.budget || null} />}
         >
           <Widget title="Budget Remaining">
             <div className="space-y-4">
@@ -158,7 +184,7 @@ export function PresidentDashboard() {
           <ExpandableTile
             title="Upcoming Events — Detail & Readiness"
             subtitle="Registration health, volunteer coverage & risk flags per event"
-            insightPanel={<EventsPanel data={eventsInsight} />}
+            insightPanel={<EventsPanel data={apiData?.insights?.events || null} />}
           >
             <Widget
               title="Upcoming Events"
@@ -189,7 +215,7 @@ export function PresidentDashboard() {
           <ExpandableTile
             title="Risk Alerts — Analysis & Recommendations"
             subtitle="All active risks with severity, context & recommended actions"
-            insightPanel={<RisksPanel data={risksInsight} />}
+            insightPanel={<RisksPanel data={apiData?.insights?.risks || null} />}
           >
             <Widget title="Risk Alerts" className="h-full">
               <DashboardList>
@@ -213,7 +239,7 @@ export function PresidentDashboard() {
       <ExpandableTile
         title="Approval Queue — All Pending Items"
         subtitle="Events, finance, marketing & budget changes awaiting your review"
-        insightPanel={<ApprovalsPanel data={approvalsInsight} />}
+        insightPanel={<ApprovalsPanel data={apiData?.insights?.approvals || null} />}
       >
         <Widget
           title="Approval Queue"

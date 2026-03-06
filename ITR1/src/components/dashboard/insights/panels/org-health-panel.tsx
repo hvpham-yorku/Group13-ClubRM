@@ -17,8 +17,10 @@ const statusColor = {
   critical: "text-destructive",
 };
 
-export function OrgHealthPanel({ data }: { data: OrgHealthInsight }) {
+export function OrgHealthPanel({ data }: { data: OrgHealthInsight | null }) {
+  if (!data) return <div className="text-sm text-muted-foreground text-center py-8">Loading health insights…</div>;
   const delta = data.overallScore - data.previousScore;
+
   const isUp = delta > 0;
 
   return (

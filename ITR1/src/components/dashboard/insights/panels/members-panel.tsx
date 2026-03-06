@@ -35,7 +35,9 @@ function DemographicBar({ slices, title, icon }: { slices: DemographicSlice[]; t
   );
 }
 
-export function MembersPanel({ data }: { data: MembersInsight }) {
+export function MembersPanel({ data }: { data: MembersInsight | null }) {
+  if (!data) return <div className="text-sm text-muted-foreground text-center py-8">Loading member insights…</div>;
+
   return (
     <div className="space-y-6">
       {/* Summary stats */}
