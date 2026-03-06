@@ -22,6 +22,11 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRole, type Role } from "@/context/role-context";
 import { useAuth } from "@/context/auth-context";
@@ -82,7 +87,20 @@ export function TopBar() {
     return items;
   }, [expenses, reimbursements, tasks, events]);
 
-  const [readNotifs, setReadNotifs] = useState<Set<string>>(new Set());
+  const [readNotifs, setReadNotifs] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("readNotifs");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("readNotifs", JSON.stringify(Array.from(readNotifs)));
+  }, [readNotifs]);
+
+  const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = notifications.filter((n) => !readNotifs.has(n.id)).length;
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
   const displayEmail = user?.email || "";
@@ -188,46 +206,57 @@ export function TopBar() {
       </div>
 
       <div className="ml-auto flex items-center gap-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative hover:bg-accent/50">
-              <Bell className="h-5 w-5 text-muted-foreground" />
+        <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative hover:bg-accent/50 group">
+              <Bell className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[9px] font-bold text-primary-foreground flex items-center justify-center">{unreadCount}</span>
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[9px] font-bold text-primary-foreground flex items-center justify-center animate-in zoom-in">{unreadCount}</span>
               )}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel className="flex justify-between items-center">
-              Notifications {unreadCount > 0 && `(${unreadCount})`}
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-0 shadow-xl" sideOffset={8}>
+            <div className="flex justify-between items-center px-4 py-3 border-b border-border/50">
+              <span className="font-semibold text-sm">Notifications {unreadCount > 0 && `(${unreadCount})`}</span>
               {unreadCount > 0 && (
-                <span className="text-[10px] font-normal text-muted-foreground cursor-pointer hover:text-primary" onClick={() => setReadNotifs(new Set(notifications.map((n) => n.id)))}>Mark all read</span>
+                <button 
+                  className="text-[10px] font-medium text-primary hover:underline outline-none transition-colors" 
+                  onClick={() => setReadNotifs(new Set(notifications.map((n) => n.id)))}
+                >
+                  Mark all read
+                </button>
               )}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            </div>
             {notifications.length === 0 ? (
-              <div className="py-2 px-1 text-center text-xs text-muted-foreground italic h-24 flex items-center justify-center">
-                No new notifications
+              <div className="py-6 px-4 text-center text-sm text-muted-foreground italic h-32 flex items-center justify-center bg-muted/20">
+                You're all caught up!
               </div>
             ) : (
-              <div className="max-h-72 overflow-y-auto">
+              <div className="max-h-80 overflow-y-auto w-full">
                 {notifications.map((n) => (
-                  <DropdownMenuItem
+                  <button
                     key={n.id}
-                    className={cn("flex flex-col items-start gap-0.5 py-2.5 px-3 cursor-pointer", readNotifs.has(n.id) && "opacity-50")}
-                    onClick={() => { setReadNotifs((prev) => new Set(prev).add(n.id)); navigate(n.route); }}
+                    className={cn(
+                      "flex flex-col items-start gap-1 w-full p-4 border-b border-border/50 bg-background hover:bg-muted/50 transition-colors text-left outline-none focus-visible:bg-muted focus-visible:ring-1 focus-visible:ring-ring",
+                      readNotifs.has(n.id) && "opacity-60 bg-muted/20 hover:bg-muted/40"
+                    )}
+                    onClick={() => { 
+                      setReadNotifs((prev) => new Set(prev).add(n.id)); 
+                      setNotifOpen(false); 
+                      navigate(n.route); 
+                    }}
                   >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-xs font-semibold">{n.title}</span>
-                      <span className="text-[9px] text-muted-foreground">{n.time}</span>
+                    <div className="flex items-start justify-between w-full gap-2">
+                      <span className={cn("text-sm font-medium leading-tight text-foreground", !readNotifs.has(n.id) && "text-primary")}>{n.title}</span>
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap mt-0.5">{n.time}</span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{n.sub}</span>
-                  </DropdownMenuItem>
+                    <span className="text-xs text-muted-foreground line-clamp-2">{n.sub}</span>
+                  </button>
                 ))}
               </div>
             )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </PopoverContent>
+        </Popover>
 
         <Separator orientation="vertical" className="h-4" />
 
