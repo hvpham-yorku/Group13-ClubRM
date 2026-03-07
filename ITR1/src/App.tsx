@@ -5,7 +5,6 @@ import { AuthPage } from "@/components/auth/auth-page";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
-import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard";
 import TestDatabase from './Testing/TestDatabase';
 
 // Lazy loaded pages
@@ -58,8 +57,7 @@ function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<PresidentDashboard />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/" element={<DashboardPage />} />
         <Route path="/members" element={<MembersPage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/events" element={<EventsPage />} />
