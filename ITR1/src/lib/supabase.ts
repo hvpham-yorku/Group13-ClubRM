@@ -1,11 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-<<<<<<< HEAD
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-=======
 import type { Database } from './database.types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
@@ -15,10 +8,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Check your .env file.')
 }
 
-export const supabase = createClient<Database>(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder')
+// Export the primary, typed client
+export const supabase = createClient<Database>(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder'
+)
 
-// Cast of the same client for tables not yet in generated Database types (documents, notifications, org_settings)
-// Uses the SAME instance — no duplicate GoTrue/auth session conflicts
+// Cast for tables not yet in generated Database types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabaseUntyped = supabase as any
->>>>>>> 3e82175cbc695093c3747484475bbd7ee4fa9602
