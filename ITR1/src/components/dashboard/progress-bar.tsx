@@ -43,7 +43,7 @@ export function ProgressBar({
     destructive: "bg-destructive",
   };
 
-  return (
+ return (
     <div className={cn("space-y-2", className)}>
       {/* Label Row */}
       <div className="flex justify-between items-end">
@@ -54,12 +54,12 @@ export function ProgressBar({
       </div>
 
       {/* Background bar */}
-      <div className="h-3 w-full bg-muted rounded-full overflow-hidden shadow-inner">
+      <div className="h-3 w-full bg-muted rounded-full overflow-hidden shadow-inner flex">
         {/* Animated bar */}
         <div
           className={cn(
             "h-full transition-all duration-1000 ease-out rounded-full",
-            colorMap[color as keyof typeof colorMap],
+            colorMap[color as keyof typeof colorMap]
           )}
           style={{ width: `${animatedWidth}%` }}
         />
