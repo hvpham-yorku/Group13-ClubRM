@@ -384,6 +384,16 @@ export function SettingsPage() {
               ))}
             </div>
 
+            <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3 space-y-1">
+              <p className="text-xs font-medium text-foreground">Availability</p>
+              <p className="text-xs text-muted-foreground">
+                In-app now: Task Assignments, Event Reminders, Finance Alerts, and New Member Joined.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Backend required later: Daily Email Digest and scheduled reminders while the app is closed.
+              </p>
+            </div>
+
             <div className="flex justify-end">
               <Button onClick={handleSave} className="gap-2">
                 {saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
