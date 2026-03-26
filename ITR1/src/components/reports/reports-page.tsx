@@ -100,53 +100,106 @@ export function ReportsPage() {
   const { members, stats: memberStats } = useMembers()
   const { events } = useEvents()
   const { tasks } = useTasks()
-  const { budget, totalSpent, totalIncome, totalPending, expenses, reimbursements, income } = useFinance()
-  const [period] = useState("this-term")
+  const { budget, totalSpent: financeTotalSpent, totalIncome: financeTotalIncome, totalPending: financeTotalPending, expenses, reimbursements, income } = useFinance()
+  const [period, setPeriod] = useState("this-term")
+  const [selectedDept, setSelectedDept] = useState<string>("all")
+
+  // ─── Filtered Data Wrappers (Cross-Filtering) ───
+  const departments = useMemo(() => {
+    const depts = new Set<string>()
+    members.forEach(m => depts.add(m.department))
+    tasks.forEach(t => t.section && depts.add(t.section))
+    return Array.from(depts).sort()
+  }, [members, tasks])
+
+  const fMembers = useMemo(() => 
+    selectedDept === "all" ? members : members.filter(m => m.department === selectedDept)
+  , [members, selectedDept])
+
+  const fTasks = useMemo(() => 
+    selectedDept === "all" ? tasks : tasks.filter(t => t.section === selectedDept)
+  , [tasks, selectedDept])
+
+  const fEvents = useMemo(() => {
+    // Events don't have direct depts, but we can filter by tags if they match dept name
+    if (selectedDept === "all") return events
+    return events.filter(e => e.tags.some(t => t.toLowerCase() === selectedDept.toLowerCase()))
+  }, [events, selectedDept])
+
+  const fExpenses = useMemo(() => {
+    if (selectedDept === "all") return expenses
+    // Map finance categories to depts roughly
+    return expenses.filter(e => e.category.toLowerCase() === selectedDept.toLowerCase())
+  }, [expenses, selectedDept])
+
+  const fIncome = useMemo(() => {
+    if (selectedDept === "all") return income
+    return income.filter(i => i.type.toLowerCase() === selectedDept.toLowerCase())
+  }, [income, selectedDept])
+
+  const fReimbursements = useMemo(() => {
+    if (selectedDept === "all") return reimbursements
+    return reimbursements.filter(r => r.category.toLowerCase() === selectedDept.toLowerCase())
+  }, [reimbursements, selectedDept])
+
+  // Re-derive stats from filtered data
+  const fMemberStats = useMemo(() => ({
+    total: fMembers.length,
+    active: fMembers.filter(m => m.status === "active").length,
+    inactive: fMembers.filter(m => m.status === "inactive").length,
+    alumni: fMembers.filter(m => m.status === "alumni").length,
+  }), [fMembers])
+
+  const fTotalSpent = fExpenses.reduce((s, e) => s + e.amount, 0)
+  const fTotalIncome = fIncome.reduce((s, i) => s + i.amount, 0)
+  const fTotalPending = fExpenses.filter(e => e.status === "pending").reduce((s, e) => s + e.amount, 0) + 
+                       fReimbursements.filter(r => r.status === "pending").reduce((s, r) => s + r.amount, 0)
+
 
   // ─── Derived: Tasks (DB-safe: guards on nullable arrays/dates) ───
-  const completedTasks = tasks.filter((t) => t.status === "done").length
-  const completionRate = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0
+  const completedTasks = fTasks.filter((t) => t.status === "done").length
+  const completionRate = fTasks.length > 0 ? (completedTasks / fTasks.length) * 100 : 0
   const now = new Date()
-  const overdueTasks = tasks.filter((t) => {
+  const overdueTasks = fTasks.filter((t) => {
     const due = safeDate(t.dueDate)
     return due && due < now && t.status !== "done"
   })
-  const inProgressTasks = tasks.filter((t) => t.status === "in_progress").length
-  const totalSubtasks = tasks.reduce((s, t) => s + (t.subtasks ?? []).length, 0)
-  const doneSubtasks = tasks.reduce((s, t) => s + (t.subtasks ?? []).filter((st) => st.done).length, 0)
+  const inProgressTasks = fTasks.filter((t) => t.status === "in_progress").length
+  const totalSubtasks = fTasks.reduce((s, t) => s + (t.subtasks ?? []).length, 0)
+  const doneSubtasks = fTasks.reduce((s, t) => s + (t.subtasks ?? []).filter((st) => st.done).length, 0)
   const subtaskRate = totalSubtasks > 0 ? (doneSubtasks / totalSubtasks) * 100 : 0
-  const avgSubtasksPerTask = tasks.length > 0 ? (totalSubtasks / tasks.length).toFixed(1) : "0"
+  const avgSubtasksPerTask = fTasks.length > 0 ? (totalSubtasks / fTasks.length).toFixed(1) : "0"
 
   const tasksByStatus = useMemo(() =>
     (["backlog", "todo", "in_progress", "in_review", "done"] as const).map((s) => ({
       name: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      value: tasks.filter((t) => t.status === s).length,
+      value: fTasks.filter((t) => t.status === s).length,
       fill: STATUS_COLORS[s],
-    })), [tasks])
+    })), [fTasks])
 
   const tasksByPriority = useMemo(() =>
     (["urgent", "high", "medium", "low"] as const).map((p) => ({
       name: p.charAt(0).toUpperCase() + p.slice(1),
-      value: tasks.filter((t) => t.priority === p).length,
+      value: fTasks.filter((t) => t.priority === p).length,
       fill: PRIORITY_COLORS[p],
-    })), [tasks])
+    })), [fTasks])
 
   const tasksBySection = useMemo(() => {
     const map: Record<string, number> = {}
-    tasks.forEach((t) => { const s = t.section || "Unsorted"; map[s] = (map[s] || 0) + 1 })
+    fTasks.forEach((t) => { const s = t.section || "Unsorted"; map[s] = (map[s] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
-  }, [tasks])
+  }, [fTasks])
 
   const tasksByTag = useMemo(() => {
     const map: Record<string, number> = {}
-    tasks.forEach((t) => (t.tags ?? []).forEach((tag) => { map[tag] = (map[tag] || 0) + 1 }))
+    fTasks.forEach((t) => (t.tags ?? []).forEach((tag) => { map[tag] = (map[tag] || 0) + 1 }))
     return Object.entries(map).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value })).sort((a, b) => b.value - a.value)
-  }, [tasks])
+  }, [fTasks])
 
   // Assignee productivity (DB-safe: guard assignees array)
   const assigneeStats = useMemo(() => {
     const map: Record<string, { assigned: number; completed: number }> = {}
-    tasks.forEach((t) => {
+    fTasks.forEach((t) => {
       ;(t.assignees ?? []).forEach((a) => {
         if (!map[a]) map[a] = { assigned: 0, completed: 0 }
         map[a].assigned++
@@ -155,26 +208,26 @@ export function ReportsPage() {
     })
     return Object.entries(map)
       .map(([id, stats]) => {
-        const member = members.find((m) => m.id === id)
+        const member = fMembers.find((m) => m.id === id)
         return { id, name: member?.name || id, ...stats, rate: stats.assigned > 0 ? Math.round((stats.completed / stats.assigned) * 100) : 0 }
       })
       .sort((a, b) => b.completed - a.completed)
       .slice(0, 8)
-  }, [tasks, members])
+  }, [fTasks, fMembers])
 
   // ─── Derived: Events (DB-safe: guard date parsing) ───
-  const upcomingEvents = events.filter((e) => { const d = safeDate(e.startDate); return d && d > now }).length
-  const pastEvents = events.filter((e) => { const d = safeDate(e.endDate); return d && d < now }).length
-  const eventsWithCapacity = events.filter((e) => e.capacity && e.capacity > 0)
+  const upcomingEvents = fEvents.filter((e) => { const d = safeDate(e.startDate); return d && d > now }).length
+  const pastEvents = fEvents.filter((e) => { const d = safeDate(e.endDate); return d && d < now }).length
+  const eventsWithCapacity = fEvents.filter((e) => e.capacity && e.capacity > 0)
   const totalCapacity = eventsWithCapacity.reduce((s, e) => s + (e.capacity || 0), 0)
   const totalRegistered = eventsWithCapacity.reduce((s, e) => s + (e.registered || 0), 0)
   const avgFillRate = totalCapacity > 0 ? (totalRegistered / totalCapacity) * 100 : 0
 
   const eventsByTag = useMemo(() => {
     const map: Record<string, number> = {}
-    events.forEach((e) => (e.tags ?? []).forEach((t) => { map[t] = (map[t] || 0) + 1 }))
+    fEvents.forEach((e) => (e.tags ?? []).forEach((t) => { map[t] = (map[t] || 0) + 1 }))
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
-  }, [events])
+  }, [fEvents])
 
   const eventFillData = useMemo(() =>
     eventsWithCapacity.map((e) => ({
@@ -186,37 +239,37 @@ export function ReportsPage() {
 
   const eventsByStatus = useMemo(() => {
     const map: Record<string, number> = {}
-    events.forEach((e) => { const s = e.status || "confirmed"; map[s] = (map[s] || 0) + 1 })
+    fEvents.forEach((e) => { const s = e.status || "confirmed"; map[s] = (map[s] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
-  }, [events])
+  }, [fEvents])
 
   // ─── Derived: Finance ───
-  const budgetUtil = budget.totalBudget > 0 ? (totalSpent / budget.totalBudget) * 100 : 0
-  const budgetRemaining = budget.totalBudget - totalSpent
-  const netCashFlow = totalIncome - totalSpent
-  const approvedExpenses = expenses.filter((e) => e.status === "approved").length
-  const pendingExpenses = expenses.filter((e) => e.status === "pending").length
-  const deniedExpenses = expenses.filter((e) => e.status === "denied").length
-  const expenseApprovalRate = expenses.length > 0 ? (approvedExpenses / expenses.length) * 100 : 0
-  const pendingReimb = reimbursements.filter((r) => r.status === "pending").length
+  const budgetUtil = budget.totalBudget > 0 ? (fTotalSpent / budget.totalBudget) * 100 : 0
+  const budgetRemaining = budget.totalBudget - fTotalSpent
+  const netCashFlow = fTotalIncome - fTotalSpent
+  const approvedExpenses = fExpenses.filter((e) => e.status === "approved").length
+  const pendingExpenses = fExpenses.filter((e) => e.status === "pending").length
+  const deniedExpenses = fExpenses.filter((e) => e.status === "denied").length
+  const expenseApprovalRate = fExpenses.length > 0 ? (approvedExpenses / fExpenses.length) * 100 : 0
+  const pendingReimb = fReimbursements.filter((r) => r.status === "pending").length
 
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {}
-    expenses.forEach((e) => { map[e.category] = (map[e.category] || 0) + e.amount })
+    fExpenses.forEach((e) => { map[e.category] = (map[e.category] || 0) + e.amount })
     return Object.entries(map).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value })).sort((a, b) => b.value - a.value)
-  }, [expenses])
+  }, [fExpenses])
 
   const incomeByType = useMemo(() => {
     const map: Record<string, number> = {}
-    income.forEach((i) => { map[i.type] = (map[i.type] || 0) + i.amount })
+    fIncome.forEach((i) => { map[i.type] = (map[i.type] || 0) + i.amount })
     return Object.entries(map).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value })).sort((a, b) => b.value - a.value)
-  }, [income])
+  }, [fIncome])
 
   const topExpenses = useMemo(() =>
-    [...expenses].sort((a, b) => b.amount - a.amount).slice(0, 8), [expenses])
+    [...fExpenses].sort((a, b) => b.amount - a.amount).slice(0, 8), [fExpenses])
 
   const topIncomes = useMemo(() =>
-    [...income].sort((a, b) => b.amount - a.amount).slice(0, 6), [income])
+    [...fIncome].sort((a, b) => b.amount - a.amount).slice(0, 6), [fIncome])
 
   // ─── Monthly Trend (computed from actual data — production-ready) ───
   const monthlyTrend = useMemo(() => {
@@ -249,49 +302,49 @@ export function ReportsPage() {
     }
     return months
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `now` excluded: stable within session, data arrays drive recomputation
-  }, [expenses, income, events, tasks, members])
+  }, [fExpenses, fIncome, fEvents, fTasks, fMembers])
 
   // ─── Derived: Members ───
   const membersByRole = useMemo(() => {
     const map: Record<string, number> = {}
-    members.forEach((m) => { map[m.role] = (map[m.role] || 0) + 1 })
+    fMembers.forEach((m) => { map[m.role] = (map[m.role] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name, value }))
-  }, [members])
+  }, [fMembers])
 
   const membersByDept = useMemo(() => {
     const map: Record<string, number> = {}
-    members.forEach((m) => { map[m.department] = (map[m.department] || 0) + 1 })
+    fMembers.forEach((m) => { map[m.department] = (map[m.department] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name: name.length > 14 ? name.slice(0, 14) + "..." : name, value })).sort((a, b) => b.value - a.value)
-  }, [members])
+  }, [fMembers])
 
   const membersByYear = useMemo(() => {
     const map: Record<string, number> = {}
-    members.forEach((m) => { map[m.year] = (map[m.year] || 0) + 1 })
+    fMembers.forEach((m) => { map[m.year] = (map[m.year] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name, value }))
-  }, [members])
+  }, [fMembers])
 
   const engagementScores = useMemo(() =>
-    members
+    fMembers
       .filter((m) => m.status === "active")
       .map((m) => {
         const score = Math.min(100, Math.round((m.tasksCompleted * 2 + m.eventsAttended * 3) / 1.5))
         return { ...m, score }
       })
-      .sort((a, b) => b.score - a.score), [members])
+      .sort((a, b) => b.score - a.score), [fMembers])
 
   const avgEngagement = engagementScores.length > 0 ? Math.round(engagementScores.reduce((s, m) => s + m.score, 0) / engagementScores.length) : 0
   const atRiskMembers = engagementScores.filter((m) => m.score < 20)
-  const retentionRate = memberStats.total > 0 ? ((memberStats.active / memberStats.total) * 100).toFixed(0) : "0"
+  const retentionRate = fMemberStats.total > 0 ? ((fMemberStats.active / fMemberStats.total) * 100).toFixed(0) : "0"
 
   // ─── Org Health Score (composite) ───
   const orgHealth = useMemo(() => {
-    const retention = memberStats.total > 0 ? (memberStats.active / memberStats.total) * 100 : 0
+    const retention = fMemberStats.total > 0 ? (fMemberStats.active / fMemberStats.total) * 100 : 0
     const taskHealth = completionRate
     const budgetHealth = Math.max(0, 100 - Math.abs(budgetUtil - 50))
     const eventHealth = avgFillRate
     const score = Math.round(retention * 0.3 + taskHealth * 0.25 + budgetHealth * 0.2 + eventHealth * 0.25)
     return Math.min(100, Math.max(0, score))
-  }, [memberStats, completionRate, budgetUtil, avgFillRate])
+  }, [fMemberStats, completionRate, budgetUtil, avgFillRate])
 
   const healthColor = orgHealth >= 75 ? "text-emerald-400" : orgHealth >= 50 ? "text-amber-400" : "text-red-400"
   const healthBg = orgHealth >= 75 ? "bg-emerald-500" : orgHealth >= 50 ? "bg-amber-500" : "bg-red-500"
@@ -305,24 +358,24 @@ export function ReportsPage() {
     const list: { type: "success" | "warning" | "danger" | "info"; title: string; detail: string }[] = []
 
     if (Number(retentionRate) >= 80) list.push({ type: "success", title: "Strong member retention", detail: `${retentionRate}% of members are active — above the 80% benchmark` })
-    else list.push({ type: "warning", title: "Member retention below target", detail: `${retentionRate}% active — ${memberStats.inactive} inactive member(s) need re-engagement` })
+    else list.push({ type: "warning", title: "Member retention below target", detail: `${retentionRate}% active — ${fMemberStats.inactive} inactive member(s) need re-engagement` })
 
     if (overdueTasks.length > 0) list.push({ type: "danger", title: `${overdueTasks.length} overdue task${overdueTasks.length > 1 ? "s" : ""}`, detail: overdueTasks.map((t) => t.title).slice(0, 3).join(", ") })
-    if (completionRate >= 60) list.push({ type: "success", title: `Task completion at ${completionRate.toFixed(0)}%`, detail: `${completedTasks} of ${tasks.length} tasks done — solid progress` })
-    else list.push({ type: "warning", title: `Task completion at ${completionRate.toFixed(0)}%`, detail: `Only ${completedTasks} of ${tasks.length} tasks done — may need resource reallocation` })
+    if (completionRate >= 60) list.push({ type: "success", title: `Task completion at ${completionRate.toFixed(0)}%`, detail: `${completedTasks} of ${fTasks.length} tasks done — solid progress` })
+    else list.push({ type: "warning", title: `Task completion at ${completionRate.toFixed(0)}%`, detail: `Only ${completedTasks} of ${fTasks.length} tasks done — may need resource reallocation` })
 
     if (budgetUtil > 85) list.push({ type: "danger", title: `Budget ${budgetUtil.toFixed(0)}% utilized`, detail: `Only ${fmt(budgetRemaining)} remaining — review upcoming expenses` })
     else if (budgetUtil > 60) list.push({ type: "info", title: `Budget ${budgetUtil.toFixed(0)}% utilized`, detail: `${fmt(budgetRemaining)} remaining — on track for the term` })
     else list.push({ type: "success", title: `Budget ${budgetUtil.toFixed(0)}% utilized`, detail: `${fmt(budgetRemaining)} remaining — healthy budget position` })
 
-    if (pendingExpenses > 3) list.push({ type: "warning", title: `${pendingExpenses} pending expense approvals`, detail: `${fmt(totalPending)} waiting for VP Finance review` })
+    if (pendingExpenses > 3) list.push({ type: "warning", title: `${pendingExpenses} pending expense approvals`, detail: `${fmt(fTotalPending)} waiting for VP Finance review` })
     if (avgFillRate > 70) list.push({ type: "success", title: `Events averaging ${avgFillRate.toFixed(0)}% fill rate`, detail: `${totalRegistered} total registrations across ${eventsWithCapacity.length} events` })
     if (atRiskMembers.length > 0) list.push({ type: "warning", title: `${atRiskMembers.length} at-risk member${atRiskMembers.length > 1 ? "s" : ""}`, detail: atRiskMembers.map((m) => m.name).join(", ") + " — low engagement scores" })
-    if (netCashFlow > 0) list.push({ type: "success", title: `Positive cash flow: ${fmt(netCashFlow)}`, detail: `Income (${fmt(totalIncome)}) exceeds spending (${fmt(totalSpent)})` })
+    if (netCashFlow > 0) list.push({ type: "success", title: `Positive cash flow: ${fmt(netCashFlow)}`, detail: `Income (${fmt(fTotalIncome)}) exceeds spending (${fmt(fTotalSpent)})` })
     else list.push({ type: "danger", title: `Negative cash flow: ${fmt(netCashFlow)}`, detail: `Spending exceeds income — review budget allocation` })
 
     return list
-  }, [retentionRate, memberStats, overdueTasks, completionRate, completedTasks, tasks, budgetUtil, budgetRemaining, pendingExpenses, totalPending, avgFillRate, totalRegistered, eventsWithCapacity, atRiskMembers, netCashFlow, totalIncome, totalSpent])
+  }, [retentionRate, fMemberStats, overdueTasks, completionRate, completedTasks, fTasks, budgetUtil, budgetRemaining, pendingExpenses, fTotalPending, avgFillRate, totalRegistered, eventsWithCapacity, atRiskMembers, netCashFlow, fTotalIncome, fTotalSpent])
 
   const insightColors = { success: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400", warning: "bg-amber-500/10 border-amber-500/20 text-amber-400", danger: "bg-red-500/10 border-red-500/20 text-red-400", info: "bg-blue-500/10 border-blue-500/20 text-blue-400" }
   const insightIcons = { success: <ArrowUpRight className="h-4 w-4" />, warning: <AlertTriangle className="h-4 w-4" />, danger: <Flame className="h-4 w-4" />, info: <Activity className="h-4 w-4" /> }
@@ -333,22 +386,22 @@ export function ReportsPage() {
       const lines: string[] = []
       lines.push("Module,Metric,Value")
       lines.push(`Members,Total,${memberStats.total}`)
-      lines.push(`Members,Active,${memberStats.active}`)
-      lines.push(`Members,Inactive,${memberStats.inactive}`)
-      lines.push(`Members,Alumni,${memberStats.alumni}`)
+      lines.push(`Members,Active,${fMemberStats.active}`)
+      lines.push(`Members,Inactive,${fMemberStats.inactive}`)
+      lines.push(`Members,Alumni,${fMemberStats.alumni}`)
       lines.push(`Members,Retention Rate,${retentionRate}%`)
-      lines.push(`Tasks,Total,${tasks.length}`)
+      lines.push(`Tasks,Total,${fTasks.length}`)
       lines.push(`Tasks,Completed,${completedTasks}`)
       lines.push(`Tasks,Completion Rate,${completionRate.toFixed(1)}%`)
       lines.push(`Tasks,Overdue,${overdueTasks.length}`)
       lines.push(`Tasks,In Progress,${inProgressTasks}`)
       lines.push(`Finance,Budget Total,${budget.totalBudget}`)
-      lines.push(`Finance,Total Spent,${totalSpent}`)
+      lines.push(`Finance,Total Spent,${fTotalSpent}`)
       lines.push(`Finance,Remaining,${budgetRemaining}`)
-      lines.push(`Finance,Total Income,${totalIncome}`)
+      lines.push(`Finance,Total Income,${fTotalIncome}`)
       lines.push(`Finance,Net Cash Flow,${netCashFlow}`)
       lines.push(`Finance,Pending Approvals,${pendingExpenses}`)
-      lines.push(`Events,Total,${events.length}`)
+      lines.push(`Events,Total,${fEvents.length}`)
       lines.push(`Events,Upcoming,${upcomingEvents}`)
       lines.push(`Events,Past,${pastEvents}`)
       lines.push(`Events,Avg Fill Rate,${avgFillRate.toFixed(1)}%`)
@@ -356,14 +409,14 @@ export function ReportsPage() {
       lines.push("")
       lines.push("--- Expenses ---")
       lines.push("Description,Amount,Category,Status,Submitted By,Date")
-      expenses.forEach((e) => {
+      fExpenses.forEach((e) => {
         const d = safeDate(e.date)
         lines.push(`"${e.description}",${e.amount},${e.category},${e.status},"${e.submittedBy}",${d ? format(d, "yyyy-MM-dd") : ""}`)
       })
       lines.push("")
       lines.push("--- Income ---")
       lines.push("Source,Amount,Type,Date")
-      income.forEach((i) => {
+      fIncome.forEach((i) => {
         const d = safeDate(i.date)
         lines.push(`"${i.source}",${i.amount},${i.type},${d ? format(d, "yyyy-MM-dd") : ""}`)
       })
@@ -390,7 +443,21 @@ export function ReportsPage() {
           <p className="text-sm text-muted-foreground mt-1">Cross-module intelligence across members, operations, finance, and events</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={period} onValueChange={() => {}}>
+          <Select value={selectedDept} onValueChange={setSelectedDept}>
+            <SelectTrigger className="w-[150px] h-9 text-xs">
+              <div className="flex items-center gap-1.5">
+                <Shield className="h-3 w-3 text-muted-foreground" />
+                <SelectValue placeholder="Department" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {departments.map(d => (
+                <SelectItem key={d} value={d}>{d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-[150px] h-9 text-xs"><SelectValue placeholder="Period" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="this-term">This Term</SelectItem>
@@ -434,13 +501,13 @@ export function ReportsPage() {
         {/* KPI Cards */}
         <div className="lg:col-span-9 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {[
-            { label: "Active Members", value: memberStats.active, sub: `of ${memberStats.total} total`, icon: <UserCheck className="h-4 w-4" />, color: "text-emerald-400", trend: `${retentionRate}% retention` },
-            { label: "Task Completion", value: `${completionRate.toFixed(0)}%`, sub: `${completedTasks}/${tasks.length} done`, icon: <Target className="h-4 w-4" />, color: "text-violet-400", trend: `${overdueTasks.length} overdue` },
+            { label: "Active Members", value: fMemberStats.active, sub: `of ${fMemberStats.total} total`, icon: <UserCheck className="h-4 w-4" />, color: "text-emerald-400", trend: `${retentionRate}% retention` },
+            { label: "Task Completion", value: `${completionRate.toFixed(0)}%`, sub: `${completedTasks}/${fTasks.length} done`, icon: <Target className="h-4 w-4" />, color: "text-violet-400", trend: `${overdueTasks.length} overdue` },
             { label: "Budget Used", value: `${budgetUtil.toFixed(0)}%`, sub: `${fmt(budgetRemaining)} left`, icon: <Wallet className="h-4 w-4" />, color: "text-cyan-400", trend: fmt(budget.totalBudget) + " total" },
-            { label: "Net Cash Flow", value: fmt(netCashFlow), sub: `${fmt(totalIncome)} in / ${fmt(totalSpent)} out`, icon: netCashFlow >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />, color: netCashFlow >= 0 ? "text-emerald-400" : "text-red-400", trend: netCashFlow >= 0 ? "Positive" : "Negative" },
-            { label: "Events", value: events.length, sub: `${upcomingEvents} upcoming`, icon: <Calendar className="h-4 w-4" />, color: "text-pink-400", trend: `${pastEvents} completed` },
+            { label: "Net Cash Flow", value: fmt(netCashFlow), sub: `${fmt(fTotalIncome)} in / ${fmt(fTotalSpent)} out`, icon: netCashFlow >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />, color: netCashFlow >= 0 ? "text-emerald-400" : "text-red-400", trend: netCashFlow >= 0 ? "Positive" : "Negative" },
+            { label: "Events", value: fEvents.length, sub: `${upcomingEvents} upcoming`, icon: <Calendar className="h-4 w-4" />, color: "text-pink-400", trend: `${pastEvents} completed` },
             { label: "Avg Fill Rate", value: `${avgFillRate.toFixed(0)}%`, sub: `${totalRegistered} registrations`, icon: <CalendarCheck className="h-4 w-4" />, color: "text-amber-400", trend: `${eventsWithCapacity.length} events` },
-            { label: "Pending Approvals", value: pendingExpenses + pendingReimb, sub: `${fmt(totalPending)} expenses`, icon: <Clock className="h-4 w-4" />, color: "text-orange-400", trend: `${pendingReimb} reimbursements` },
+            { label: "Pending Approvals", value: pendingExpenses + pendingReimb, sub: `${fmt(fTotalPending)} expenses`, icon: <Clock className="h-4 w-4" />, color: "text-orange-400", trend: `${pendingReimb} reimbursements` },
             { label: "Engagement Avg", value: `${avgEngagement}`, sub: `${atRiskMembers.length} at risk`, icon: <Activity className="h-4 w-4" />, color: "text-blue-400", trend: `${engagementScores.length} active` },
           ].map((kpi) => (
             <div key={kpi.label} className="bg-card border border-border/50 rounded-xl p-3 space-y-1 hover:border-primary/30 transition-colors">
@@ -508,10 +575,10 @@ export function ReportsPage() {
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /> Module Breakdown</h3>
               <div className="space-y-4">
                 {[
-                  { label: "Members", val: memberStats.active, max: memberStats.total, color: "#3b82f6", detail: `${memberStats.inactive} inactive, ${memberStats.alumni} alumni` },
-                  { label: "Tasks Done", val: completedTasks, max: tasks.length, color: "#10b981", detail: `${inProgressTasks} in progress, ${overdueTasks.length} overdue` },
-                  { label: "Budget", val: Math.round(totalSpent), max: budget.totalBudget, color: budgetUtil > 85 ? "#ef4444" : "#f59e0b", detail: `${fmt(budgetRemaining)} remaining` },
-                  { label: "Events", val: pastEvents, max: events.length, color: "#f472b6", detail: `${upcomingEvents} upcoming, ${avgFillRate.toFixed(0)}% avg fill` },
+                  { label: "Members", val: fMemberStats.active, max: fMemberStats.total, color: "#3b82f6", detail: `${fMemberStats.inactive} inactive, ${fMemberStats.alumni} alumni` },
+                  { label: "Tasks Done", val: completedTasks, max: fTasks.length, color: "#10b981", detail: `${inProgressTasks} in progress, ${overdueTasks.length} overdue` },
+                  { label: "Budget", val: Math.round(fTotalSpent), max: budget.totalBudget, color: budgetUtil > 85 ? "#ef4444" : "#f59e0b", detail: `${fmt(budgetRemaining)} remaining` },
+                  { label: "Events", val: pastEvents, max: fEvents.length, color: "#f472b6", detail: `${upcomingEvents} upcoming, ${avgFillRate.toFixed(0)}% avg fill` },
                   { label: "Subtasks", val: doneSubtasks, max: totalSubtasks, color: "#8b5cf6", detail: `${subtaskRate.toFixed(0)}% done, ${avgSubtasksPerTask} avg per task` },
                 ].map((item) => (
                   <div key={item.label} className="space-y-1.5">
@@ -646,7 +713,7 @@ export function ReportsPage() {
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><CheckSquare className="h-4 w-4 text-primary" /> Task Pipeline</h3>
               <div className="space-y-3">
                 {tasksByStatus.map((s) => {
-                  const width = tasks.length > 0 ? (s.value / tasks.length) * 100 : 0
+                  const width = fTasks.length > 0 ? (s.value / fTasks.length) * 100 : 0
                   return (
                     <div key={s.name} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
@@ -812,7 +879,7 @@ export function ReportsPage() {
                         <span className="font-medium">{fmt(item.value)}</span>
                       </div>
                       <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${pct(item.value, totalSpent)}%`, backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                        <div className="h-full rounded-full" style={{ width: `${pct(item.value, fTotalSpent)}%`, backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
                       </div>
                     </div>
                   ))}
@@ -843,7 +910,7 @@ export function ReportsPage() {
                         <span className="font-medium">{fmt(item.value)}</span>
                       </div>
                       <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${pct(item.value, totalIncome)}%`, backgroundColor: PIE_COLORS[(idx + 3) % PIE_COLORS.length] }} />
+                        <div className="h-full rounded-full" style={{ width: `${pct(item.value, fTotalIncome)}%`, backgroundColor: PIE_COLORS[(idx + 3) % PIE_COLORS.length] }} />
                       </div>
                     </div>
                   ))}
@@ -862,12 +929,12 @@ export function ReportsPage() {
                 </div>
                 <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
                   <TrendingDown className="h-4 w-4 text-red-400 mx-auto" />
-                  <p className="text-lg font-bold">{fmt(totalSpent)}</p>
+                  <p className="text-lg font-bold">{fmt(fTotalSpent)}</p>
                   <p className="text-[10px] text-muted-foreground">Total Spent</p>
                 </div>
                 <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
                   <TrendingUp className="h-4 w-4 text-emerald-400 mx-auto" />
-                  <p className="text-lg font-bold">{fmt(totalIncome)}</p>
+                  <p className="text-lg font-bold">{fmt(fTotalIncome)}</p>
                   <p className="text-[10px] text-muted-foreground">Total Income</p>
                 </div>
                 <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
@@ -877,7 +944,7 @@ export function ReportsPage() {
                 </div>
                 <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
                   <Clock className="h-4 w-4 text-amber-400 mx-auto" />
-                  <p className="text-lg font-bold">{fmt(totalPending)}</p>
+                  <p className="text-lg font-bold">{fmt(fTotalPending)}</p>
                   <p className="text-[10px] text-muted-foreground">Pending</p>
                 </div>
                 <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
@@ -924,7 +991,7 @@ export function ReportsPage() {
                 <h4 className="text-xs font-semibold text-muted-foreground mb-3 uppercase">Expense Approval Funnel</h4>
                 <div className="space-y-2">
                   {[
-                    { label: "Total Submitted", value: expenses.length, color: "#3b82f6" },
+                    { label: "Total Submitted", value: fExpenses.length, color: "#3b82f6" },
                     { label: "Approved", value: approvedExpenses, color: "#10b981" },
                     { label: "Pending", value: pendingExpenses, color: "#f59e0b" },
                     { label: "Denied", value: deniedExpenses, color: "#ef4444" },
@@ -934,7 +1001,7 @@ export function ReportsPage() {
                       <span className="flex-1">{step.label}</span>
                       <span className="font-bold">{step.value}</span>
                       <div className="w-16 h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${expenses.length > 0 ? (step.value / expenses.length) * 100 : 0}%`, backgroundColor: step.color }} />
+                        <div className="h-full rounded-full" style={{ width: `${fExpenses.length > 0 ? (step.value / fExpenses.length) * 100 : 0}%`, backgroundColor: step.color }} />
                       </div>
                     </div>
                   ))}
@@ -952,7 +1019,7 @@ export function ReportsPage() {
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> Event Overview</h3>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div className="bg-muted/20 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold">{events.length}</p>
+                  <p className="text-2xl font-bold">{fEvents.length}</p>
                   <p className="text-[10px] text-muted-foreground">Total Events</p>
                 </div>
                 <div className="bg-muted/20 rounded-lg p-3 text-center">
@@ -1014,7 +1081,7 @@ export function ReportsPage() {
                 ))}
               </div>
               <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {events.map((e) => {
+                {fEvents.map((e) => {
                   const fill = e.capacity ? ((e.registered || 0) / e.capacity) * 100 : null
                   return (
                     <div key={e.id} className="flex items-center gap-3 text-xs bg-muted/10 rounded-lg p-2">
