@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useFinance } from "@/context/finance-context"
 import {
   type Income,
@@ -43,7 +44,9 @@ const TYPE_COLORS: Record<IncomeType, string> = {
 
 export function IncomeTab() {
   const { income, addIncome, deleteIncome, totalIncome } = useFinance()
+  const [searchParams] = useSearchParams()
 
+  const [search, setSearch] = useState(searchParams.get("search") || "")
   const [filterType, setFilterType] = useState<IncomeType | "all">("all")
   const [modalOpen, setModalOpen] = useState(false)
   const [newSource, setNewSource] = useState("")

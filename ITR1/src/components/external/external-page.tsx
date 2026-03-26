@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react"
+import { useSearchParams } from "react-router-dom"
 import { type Sponsor, type SponsorTier, type SponsorStatus, SEED_SPONSORS, TIER_CONFIG, STATUS_CONFIG, INDUSTRIES, formatCurrency } from "./types"
 import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
@@ -112,8 +113,9 @@ function toRow(s: Sponsor) {
 }
 
 export function ExternalPage() {
+  const [searchParams] = useSearchParams()
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(searchParams.get("search") || "")
   const [tierFilter, setTierFilter] = useState<string>("all")
   const [statusFilter] = useState<string>("all")
   const [addOpen, setAddOpen] = useState(false)

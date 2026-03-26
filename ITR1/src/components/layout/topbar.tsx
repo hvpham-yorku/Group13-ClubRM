@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Bell, Search, ChevronDown, User, Settings, LogOut, ShieldCheck } from "lucide-react";
+import { Bell, Search, ChevronDown, User, Settings, LogOut, ShieldCheck, DollarSign, FileText, Building2, Calendar, CheckSquare, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -9,6 +9,7 @@ import { useEvents } from "@/context/events-context";
 import { useTasks } from "@/context/tasks-context";
 import { useMembers } from "@/context/members-context";
 import { useFinance } from "@/context/finance-context";
+import { supabase } from "@/lib/supabase";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +43,16 @@ const ROLES: Role[] = [
   "Administrator",
 ];
 
+/** Type badge config for search result categories */
+const SEARCH_TYPE_CONFIG: Record<string, { color: string; icon: React.ReactNode }> = {
+  Event:    { color: "bg-pink-500/20 text-pink-400",    icon: <Calendar   className="h-3 w-3" /> },
+  Task:     { color: "bg-amber-500/20 text-amber-400",  icon: <CheckSquare className="h-3 w-3" /> },
+  Member:   { color: "bg-primary/20 text-primary",      icon: <Users      className="h-3 w-3" /> },
+  Finance:  { color: "bg-emerald-500/20 text-emerald-400", icon: <DollarSign className="h-3 w-3" /> },
+  Document: { color: "bg-violet-500/20 text-violet-400", icon: <FileText  className="h-3 w-3" /> },
+  Sponsor:  { color: "bg-sky-500/20 text-sky-400",      icon: <Building2  className="h-3 w-3" /> },
+};
+
 export function TopBar() {
   const { role, setRole } = useRole();
   const { user, signOut } = useAuth();
@@ -49,7 +60,24 @@ export function TopBar() {
   const { events } = useEvents();
   const { tasks } = useTasks();
   const { members } = useMembers();
-  const { expenses, reimbursements } = useFinance();
+  const { expenses, reimbursements, income } = useFinance();
+
+  // Lightweight search index for modules without a context (Supabase direct)
+  const [searchSponsors, setSearchSponsors] = useState<{ id: string; company: string; industry: string; tier: string }[]>([]);
+  const [searchDocs, setSearchDocs] = useState<{ id: string; name: string; category: string; tags: string[] }[]>([]);
+
+  useEffect(() => {
+    // Fetch sponsors and documents once for search index
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any;
+    Promise.all([
+      supabase.from("sponsors").select("id, company, industry, tier"),
+      db.from("documents").select("id, name, category, tags"),
+    ]).then(([sponsorsRes, docsRes]: [any, any]) => {
+      if (sponsorsRes.data) setSearchSponsors(sponsorsRes.data);
+      if (docsRes.data) setSearchDocs(docsRes.data);
+    });
+  }, []);
 
   // Build real notifications from context data
   const notifications = useMemo(() => {
@@ -125,17 +153,51 @@ export function TopBar() {
     if (!searchQuery.trim() || searchQuery.length < 2) return [];
     const q = searchQuery.toLowerCase();
     const results: { type: string; label: string; sub: string; route: string }[] = [];
-    events.filter((e) => e.title.toLowerCase().includes(q)).slice(0, 3).forEach((e) =>
-      results.push({ type: "Event", label: e.title, sub: e.location || "", route: "/events" })
-    );
-    tasks.filter((t) => t.title.toLowerCase().includes(q)).slice(0, 3).forEach((t) =>
-      results.push({ type: "Task", label: t.title, sub: t.status, route: "/tasks" })
-    );
-    members.filter((m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)).slice(0, 3).forEach((m) =>
-      results.push({ type: "Member", label: m.name, sub: m.role, route: "/members" })
-    );
+
+    // Events
+    events
+      .filter((e) => e.title.toLowerCase().includes(q) || (e.location || "").toLowerCase().includes(q))
+      .slice(0, 3)
+      .forEach((e) => results.push({ type: "Event", label: e.title, sub: e.location || "No location", route: "/events" }));
+
+    // Tasks
+    tasks
+      .filter((t) => t.title.toLowerCase().includes(q) || (t.description || "").toLowerCase().includes(q))
+      .slice(0, 3)
+      .forEach((t) => results.push({ type: "Task", label: t.title, sub: t.status, route: "/tasks" }));
+
+    // Members
+    members
+      .filter((m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q) || m.role.toLowerCase().includes(q))
+      .slice(0, 3)
+      .forEach((m) => results.push({ type: "Member", label: m.name, sub: `${m.role} • ${m.department}`, route: "/members" }));
+
+    // Finance — expenses
+    expenses
+      .filter((e) => e.description.toLowerCase().includes(q) || e.category.toLowerCase().includes(q))
+      .slice(0, 2)
+      .forEach((e) => results.push({ type: "Finance", label: e.description, sub: `Expense • $${e.amount} • ${e.status}`, route: "/finance" }));
+
+    // Finance — income
+    income
+      .filter((i) => i.source.toLowerCase().includes(q))
+      .slice(0, 2)
+      .forEach((i) => results.push({ type: "Finance", label: i.source, sub: `Income • $${i.amount}`, route: "/finance" }));
+
+    // Documents
+    searchDocs
+      .filter((d) => d.name.toLowerCase().includes(q) || d.category.toLowerCase().includes(q) || (d.tags || []).some((t) => t.toLowerCase().includes(q)))
+      .slice(0, 3)
+      .forEach((d) => results.push({ type: "Document", label: d.name, sub: d.category, route: "/documents" }));
+
+    // Sponsors
+    searchSponsors
+      .filter((s) => s.company.toLowerCase().includes(q) || s.industry.toLowerCase().includes(q) || s.tier.toLowerCase().includes(q))
+      .slice(0, 3)
+      .forEach((s) => results.push({ type: "Sponsor", label: s.company, sub: `${s.industry} • ${s.tier}`, route: "/external" }));
+
     return results;
-  }, [searchQuery, events, tasks, members]);
+  }, [searchQuery, events, tasks, members, expenses, reimbursements, income, searchDocs, searchSponsors]);
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 w-full bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 sticky top-0 z-50">
@@ -171,7 +233,7 @@ export function TopBar() {
           <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
             type="text"
-            placeholder="Search events, members, tasks..."
+            placeholder="Search events, tasks, members, finance, documents, sponsors..."
             className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/70"
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
@@ -182,20 +244,34 @@ export function TopBar() {
           )}
         </div>
         {searchOpen && searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/50 rounded-lg shadow-xl z-50 overflow-hidden">
-            {searchResults.map((r, i) => (
-              <button
-                key={i}
-                className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-left"
-                onClick={() => { navigate({ pathname: r.route, search: `?search=${encodeURIComponent(r.label)}` }); setSearchQuery(""); setSearchOpen(false); }}
-              >
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold uppercase">{r.type}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{r.label}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{r.sub}</p>
-                </div>
-              </button>
-            ))}
+          <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/50 rounded-lg shadow-xl z-50 overflow-hidden max-h-[420px] overflow-y-auto">
+            <div className="px-3 py-2 border-b border-border/30 flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Search Results</span>
+              <span className="text-[10px] text-muted-foreground">{searchResults.length} match{searchResults.length !== 1 ? "es" : ""}</span>
+            </div>
+            {searchResults.map((r, i) => {
+              const cfg = SEARCH_TYPE_CONFIG[r.type] || { color: "bg-muted text-muted-foreground", icon: null };
+              return (
+                <button
+                  key={i}
+                  className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-left border-b border-border/20 last:border-0"
+                  onClick={() => { navigate({ pathname: r.route, search: `?search=${encodeURIComponent(r.label)}` }); setSearchQuery(""); setSearchOpen(false); }}
+                >
+                  <span className={cn("flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase whitespace-nowrap", cfg.color)}>
+                    {cfg.icon}{r.type}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{r.label}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{r.sub}</p>
+                  </div>
+                </button>
+              );
+            })}
+            <div className="px-4 py-2 border-t border-border/30 bg-muted/20">
+              <p className="text-[10px] text-muted-foreground">
+                Searching across events, tasks, members, finance, documents &amp; sponsors
+              </p>
+            </div>
           </div>
         )}
         {searchOpen && searchQuery.length >= 2 && searchResults.length === 0 && (

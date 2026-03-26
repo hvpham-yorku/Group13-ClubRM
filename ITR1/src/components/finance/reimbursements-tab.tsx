@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useFinance } from "@/context/finance-context"
 import { useAuth } from "@/context/auth-context"
 import {
@@ -37,7 +38,9 @@ export function ReimbursementsTab() {
   const { reimbursements, addReimbursement, updateReimbursementStatus } = useFinance()
   const { user } = useAuth()
   const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
+  const [searchParams] = useSearchParams()
 
+  const [search, setSearch] = useState(searchParams.get("search") || "")
   const [filterStatus, setFilterStatus] = useState<ReimbursementStatus | "all">("all")
   const [modalOpen, setModalOpen] = useState(false)
 
