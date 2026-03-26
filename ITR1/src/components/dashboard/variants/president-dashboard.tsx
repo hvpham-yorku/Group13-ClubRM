@@ -17,6 +17,7 @@ import { useFinance } from "@/context/finance-context";
 import { useTasks } from "@/context/tasks-context";
 import { format } from "date-fns";
 import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider";
+import { useDashboardInsights } from "@/hooks/use-dashboard-insights";
 import { SortableWidget } from "../customization/sortable-widget";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -81,6 +82,8 @@ export function PresidentDashboard() {
 
 function PresidentDashboardContent() {
   const [apiData, setApiData] = useState<DashboardAPIResponse | null>(null);
+  // Live client-side insights — used as fallback when API is unavailable (local dev)
+  const liveInsights = useDashboardInsights();
   const { session } = useAuth();
   const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout();
 
@@ -164,12 +167,12 @@ function PresidentDashboardContent() {
           <ExpandableTile
             title="Org Health Score — Deep Dive"
             subtitle="Composite score from member engagement, events, budget & tasks"
-            insightPanel={<OrgHealthPanel data={apiData?.insights?.orgHealth || null} />}
+            insightPanel={<OrgHealthPanel data={apiData?.insights?.orgHealth ?? liveInsights.orgHealth} />}
           >
             <StatCard
               title="Org Health Score"
-              value={apiData ? `${apiData.score}/100` : "..."}
-              trend={{ value: apiData ? apiData.score - (apiData.insights?.orgHealth?.previousScore ?? apiData.score) : 0, label: "vs last month" }}
+              value={`${apiData?.score ?? liveInsights.score}/100`}
+              trend={{ value: (apiData?.score ?? liveInsights.score) - (apiData?.insights?.orgHealth?.previousScore ?? liveInsights.orgHealth.previousScore), label: "vs last month" }}
               icon={<Activity className="h-5 w-5" />}
             />
           </ExpandableTile>
@@ -179,16 +182,12 @@ function PresidentDashboardContent() {
           <ExpandableTile
             title="Active Members — Full Breakdown"
             subtitle="Demographics, recent joiners, retention & engagement stats"
-            insightPanel={<MembersPanel data={apiData?.insights?.members || null} />}
+            insightPanel={<MembersPanel data={apiData?.insights?.members ?? liveInsights.members} />}
           >
             <StatCard
               title="Active Members"
-              value={apiData ? String(apiData.stats.activeMembers) : "..."}
-              description={
-                apiData && apiData.stats.members > 0
-                  ? `${Math.round((apiData.stats.activeMembers / apiData.stats.members) * 100)}% of ${apiData.stats.members} total`
-                  : "..."
-              }
+              value={String(apiData?.stats.activeMembers ?? liveInsights.members.activeMembers)}
+              description={`${Math.round(((apiData?.stats.activeMembers ?? liveInsights.members.activeMembers) / (apiData?.stats.members ?? (liveInsights.members.totalMembers || 1))) * 100)}% of ${apiData?.stats.members ?? liveInsights.members.totalMembers} total`}
               icon={<Users className="h-5 w-5" />}
             />
           </ExpandableTile>
@@ -198,18 +197,18 @@ function PresidentDashboardContent() {
           <ExpandableTile
             title="Budget — Financial Detail"
             subtitle="Spending categories, burn rate, top expenses & alerts"
-            insightPanel={<BudgetPanel data={apiData?.insights?.budget || null} />}
+            insightPanel={<BudgetPanel data={apiData?.insights?.budget ?? liveInsights.budget} />}
           >
             <Widget title="Budget Remaining">
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-primary" />
-                  <span className="text-3xl font-bold">${apiData ? remaining.toLocaleString() : "..."}</span>
+                  <span className="text-3xl font-bold">${(apiData?.stats ? remaining : liveInsights.budget.remaining).toLocaleString()}</span>
                 </div>
                 <ProgressBar
-                  value={apiData ? remainingPct : 0}
-                  label={`Total Spent: $${apiData ? displaySpent.toLocaleString() : "..."}`}
-                  subLabel={apiData ? `${remainingPct}% remaining` : "..."}
+                  value={apiData?.stats ? remainingPct : liveInsights.budget.percentRemaining}
+                  label={`Total Spent: $${(apiData?.stats ? displaySpent : liveInsights.budget.spent).toLocaleString()}`}
+                  subLabel={`${apiData?.stats ? remainingPct : liveInsights.budget.percentRemaining}% remaining`}
                   color="pink"
                 />
               </div>
@@ -222,7 +221,7 @@ function PresidentDashboardContent() {
             className="lg:col-span-2"
             title="Upcoming Events — Detail & Readiness"
             subtitle="Registration health, volunteer coverage & risk flags per event"
-            insightPanel={<EventsPanel data={apiData?.insights?.events || null} />}
+            insightPanel={<EventsPanel data={apiData?.insights?.events ?? liveInsights.events} />}
           >
             <Widget
               title="Upcoming Events"
@@ -253,7 +252,7 @@ function PresidentDashboardContent() {
           <ExpandableTile
             title="Risk Alerts — Analysis & Recommendations"
             subtitle="All active risks with severity, context & recommended actions"
-            insightPanel={<RisksPanel data={apiData?.insights?.risks || null} />}
+            insightPanel={<RisksPanel data={apiData?.insights?.risks ?? liveInsights.risks} />}
           >
             <Widget title="Risk Alerts" className="h-full">
               <DashboardList>
@@ -277,7 +276,7 @@ function PresidentDashboardContent() {
             className="md:col-span-2 lg:col-span-3"
             title="Approval Queue — All Pending Items"
             subtitle="Events, finance, marketing & budget changes awaiting your review"
-            insightPanel={<ApprovalsPanel data={apiData?.insights?.approvals || null} />}
+            insightPanel={<ApprovalsPanel data={apiData?.insights?.approvals ?? liveInsights.approvals} />}
           >
             <Widget
               title="Approval Queue"
