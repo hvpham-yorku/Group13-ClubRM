@@ -48,6 +48,15 @@ interface NotificationPrefs {
   memberJoined: boolean
 }
 
+const NOTIFICATION_PREFS_STORAGE_KEY = "clubrm-notification-prefs"
+const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  emailDigest: true,
+  taskAssigned: true,
+  eventReminder: true,
+  financeAlerts: true,
+  memberJoined: false,
+}
+
 const ROLES_CONFIG = [
   { role: "President", permissions: ["all"], color: "text-amber-400", description: "Full access to all modules and settings" },
   { role: "VP Internal", permissions: ["tasks.all", "members.read", "events.read", "reports.read"], color: "text-blue-400", description: "Task management and internal operations" },
@@ -83,11 +92,7 @@ export function SettingsPage() {
   })
 
   const [notifications, setNotifications] = useState<NotificationPrefs>({
-    emailDigest: true,
-    taskAssigned: true,
-    eventReminder: true,
-    financeAlerts: true,
-    memberJoined: false,
+    ...DEFAULT_NOTIFICATION_PREFS,
   })
 
   const [saved, setSaved] = useState(false)
@@ -95,7 +100,24 @@ export function SettingsPage() {
   // Load settings from Supabase
   useEffect(() => {
     async function load() {
-      const { data, error } = await db.from("org_settings").select("*").limit(1).single()
+      try {
+        const localPrefs = window.localStorage.getItem(NOTIFICATION_PREFS_STORAGE_KEY)
+        if (localPrefs) {
+          const parsedPrefs = JSON.parse(localPrefs)
+          if (parsedPrefs && typeof parsedPrefs === "object") {
+            setNotifications((prev) => ({ ...prev, ...parsedPrefs }))
+          }
+        }
+      } catch (error) {
+        console.error("Failed to read local notification preferences:", error)
+      }
+
+      const { data, error } = await db
+        .from("org_settings")
+        .select("*")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
       if (error) {
         console.error("Failed to load settings:", error)
         return
@@ -114,6 +136,10 @@ export function SettingsPage() {
         })
         if (data.notification_prefs && typeof data.notification_prefs === "object") {
           setNotifications((prev) => ({ ...prev, ...data.notification_prefs }))
+          window.localStorage.setItem(NOTIFICATION_PREFS_STORAGE_KEY, JSON.stringify({
+            ...DEFAULT_NOTIFICATION_PREFS,
+            ...data.notification_prefs,
+          }))
         }
         if (data.theme === "dark" || data.theme === "light" || data.theme === "system") {
           setTheme(data.theme)
@@ -136,8 +162,29 @@ export function SettingsPage() {
       notification_prefs: notifications,
       theme,
     }
-    if (settingsId) {
-      const { error } = await db.from("org_settings").update(payload).eq("id", settingsId)
+
+    window.localStorage.setItem(NOTIFICATION_PREFS_STORAGE_KEY, JSON.stringify(notifications))
+
+    let activeSettingsId = settingsId
+
+    if (!activeSettingsId) {
+      const { data: existingSettings, error: lookupError } = await db
+        .from("org_settings")
+        .select("id")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (lookupError) {
+        console.error("Failed to look up settings before save:", lookupError)
+      } else if (existingSettings?.id) {
+        activeSettingsId = existingSettings.id
+        setSettingsId(existingSettings.id)
+      }
+    }
+
+    if (activeSettingsId) {
+      const { error } = await db.from("org_settings").update(payload).eq("id", activeSettingsId)
       if (error) console.error("Failed to save settings:", error)
     } else {
       const { data, error } = await db.from("org_settings").insert(payload).select().single()
