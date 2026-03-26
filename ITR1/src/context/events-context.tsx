@@ -10,7 +10,7 @@ function d(day: number, hour: number, min = 0) {
   return new Date(year, month, day, hour, min)
 }
 
-const SEED_EVENTS: CalendarEvent[] = [
+export const SEED_EVENTS: CalendarEvent[] = [
   {
     id: "evt-1",
     title: "Tech Talk: AI in 2026",
@@ -224,21 +224,24 @@ function toEvent(row: Record<string, unknown>): CalendarEvent {
 }
 
 function toRow(e: CalendarEvent) {
+  const start = e.startDate ? new Date(e.startDate) : new Date()
+  const end = e.endDate ? new Date(e.endDate) : new Date()
+  
   return {
     title: e.title,
-    description: e.description,
-    start_date: new Date(e.startDate).toISOString(),
-    end_date: new Date(e.endDate).toISOString(),
-    all_day: e.allDay,
-    location: e.location,
-    color_id: e.colorId,
-    tags: e.tags,
-    collaborators: e.collaborators,
-    created_by: e.createdBy,
+    description: e.description || "",
+    start_date: isNaN(start.getTime()) ? new Date().toISOString() : start.toISOString(),
+    end_date: isNaN(end.getTime()) ? new Date().toISOString() : end.toISOString(),
+    all_day: e.allDay || false,
+    location: e.location || "",
+    color_id: e.colorId || "blue",
+    tags: e.tags || [],
+    collaborators: e.collaborators || [],
+    created_by: e.createdBy || "",
     capacity: e.capacity ?? null,
     registered: e.registered ?? null,
-    is_public: e.isPublic,
-    status: e.status,
+    is_public: e.isPublic ?? true,
+    status: e.status || "confirmed",
   }
 }
 
@@ -253,10 +256,11 @@ interface EventsContextType {
 
 const EventsContext = createContext<EventsContextType | undefined>(undefined)
 
-export function EventsProvider({ children }: { children: React.ReactNode }) {
-  const [events, setEvents] = useState<CalendarEvent[]>([])
+export function EventsProvider({ children, initialEvents = [] }: { children: React.ReactNode, initialEvents?: CalendarEvent[] }) {
+  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
 
   useEffect(() => {
+    if (initialEvents.length > 0) return
     async function load() {
       const { data, error } = await supabase.from("events").select("*").order("start_date", { ascending: true })
       if (error) {

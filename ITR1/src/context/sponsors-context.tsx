@@ -12,7 +12,15 @@ function toSponsor(row: Record<string, unknown>): Sponsor {
     amount: Number(row.amount),
     startDate: row.start_date as string,
     endDate: (row.end_date as string) || undefined,
-    contacts: (row.contacts as Sponsor["contacts"]) || [],
+    contacts: (() => {
+      const parsed = typeof row.contacts === "string" ? JSON.parse(row.contacts) : (row.contacts as any[])
+      return (parsed || []).map((c: any) => ({
+        ...c,
+        tags: c.tags || [],
+        organization: c.organization || (row.company as string),
+        createdAt: c.createdAt || (row.created_at as string) || new Date().toISOString()
+      }))
+    })(),
     interactions: (row.interactions as Sponsor["interactions"]) || [],
     notes: (row.notes as string) || undefined,
     industry: row.industry as string,
@@ -28,8 +36,8 @@ function toRow(s: Sponsor) {
     amount: s.amount,
     start_date: s.startDate,
     end_date: s.endDate || null,
-    contacts: JSON.parse(JSON.stringify(s.contacts)),
-    interactions: JSON.parse(JSON.stringify(s.interactions)),
+    contacts: JSON.parse(JSON.stringify(s.contacts || [])),
+    interactions: JSON.parse(JSON.stringify(s.interactions || [])),
     notes: s.notes || null,
     industry: s.industry,
   }
@@ -75,16 +83,13 @@ export function SponsorsProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const addSponsor = useCallback(async (sponsor: Omit<Sponsor, "id"> & { id?: string }) => {
-    // If no ID is provided, Supabase usually handles it if DB generates UUIDs,
-    // but the types say id is string.
     const row = toRow(sponsor as Sponsor)
-    // if UI gave an id like s2344 we keep it, otherwise omit mapping ID if DB generates it
     const payload = sponsor.id ? { id: sponsor.id, ...row } : row
     
     const { data, error } = await supabase.from("sponsors").insert(payload as any).select().single()
     if (error) {
       console.error("Failed to add sponsor:", error)
-      return
+      throw error
     }
     if (data) setSponsors((prev) => [...prev, toSponsor(data)])
   }, [])
@@ -94,7 +99,7 @@ export function SponsorsProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.from("sponsors").update(row as any).eq("id", sponsor.id)
     if (error) {
       console.error("Failed to update sponsor:", error)
-      return
+      throw error
     }
     setSponsors((prev) => prev.map((s) => (s.id === sponsor.id ? sponsor : s)))
   }, [])

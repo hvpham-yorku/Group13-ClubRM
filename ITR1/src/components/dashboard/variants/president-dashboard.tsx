@@ -108,18 +108,23 @@ function PresidentDashboardContent() {
   const { events, updateEvent } = useEvents();
   const { tasks, moveTask } = useTasks();
 
-  // Loading states for optimistic UI on quick actions
+  // Loading and Error states
   const [actioningId, setActioningId] = useState<string | null>(null);
+  const [stateError, setStateError] = useState<string | null>(null);
 
   const handleApprove = async (id: string, type: "finance" | "reimbursement", e?: React.MouseEvent) => {
     e?.stopPropagation();
     setActioningId(`approve-${id}`);
+    setStateError(null);
     try {
       if (type === "finance") {
-        await updateExpenseStatus(id, "approved", "me"); // "me" or actual user name
+        await updateExpenseStatus(id, "approved", "President"); 
       } else {
-        await updateReimbursementStatus(id, "approved", "me");
+        await updateReimbursementStatus(id, "approved", "President");
       }
+    } catch (err: any) {
+      console.error("Approval failed:", err);
+      setStateError(err.message || "Failed to approve item. Check permissions.");
     } finally {
       setActioningId(null);
     }
@@ -128,8 +133,11 @@ function PresidentDashboardContent() {
   const handleResolveTask = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setActioningId(`task-${id}`);
+    setStateError(null);
     try {
       await moveTask(id, "done");
+    } catch (err: any) {
+      setStateError("Failed to update task status.");
     } finally {
       setActioningId(null);
     }
@@ -138,8 +146,11 @@ function PresidentDashboardContent() {
   const handleRSVP = async (event: any, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setActioningId(`rsvp-${event.id}`);
+    setStateError(null);
     try {
       await updateEvent({ ...event, registered: (event.registered || 0) + 1 });
+    } catch (err: any) {
+      setStateError("Failed to register for event.");
     } finally {
       setActioningId(null);
     }
@@ -185,22 +196,31 @@ function PresidentDashboardContent() {
   }, [apiData, tasks, totalPending]);
 
   const pendingApprovals = useMemo(() => {
-    if (apiData?.insights?.approvals?.items && apiData.insights.approvals.items.length > 0) {
-      return apiData.insights.approvals.items.slice(0, 4).map((a: any) => ({
-        id: a.id,
-        title: a.title,
-        sub: `${a.submittedBy} • $${a.amount ?? ""}`,
-        type: a.type === "finance" ? "Finance" : "Reimbursement",
-        rawType: a.type
-      }));
-    }
     const items: { id: string; title: string; sub: string; type: string; rawType: "finance" | "reimbursement" }[] = [];
-    expenses.filter((e) => e.status === "pending").slice(0, 2).forEach((e) =>
+    
+    // Always use live context data for the approval list to ensure immediate reactivity
+    expenses.filter((e) => e.status === "pending").forEach((e) =>
       items.push({ id: e.id, title: e.description, sub: `${e.submittedBy} • $${e.amount}`, type: "Finance", rawType: "finance" })
     );
-    reimbursements.filter((r) => r.status === "pending").slice(0, 2).forEach((r) =>
+    reimbursements.filter((r) => r.status === "pending").forEach((r) =>
       items.push({ id: r.id, title: r.description, sub: `${r.submittedBy} • $${r.amount}`, type: "Reimbursement", rawType: "reimbursement" })
     );
+
+    // If we have API data for items that aren't in our local context yet (unlikely but possible), merge them
+    if (apiData?.insights?.approvals?.items) {
+      apiData.insights.approvals.items.forEach((a: any) => {
+        if (!items.find(i => i.id === a.id)) {
+          items.push({
+            id: a.id,
+            title: a.title,
+            sub: `${a.submittedBy} • $${a.amount ?? ""}`,
+            type: a.type === "finance" ? "Finance" : "Reimbursement",
+            rawType: a.type
+          });
+        }
+      });
+    }
+
     return items;
   }, [apiData, expenses, reimbursements]);
 
@@ -437,6 +457,13 @@ function PresidentDashboardContent() {
           <h2 className="text-xl font-semibold tracking-tight">Executive Summary</h2>
           <p className="text-sm text-muted-foreground">High-level insights across all club operations.</p>
         </div>
+        {stateError && (
+          <div className="flex items-center gap-2 text-xs font-medium text-red-400 bg-red-400/10 px-3 py-1.5 rounded-lg border border-red-400/20 animate-in slide-in-from-top-2">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            {stateError}
+            <button onClick={() => setStateError(null)} className="ml-2 hover:text-red-300">×</button>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           {isCustomizing ? (
             <>
