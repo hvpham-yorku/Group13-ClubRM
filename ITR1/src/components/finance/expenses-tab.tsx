@@ -31,7 +31,12 @@ import {
   Trash2,
   Calendar,
   Filter,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react"
+
+type SortKey = "date" | "description" | "category" | "submittedBy" | "amount" | "status"
 
 interface ExpensesTabProps {
   onAddExpense?: () => void
@@ -54,6 +59,8 @@ export function ExpensesTab({}: ExpensesTabProps) {
   const [newDate, setNewDate] = useState(format(new Date(), "yyyy-MM-dd"))
   const [newNotes, setNewNotes] = useState("")
 
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: "asc" | "desc" }>({ key: "date", direction: "desc" })
+
   const filteredExpenses = useMemo(() => {
     return expenses
       .filter((e) => {
@@ -62,8 +69,42 @@ export function ExpensesTab({}: ExpensesTabProps) {
         if (search && !e.description.toLowerCase().includes(search.toLowerCase())) return false
         return true
       })
-      .sort((a, b) => b.date.getTime() - a.date.getTime())
-  }, [expenses, filterStatus, filterCategory, search])
+      .sort((a, b) => {
+        const dir = sortConfig.direction === "asc" ? 1 : -1
+        switch (sortConfig.key) {
+          case "date":
+            return (a.date.getTime() - b.date.getTime()) * dir
+          case "description":
+            return a.description.localeCompare(b.description) * dir
+          case "category":
+            return a.category.localeCompare(b.category) * dir
+          case "submittedBy":
+            return a.submittedBy.localeCompare(b.submittedBy) * dir
+          case "amount":
+            return (a.amount - b.amount) * dir
+          case "status":
+            return a.status.localeCompare(b.status) * dir
+          default:
+            return 0
+        }
+      })
+  }, [expenses, filterStatus, filterCategory, search, sortConfig])
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig((current) => ({
+      key,
+      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+    }))
+  }
+
+  const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
+    if (sortConfig.key !== columnKey) return <ArrowUpDown className="ml-1.5 h-3 w-3 opacity-40 group-hover:opacity-100 transition-opacity inline-block" />
+    return sortConfig.direction === "asc" ? (
+      <ArrowUp className="ml-1.5 h-3 w-3 inline-block" />
+    ) : (
+      <ArrowDown className="ml-1.5 h-3 w-3 inline-block" />
+    )
+  }
 
   const handleAddExpense = () => {
     if (!newDesc.trim() || !newAmount) return
@@ -150,12 +191,24 @@ export function ExpensesTab({}: ExpensesTabProps) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/30 bg-muted/20">
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Submitted By</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer group hover:text-foreground transition-colors" onClick={() => handleSort("date")}>
+                  Date <SortIcon columnKey="date" />
+                </th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer group hover:text-foreground transition-colors" onClick={() => handleSort("description")}>
+                  Description <SortIcon columnKey="description" />
+                </th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer group hover:text-foreground transition-colors" onClick={() => handleSort("category")}>
+                  Category <SortIcon columnKey="category" />
+                </th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer group hover:text-foreground transition-colors" onClick={() => handleSort("submittedBy")}>
+                  Submitted By <SortIcon columnKey="submittedBy" />
+                </th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer group hover:text-foreground transition-colors" onClick={() => handleSort("amount")}>
+                  Amount <SortIcon columnKey="amount" />
+                </th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer group hover:text-foreground transition-colors" onClick={() => handleSort("status")}>
+                  Status <SortIcon columnKey="status" />
+                </th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
