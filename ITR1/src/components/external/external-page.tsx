@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useSearchParams } from "react-router-dom"
-import { type Sponsor, type SponsorTier, type SponsorStatus, SEED_SPONSORS, TIER_CONFIG, STATUS_CONFIG, INDUSTRIES, formatCurrency } from "./types"
-import { supabase } from "@/lib/supabase"
+import { useSponsors } from "@/context/sponsors-context"
+import { type Sponsor, type SponsorTier, type SponsorStatus, TIER_CONFIG, STATUS_CONFIG, INDUSTRIES, formatCurrency } from "./types"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,6 +51,7 @@ import {
   FileText,
   Crown,
   MessageSquare,
+  Edit,
 } from "lucide-react"
 
 function getCompanyInitials(name: string) {
@@ -113,15 +114,16 @@ function toRow(s: Sponsor) {
 }
 
 export function ExternalPage() {
+  const { sponsors, addSponsor, updateSponsor, deleteSponsor } = useSponsors()
   const [searchParams] = useSearchParams()
-  const [sponsors, setSponsors] = useState<Sponsor[]>([])
   const [search, setSearch] = useState(searchParams.get("search") || "")
   const [tierFilter, setTierFilter] = useState<string>("all")
   const [statusFilter] = useState<string>("all")
   const [addOpen, setAddOpen] = useState(false)
   const [detailSponsor, setDetailSponsor] = useState<Sponsor | null>(null)
+  const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null)
 
-  // Add form
+  // Add/Edit form
   const [formCompany, setFormCompany] = useState("")
   const [formTier, setFormTier] = useState<SponsorTier>("prospect")
   const [formAmount, setFormAmount] = useState("")
@@ -154,70 +156,85 @@ export function ExternalPage() {
     setFormContactEmail("")
     setFormContactTitle("")
     setFormNotes("")
+    setEditingSponsorId(null)
   }
 
-  // Load sponsors from Supabase
-  useEffect(() => {
-    async function load() {
-      const { data, error } = await supabase.from("sponsors").select("*").order("created_at", { ascending: true })
-      if (error) {
-        console.error("Failed to load sponsors:", error)
-        setSponsors(SEED_SPONSORS)
-        return
-      }
-      if (data && data.length > 0) {
-        setSponsors(data.map(toSponsor))
-      } else {
-        const rows = SEED_SPONSORS.map(toRow)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: seeded, error: seedErr } = await supabase.from("sponsors").insert(rows as any).select()
-        if (seedErr) {
-          console.error("Failed to seed sponsors:", seedErr)
-          setSponsors(SEED_SPONSORS)
-        } else if (seeded) {
-          setSponsors(seeded.map(toSponsor))
-        }
-      }
+  function handleOpenEdit(sponsor: Sponsor) {
+    setFormCompany(sponsor.company)
+    setFormTier(sponsor.tier)
+    setFormAmount(sponsor.amount.toString())
+    setFormIndustry(sponsor.industry)
+    setFormNotes(sponsor.notes || "")
+    if (sponsor.contacts.length > 0) {
+      setFormContactName(sponsor.contacts[0].name)
+      setFormContactEmail(sponsor.contacts[0].email)
+      setFormContactTitle(sponsor.contacts[0].title)
+    } else {
+      setFormContactName("")
+      setFormContactEmail("")
+      setFormContactTitle("")
     }
-    load()
-  }, [])
+    setEditingSponsorId(sponsor.id)
+    setAddOpen(true)
+  }
 
-  const handleAdd = useCallback(async () => {
+  const handleSave = useCallback(async () => {
     if (!formCompany.trim()) return
-    const newSponsor: Sponsor = {
-      id: `s${Date.now()}`,
-      company: formCompany.trim(),
-      tier: formTier,
-      status: formTier === "prospect" ? "prospect" : "pending",
-      amount: Number(formAmount) || 0,
-      startDate: new Date().toISOString().split("T")[0],
-      industry: formIndustry,
-      notes: formNotes.trim() || undefined,
-      contacts: formContactName.trim()
-        ? [{ id: `c${Date.now()}`, name: formContactName.trim(), title: formContactTitle.trim(), email: formContactEmail.trim(), phone: "" }]
-        : [],
-      interactions: [],
+
+    if (editingSponsorId) {
+      const existing = sponsors.find((s) => s.id === editingSponsorId)
+      if (existing) {
+        let updatedContacts = existing.contacts
+        if (formContactName.trim()) {
+          const newContact = { 
+            id: existing.contacts[0]?.id || `c${Date.now()}`, 
+            name: formContactName.trim(), 
+            title: formContactTitle.trim(), 
+            email: formContactEmail.trim(), 
+            phone: existing.contacts[0]?.phone || "" 
+          }
+          if (existing.contacts.length > 0) {
+            updatedContacts = [newContact, ...existing.contacts.slice(1)]
+          } else {
+            updatedContacts = [newContact]
+          }
+        }
+        await updateSponsor({
+          ...existing,
+          company: formCompany.trim(),
+          tier: formTier,
+          amount: Number(formAmount) || 0,
+          industry: formIndustry,
+          notes: formNotes.trim() || undefined,
+          contacts: updatedContacts,
+          status: existing.status === formTier ? existing.status : (formTier === "prospect" ? "prospect" : existing.status) // simplistic logic, but handles UI change
+        })
+      }
+    } else {
+      const newSponsor: Sponsor = {
+        id: `s${Date.now()}`,
+        company: formCompany.trim(),
+        tier: formTier,
+        status: formTier === "prospect" ? "prospect" : "pending",
+        amount: Number(formAmount) || 0,
+        startDate: new Date().toISOString().split("T")[0],
+        industry: formIndustry,
+        notes: formNotes.trim() || undefined,
+        contacts: formContactName.trim()
+          ? [{ id: `c${Date.now()}`, name: formContactName.trim(), title: formContactTitle.trim(), email: formContactEmail.trim(), phone: "" }]
+          : [],
+        interactions: [],
+      }
+      await addSponsor(newSponsor)
     }
-    const row = toRow(newSponsor)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await supabase.from("sponsors").insert(row as any).select().single()
-    if (error) {
-      console.error("Failed to add sponsor:", error)
-      return
-    }
-    if (data) setSponsors((prev) => [...prev, toSponsor(data)])
+
     resetForm()
     setAddOpen(false)
-  }, [formCompany, formTier, formAmount, formIndustry, formNotes, formContactName, formContactTitle, formContactEmail])
+  }, [formCompany, formTier, formAmount, formIndustry, formNotes, formContactName, formContactTitle, formContactEmail, editingSponsorId, sponsors, updateSponsor, addSponsor])
 
   const handleDelete = useCallback(async (id: string) => {
-    const { error } = await supabase.from("sponsors").delete().eq("id", id)
-    if (error) {
-      console.error("Failed to delete sponsor:", error)
-      return
-    }
-    setSponsors((prev) => prev.filter((s) => s.id !== id))
-  }, [])
+    await deleteSponsor(id)
+  }, [deleteSponsor])
 
   // Pipeline view — group by status
   const pipeline: { status: SponsorStatus; sponsors: Sponsor[] }[] = [
@@ -235,7 +252,7 @@ export function ExternalPage() {
           <h1 className="text-2xl font-bold tracking-tight">Sponsorship & Partnerships</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage sponsor relationships, track pipeline, and log interactions</p>
         </div>
-        <Button onClick={() => setAddOpen(true)} className="gap-2">
+        <Button onClick={() => { resetForm(); setAddOpen(true) }} className="gap-2">
           <Plus className="h-4 w-4" />
           Add Sponsor
         </Button>
@@ -406,6 +423,9 @@ export function ExternalPage() {
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setDetailSponsor(sponsor) }}>
                             <Eye className="h-4 w-4 mr-2" /> View Details
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(sponsor) }}>
+                            <Edit className="h-4 w-4 mr-2" /> Edit Sponsor
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(sponsor.id) }}>
                             <Trash2 className="h-4 w-4 mr-2" /> Remove
@@ -451,7 +471,7 @@ export function ExternalPage() {
       {/* Add Sponsor Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Add Sponsor</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingSponsorId ? "Edit Sponsor" : "Add Sponsor"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Company Name *</Label>
@@ -498,7 +518,7 @@ export function ExternalPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { resetForm(); setAddOpen(false) }}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={!formCompany.trim()}>Add Sponsor</Button>
+            <Button onClick={handleSave} disabled={!formCompany.trim()}>{editingSponsorId ? "Save Changes" : "Add Sponsor"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

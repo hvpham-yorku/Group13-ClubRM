@@ -9,6 +9,7 @@ import {
   Megaphone,
   FileText,
   BarChart,
+  Contact,
 } from "lucide-react";
 import {
   Sidebar,
@@ -44,6 +45,7 @@ const items: SidebarItem[] = [
   { title: "Members", url: "/members", icon: Users },
   { title: "Finance", url: "/finance", icon: DollarSign, roles: ["President", "VP Finance", "Administrator"], badge: "pendingExpenses" },
   { title: "External", url: "/external", icon: Handshake, roles: ["President", "VP External", "Administrator"] },
+  { title: "Contacts", url: "/contacts", icon: Contact, roles: ["President", "VP External", "Administrator"] },
   { title: "Marketing", url: "/marketing", icon: Megaphone, roles: ["President", "Marketing", "Administrator"] },
   { title: "Reports", url: "/reports", icon: BarChart, roles: ["President", "VP Internal", "VP Finance", "VP Events", "VP External", "Marketing", "Administrator"] },
   { title: "Documents", url: "/documents", icon: FileText },

@@ -8,6 +8,7 @@ import { EventsProvider } from './context/events-context.tsx'
 import { TasksProvider } from './context/tasks-context.tsx'
 import { FinanceProvider } from './context/finance-context.tsx'
 import { MembersProvider } from './context/members-context.tsx'
+import { SponsorsProvider } from './context/sponsors-context.tsx'
 import App from './App.tsx'
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
@@ -44,7 +45,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <EventsProvider>
               <TasksProvider>
                 <FinanceProvider>
-                  <App />
+                  <SponsorsProvider>
+                    <App />
+                  </SponsorsProvider>
                 </FinanceProvider>
               </TasksProvider>
             </EventsProvider>
