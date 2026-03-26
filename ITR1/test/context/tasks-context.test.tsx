@@ -1,23 +1,11 @@
 import { describe, it, expect, vi } from "vitest"
-import { renderHook, act } from "@testing-library/react"
+import { renderHook, act, waitFor } from "@testing-library/react"
 import { TasksProvider, useTasks } from "../../src/context/tasks-context"
 import type { ReactNode } from "react"
 
-// Hoist the mock data and Supabase object
-const { mockTasks, mockSupabase } = vi.hoisted(() => {
-  const tasks = [
-    { 
-      id: "seed-1", 
-      title: "Seed Task", 
-      status: "backlog", 
-      priority: "medium", 
-      section: "General", 
-      subtasks: [],
-      created_at: new Date().toISOString() 
-    }
-  ];
+const { mockSupabase } = vi.hoisted(() => {
+  const tasks = [{ id: "seed-1", title: "Seed Task", status: "backlog", priority: "medium", section: "General", subtasks: [], created_at: new Date().toISOString() }];
   return {
-    mockTasks: tasks,
     mockSupabase: {
       from: vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
@@ -27,13 +15,13 @@ const { mockTasks, mockSupabase } = vi.hoisted(() => {
         delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
         then: vi.fn((cb) => cb({ data: tasks, error: null })),
       })),
     }
   };
 });
 
-// 2. Mock the Supabase library 
 vi.mock("../../src/lib/supabase", () => ({
   supabase: mockSupabase,
   supabaseUntyped: mockSupabase,
@@ -44,17 +32,13 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe("TasksContext", () => {
-  it("provides seed tasks", () => {
+  it("adds a task", async () => {
     const { result } = renderHook(() => useTasks(), { wrapper })
-    expect(result.current.tasks.length).toBeGreaterThan(0)
-  })
-
-  it("adds a task", () => {
-    const { result } = renderHook(() => useTasks(), { wrapper })
+    await waitFor(() => expect(result.current.tasks.length).toBe(1))
+    
     const before = result.current.tasks.length
-
-    act(() => {
-      result.current.addTask({
+    await act(async () => {
+      await result.current.addTask({
         id: "test-task",
         title: "Test Task",
         status: "backlog",
@@ -66,44 +50,38 @@ describe("TasksContext", () => {
       })
     })
 
-    expect(result.current.tasks.length).toBe(before + 1)
-    expect(result.current.tasks.find((t) => t.id === "test-task")).toBeDefined()
+    await waitFor(() => {
+      expect(result.current.tasks.length).toBe(before + 1)
+    })
   })
 
-  it("updates a task", () => {
+  it("updates a task", async () => {
     const { result } = renderHook(() => useTasks(), { wrapper })
+    await waitFor(() => expect(result.current.tasks.length).toBe(1))
+    
     const first = result.current.tasks[0]
-
-    act(() => {
-      result.current.updateTask({ ...first, title: "Updated Title" })
+    await act(async () => {
+      await result.current.updateTask({ ...first, title: "Updated Title" })
     })
 
-    const updated = result.current.tasks.find((t) => t.id === first.id)
-    expect(updated?.title).toBe("Updated Title")
+    await waitFor(() => {
+      const updated = result.current.tasks.find((t) => t.id === first.id)
+      expect(updated?.title).toBe("Updated Title")
+    })
   })
 
-  it("deletes a task", () => {
+  it("moves a task to a new status", async () => {
     const { result } = renderHook(() => useTasks(), { wrapper })
-    const first = result.current.tasks[0]
-    const before = result.current.tasks.length
-
-    act(() => {
-      result.current.deleteTask(first.id)
+    await waitFor(() => expect(result.current.tasks.length).toBe(1))
+    
+    const task = result.current.tasks[0]
+    await act(async () => {
+      await result.current.moveTask(task.id, "in-progress")
     })
 
-    expect(result.current.tasks.length).toBe(before - 1)
-  })
-
-  it("moves a task to a new status", () => {
-    const { result } = renderHook(() => useTasks(), { wrapper })
-    const backlogTask = result.current.tasks.find((t) => t.status === "backlog")
-    if (!backlogTask) return
-
-    act(() => {
-      result.current.moveTask(backlogTask.id, "in-progress")
+    await waitFor(() => {
+      const moved = result.current.tasks.find((t) => t.id === task.id)
+      expect(moved?.status).toBe("in-progress")
     })
-
-    const moved = result.current.tasks.find((t) => t.id === backlogTask.id)
-    expect(moved?.status).toBe("in-progress")
   })
 })

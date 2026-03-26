@@ -4,8 +4,11 @@ import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Search, FileText, Download, Loader2, Trash2 } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { 
+  Plus, Search, FileText, Download, Loader2, Trash2, 
+  ShieldCheck, Landmark, Calendar, HardDrive, FileQuestion 
+} from "lucide-react"
 
 type DocCategory = "governance" | "finance" | "events" | "marketing" | "templates" | "meeting-notes" | "other"
 
@@ -19,42 +22,46 @@ interface Document {
 }
 
 export function DocumentsPage() {
+  // State 
   const [documents, setDocuments] = useState<Document[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const { user } = useAuth()
-
-  const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
-  const userOrgId = user?.user_metadata?.organization_id
-
-  const [addOpen, setAddOpen] = useState(false)
   const [search, setSearch] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [addOpen, setAddOpen] = useState(false)
+  
+  // Upload States
   const [isUploading, setIsUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [formName, setFormName] = useState("")
   const [formCategory, setFormCategory] = useState<DocCategory>("other")
 
+  const { user } = useAuth()
+  const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
+  const userOrgId = user?.user_metadata?.organization_id
+
+  // Data Fetching
   const transformDoc = (row: any): Document => ({
     id: row.id,
     name: row.name,
     category: row.category as DocCategory,
-    size: row.size,
+    size: row.size || "0 KB",
     uploadedBy: row.uploaded_by,
     storagePath: row.storage_path
   })
 
-  useEffect(() => {
-    async function fetchDocs() {
-      let query = db.from("documents").select("*").order("created_at", { ascending: false })
-      if (userOrgId) query = query.eq('organization_id', userOrgId)
+  const fetchDocs = useCallback(async () => {
+    setIsLoading(true)
+    let query = db.from("documents").select("*").order("created_at", { ascending: false })
+    if (userOrgId) query = query.eq('organization_id', userOrgId)
 
-      const { data, error } = await query
-      if (!error && data) setDocuments(data.map(transformDoc))
-      setIsLoading(false)
-    }
-    fetchDocs()
+    const { data, error } = await query
+    if (!error && data) setDocuments(data.map(transformDoc))
+    setIsLoading(false)
   }, [userOrgId])
 
+  useEffect(() => { fetchDocs() }, [fetchDocs])
+
+  // Handlers 
   const filtered = useMemo(() => {
     return documents.filter((d) => {
       const matchesSearch = !search || d.name.toLowerCase().includes(search.toLowerCase())
@@ -63,47 +70,13 @@ export function DocumentsPage() {
     })
   }, [documents, search, categoryFilter])
 
-  const handleAdd = useCallback(async () => {
-    if (!formName.trim() || !selectedFile) {
-      alert("Please provide a name and select a file");
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      const storagePath = `${userOrgId || 'general'}/${Date.now()}_${selectedFile.name}`;
-
-      const { error: uploadError } = await db.storage
-        .from('azure-planbstorage')
-        .upload(storagePath, selectedFile);
-
-      if (uploadError) throw uploadError;
-
-      const { data, error } = await db.from("documents").insert({
-        name: formName.trim(),
-        category: formCategory,
-        size: `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`,
-        uploaded_by: currentUserName,
-        storage_path: storagePath,
-        organization_id: userOrgId || null
-      }).select().single();
-
-      if (error) throw error;
-
-      setDocuments((prev) => [transformDoc(data), ...prev]);
-      setAddOpen(false);
-      setFormName("");
-      setSelectedFile(null);
-    } catch (e: any) {
-      console.error("Upload Failure:", e);
-      alert("Upload failed: " + (e.message || "Unknown error"));
-    } finally {
-      setIsUploading(false);
-    }
-  }, [formName, formCategory, currentUserName, selectedFile, userOrgId]);
+  const stats = useMemo(() => {
+    const totalSize = documents.reduce((acc, doc) => acc + parseFloat(doc.size || "0"), 0)
+    return { count: documents.length, size: totalSize.toFixed(2) + " MB" }
+  }, [documents])
 
   const handleDownload = async (path: string, name: string) => {
-    const { data, error } = await db.storage.from('azure-fallback').download(path)
+    const { data, error } = await db.storage.from('azure-planbstorage').download(path)
     if (error) return alert("Download failed")
     const url = URL.createObjectURL(data)
     const a = document.createElement('a')
@@ -113,57 +86,113 @@ export function DocumentsPage() {
   }
 
   const handleDelete = async (id: string, storagePath: string) => {
-    if (!confirm("Are you sure you want to delete this document?")) return;
-    const { error: storageError } = await db.storage.from('azure-fallback').remove([storagePath]);
-    if (storageError) return alert("Error deleting file from storage");
-    const { error: dbError } = await db.from('documents').delete().eq('id', id);
-    if (dbError) return alert("Error deleting database record");
-    setDocuments((prev) => prev.filter((doc) => doc.id !== id));
+    if (!confirm("Are you sure? This cannot be undone.")) return
+    await db.storage.from('azure-planbstorage').remove([storagePath])
+    await db.from('documents').delete().eq('id', id)
+    setDocuments((prev) => prev.filter((doc) => doc.id !== id))
+  }
+
+  const handleAdd = async () => {
+    if (!formName.trim() || !selectedFile) return alert("Missing file or name")
+    setIsUploading(true)
+    try {
+      const path = `${userOrgId || 'gen'}/${Date.now()}_${selectedFile.name}`
+      await db.storage.from('azure-planbstorage').upload(path, selectedFile)
+      
+      const { data, error } = await db.from("documents").insert({
+        name: formName.trim(),
+        category: formCategory,
+        size: `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`,
+        uploaded_by: currentUserName,
+        storage_path: path,
+        organization_id: userOrgId || null
+      }).select().single()
+
+      if (error) throw error
+      setDocuments(prev => [transformDoc(data), ...prev])
+      setAddOpen(false)
+    } catch (e) { alert("Upload failed") } finally { setIsUploading(false) }
+  }
+
+  const getCategoryIcon = (cat: string) => {
+    switch(cat) {
+      case 'governance': return <ShieldCheck className="h-4 w-4 text-purple-500" />
+      case 'finance': return <Landmark className="h-4 w-4 text-emerald-500" />
+      case 'events': return <Calendar className="h-4 w-4 text-blue-500" />
+      default: return <FileText className="h-4 w-4 text-slate-400" />
+    }
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Documents</h1>
-        <Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Upload</Button>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Resource Vault</h1>
+          <p className="text-muted-foreground text-sm">Centralized documentation and assets.</p>
+        </div>
+        <div className="flex items-center gap-4 bg-muted/30 p-2 rounded-xl border border-border/50">
+          <div className="px-4 border-r border-border/50 text-center">
+            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Files</p>
+            <p className="text-xl font-bold">{stats.count}</p>
+          </div>
+          <div className="px-4 text-center">
+            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Storage</p>
+            <p className="text-xl font-bold">{stats.size}</p>
+          </div>
+          <Button onClick={() => setAddOpen(true)} className="ml-2 shadow-lg shadow-primary/20">
+            <Plus className="mr-2 h-4 w-4" /> Upload
+          </Button>
+        </div>
       </div>
 
-      <div className="flex gap-3">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-card/50 p-2 rounded-2xl border">
+        <Tabs value={categoryFilter} onValueChange={setCategoryFilter} className="w-full sm:w-auto">
+          <TabsList className="bg-transparent gap-1">
+            {["all", "governance", "finance", "events", "other"].map(tab => (
+              <TabsTrigger key={tab} value={tab} className="capitalize data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                {tab}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Filter by name..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-background/50 border-none shadow-inner" />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Category" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="governance">Governance</SelectItem>
-            <SelectItem value="finance">Finance</SelectItem>
-            <SelectItem value="events">Events</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center p-12"><Loader2 className="animate-spin" /></div>
+        <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
+          <Loader2 className="animate-spin h-10 w-10 mb-4 opacity-20" />
+          <p className="text-sm font-medium animate-pulse">Accessing Secure Storage...</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed rounded-[2rem] bg-muted/10">
+          <FileQuestion className="h-16 w-16 text-muted-foreground/20 mb-4" />
+          <h3 className="text-xl font-semibold opacity-50">No documents found</h3>
+          <p className="text-muted-foreground text-sm mt-1">Try a different search or category.</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filtered.map((doc) => (
-            <div key={doc.id} className="p-4 border rounded-xl bg-card flex flex-col justify-between h-36 hover:shadow-md transition-shadow">
+            <div key={doc.id} className="group relative bg-card border rounded-2xl p-5 hover:border-primary/40 transition-all hover:shadow-2xl hover:shadow-primary/5 flex flex-col justify-between min-h-[180px]">
               <div>
-                <div className="flex items-start justify-between">
-                  <FileText className="h-5 w-5 text-blue-500" />
-                  <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full uppercase font-medium">{doc.size}</span>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2.5 bg-muted rounded-xl group-hover:bg-primary/10 transition-colors">
+                    {getCategoryIcon(doc.category)}
+                  </div>
+                  <span className="text-[10px] font-mono bg-muted/50 px-2 py-1 rounded-md">{doc.size}</span>
                 </div>
-                <p className="font-semibold truncate mt-2">{doc.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{doc.category}</p>
+                <h4 className="font-bold text-sm leading-tight line-clamp-2">{doc.name}</h4>
+                <p className="text-[10px] text-muted-foreground uppercase mt-2 tracking-wider font-semibold">
+                  {doc.category} • {doc.uploadedBy}
+                </p>
               </div>
-              <div className="flex items-center gap-1 mt-2 border-t pt-2">
-                <Button variant="ghost" size="sm" className="flex-1 h-8 text-xs font-medium" onClick={() => handleDownload(doc.storagePath, doc.name)}>
-                  <Download className="h-3 w-3 mr-1.5" /> Download
+              <div className="flex gap-2 mt-5 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
+                <Button variant="secondary" size="sm" className="flex-1 rounded-xl h-9" onClick={() => handleDownload(doc.storagePath, doc.name)}>
+                  <Download className="h-3.5 w-3.5 mr-2" /> Get
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(doc.id, doc.storagePath)}>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDelete(doc.id, doc.storagePath)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -172,29 +201,33 @@ export function DocumentsPage() {
         </div>
       )}
 
+      {/* Upload Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
+          <DialogHeader><DialogTitle>Secure Upload</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
-            <Input type="file" onChange={(e) => {
-              const file = e.target.files?.[0] || null
-              setSelectedFile(file)
-              if (file && !formName) setFormName(file.name)
-            }} />
-            <Input placeholder="Document Name" value={formName} onChange={(e) => setFormName(e.target.value)} />
-            <Select value={formCategory} onValueChange={(v) => setFormCategory(v as DocCategory)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="governance">Governance</SelectItem>
-                <SelectItem value="finance">Finance</SelectItem>
-                <SelectItem value="events">Events</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="border-2 border-dashed rounded-xl p-8 text-center hover:bg-muted/50 transition-colors cursor-pointer relative">
+              <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
+                const file = e.target.files?.[0] || null
+                setSelectedFile(file)
+                if (file) setFormName(file.name)
+              }} />
+              <HardDrive className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
+              <p className="text-xs text-muted-foreground font-medium">
+                {selectedFile ? selectedFile.name : "Click or drag to choose file"}
+              </p>
+            </div>
+            <Input placeholder="Internal Label" value={formName} onChange={(e) => setFormName(e.target.value)} />
+            <select className="w-full bg-background border rounded-md p-2 text-sm" value={formCategory} onChange={(e) => setFormCategory(e.target.value as DocCategory)}>
+              <option value="governance">Governance</option>
+              <option value="finance">Finance</option>
+              <option value="events">Events</option>
+              <option value="other">Other</option>
+            </select>
           </div>
           <DialogFooter>
-            <Button onClick={handleAdd} disabled={isUploading || !selectedFile}>
-              {isUploading ? <Loader2 className="animate-spin mr-2" /> : "Upload"}
+            <Button onClick={handleAdd} disabled={isUploading || !selectedFile} className="w-full">
+              {isUploading ? <Loader2 className="animate-spin" /> : "Initiate Upload"}
             </Button>
           </DialogFooter>
         </DialogContent>

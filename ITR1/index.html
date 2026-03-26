@@ -4,18 +4,22 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>clubrm-vite</title>
+    <title>ClubRM</title>
+    <style>
+      body { 
+        margin: 0; 
+        background-color: #09090b; 
+        color: white; 
+        font-family: sans-serif; 
+      }
+      #root { 
+        min-height: 100vh; 
+      }
+    </style>
   </head>
   <body>
-    <div id="root"><div style="color:#fff;background:#111;padding:40px;font-family:monospace;min-height:100vh"><p>Loading ClubRM…</p></div></div>
-    <script>
-      window.addEventListener('error', function(e) {
-        document.getElementById('root').innerHTML = '<div style="color:#f55;background:#111;padding:40px;font-family:monospace;min-height:100vh"><h1>JS Error</h1><pre>' + e.message + '</pre><pre>' + (e.filename || '') + ':' + (e.lineno || '') + '</pre></div>';
-      });
-      window.addEventListener('unhandledrejection', function(e) {
-        document.getElementById('root').innerHTML = '<div style="color:#f55;background:#111;padding:40px;font-family:monospace;min-height:100vh"><h1>Unhandled Promise Rejection</h1><pre>' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)) + '</pre><pre>' + (e.reason && e.reason.stack ? e.reason.stack : '') + '</pre></div>';
-      });
-    </script>
+    <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

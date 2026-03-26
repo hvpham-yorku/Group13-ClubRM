@@ -5,23 +5,47 @@ import { AuthPage } from "@/components/auth/auth-page";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
+
+// Context Providers
+import { EventsProvider } from './context/events-context.tsx'
+import { TasksProvider } from './context/tasks-context.tsx'
+import { FinanceProvider } from './context/finance-context.tsx'
+import { MembersProvider } from './context/members-context.tsx'
+
 import TestDatabase from './Testing/TestDatabase';
 
-// Lazy loaded pages
-const DashboardPage = React.lazy(() => import("@/components/dashboard/dashboard-page").then((m) => ({ default: m.DashboardPage })));
-const EventsPage = React.lazy(() => import("@/components/events/events-page").then((m) => ({ default: m.EventsPage })));
-const TasksPage = React.lazy(() => import("@/components/tasks/tasks-page").then((m) => ({ default: m.TasksPage })));
-const MembersPage = React.lazy(() => import("@/components/members/members-page").then((m) => ({ default: m.MembersPage })));
-const FinancePage = React.lazy(() => import("@/components/finance/finance-page").then((m) => ({ default: m.FinancePage })));
-const ExternalPage = React.lazy(() => import("@/components/external/external-page").then((m) => ({ default: m.ExternalPage })));
-const MarketingPage = React.lazy(() => import("@/components/marketing/marketing-page").then((m) => ({ default: m.MarketingPage })));
-const DocumentsPage = React.lazy(() => import("@/components/documents/documents-page").then((m) => ({ default: m.DocumentsPage })));
-const ReportsPage = React.lazy(() => import("@/components/reports/reports-page").then((m) => ({ default: m.ReportsPage })));
-const SettingsPage = React.lazy(() => import("@/components/settings/settings-page").then((m) => ({ default: m.SettingsPage })));
+// Helper function to handle both named and default exports safely
+const lazyLoad = (importFn: () => Promise<any>, name?: string) => {
+  return React.lazy(() => 
+    importFn().then((module) => {
+      // 1. Try named export
+      if (name && module[name]) return { default: module[name] };
+      // 2. Try default export
+      if (module.default) return { default: module.default };
+      // 3. Last ditch: return the first thing found in the module
+      const firstExport = Object.values(module).find((val) => typeof val === 'function');
+      if (firstExport) return { default: firstExport as React.ComponentType<any> };
+      
+      throw new Error(`Could not find component in module`);
+    })
+  );
+};
+
+// Lazy Pages using the helper
+const DashboardPage = lazyLoad(() => import("@/components/dashboard/dashboard-page"), "DashboardPage");
+const EventsPage = lazyLoad(() => import("@/components/events/events-page"), "EventsPage");
+const TasksPage = lazyLoad(() => import("@/components/tasks/tasks-page"), "TasksPage");
+const MembersPage = lazyLoad(() => import("@/components/members/members-page"), "MembersPage");
+const FinancePage = lazyLoad(() => import("@/components/finance/finance-page"), "FinancePage");
+const ExternalPage = lazyLoad(() => import("@/components/external/external-page"), "ExternalPage");
+const MarketingPage = lazyLoad(() => import("@/components/marketing/marketing-page"), "MarketingPage");
+const DocumentsPage = lazyLoad(() => import("@/components/documents/documents-page"), "DocumentsPage");
+const ReportsPage = lazyLoad(() => import("@/components/reports/reports-page"), "ReportsPage");
+const SettingsPage = lazyLoad(() => import("@/components/settings/settings-page"), "SettingsPage");
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-full">
+    <div className="flex items-center justify-center h-full w-full py-20">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
     </div>
   );
@@ -30,12 +54,14 @@ function PageLoader() {
 function Layout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full bg-background text-foreground">
         <AppSidebar />
         <main className="flex-1 flex flex-col h-screen overflow-hidden">
           <TopBar />
-          <div className="flex-1 overflow-auto bg-background p-4">
-            <Suspense fallback={<PageLoader />}>{children}</Suspense>
+          <div className="flex-1 overflow-auto p-4 md:p-6">
+            <Suspense fallback={<PageLoader />}>
+              {children}
+            </Suspense>
           </div>
         </main>
       </div>
@@ -47,7 +73,12 @@ function App() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen bg-[#111] text-white">Checking authentication...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-[#09090b] text-white">
+        <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="font-mono text-[10px] tracking-[0.3em] uppercase opacity-40">System Initializing</p>
+      </div>
+    );
   }
 
   if (!user) {
@@ -55,22 +86,30 @@ function App() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/members" element={<MembersPage />} />
-        <Route path="/tasks" element={<TasksPage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/finance" element={<FinancePage />} />
-        <Route path="/external" element={<ExternalPage />} />
-        <Route path="/marketing" element={<MarketingPage />} />
-        <Route path="/documents" element={<DocumentsPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/test-db" element={<TestDatabase />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+    <MembersProvider key={user.id}>
+      <EventsProvider>
+        <TasksProvider>
+          <FinanceProvider>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/members" element={<MembersPage />} />
+                <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/events" element={<EventsPage />} />
+                <Route path="/finance" element={<FinancePage />} />
+                <Route path="/external" element={<ExternalPage />} />
+                <Route path="/marketing" element={<MarketingPage />} />
+                <Route path="/documents" element={<DocumentsPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/test-db" element={<TestDatabase />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Layout>
+          </FinanceProvider>
+        </TasksProvider>
+      </EventsProvider>
+    </MembersProvider>
   );
 }
 
