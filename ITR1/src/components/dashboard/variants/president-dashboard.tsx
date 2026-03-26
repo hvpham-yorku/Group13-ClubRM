@@ -29,7 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Settings2, RotateCcw, Save } from "lucide-react";
+import { Plus, Settings2, RotateCcw, Save, Loader2, Check } from "lucide-react";
 
 const WIDGET_TITLES: Record<string, string> = {
   "org-health": "Org Health Score",
@@ -104,9 +104,46 @@ function PresidentDashboardContent() {
     fetchStats();
   }, [session?.access_token]);
 
-  const { expenses, reimbursements, budget, totalSpent, totalPending } = useFinance();
-  const { events } = useEvents();
-  const { tasks } = useTasks();
+  const { expenses, reimbursements, budget, totalSpent, totalPending, updateExpenseStatus, updateReimbursementStatus } = useFinance();
+  const { events, updateEvent } = useEvents();
+  const { tasks, moveTask } = useTasks();
+
+  // Loading states for optimistic UI on quick actions
+  const [actioningId, setActioningId] = useState<string | null>(null);
+
+  const handleApprove = async (id: string, type: "finance" | "reimbursement", e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setActioningId(`approve-${id}`);
+    try {
+      if (type === "finance") {
+        await updateExpenseStatus(id, "approved", "me"); // "me" or actual user name
+      } else {
+        await updateReimbursementStatus(id, "approved", "me");
+      }
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleResolveTask = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setActioningId(`task-${id}`);
+    try {
+      await moveTask(id, "done");
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleRSVP = async (event: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setActioningId(`rsvp-${event.id}`);
+    try {
+      await updateEvent({ ...event, registered: (event.registered || 0) + 1 });
+    } finally {
+      setActioningId(null);
+    }
+  };
 
   const remaining = apiData
     ? apiData.stats.totalBudget - apiData.stats.spentBudget
@@ -127,33 +164,42 @@ function PresidentDashboardContent() {
   const risks = useMemo(() => {
     if (apiData?.insights?.risks?.risks && apiData.insights.risks.risks.length > 0) {
       return apiData.insights.risks.risks.slice(0, 3).map((r: any) => ({
+        id: r.id || `api-${Math.random()}`,
         title: r.title,
         sub: r.description,
         severity: r.severity === "high" ? "High" : r.severity === "medium" ? "Medium" : "Low",
+        type: "api",
       }));
     }
-    const items: { title: string; sub: string; severity: string }[] = [];
+    const items: { id: string; title: string; sub: string; severity: string; type: string }[] = [];
     const now = new Date();
     const overdue = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < now && t.status !== "done");
-    if (overdue.length > 0) items.push({ title: `${overdue.length} overdue task(s)`, sub: overdue[0].title, severity: "High" });
-    if (totalPending > 500) items.push({ title: "High pending expenses", sub: `$${totalPending.toFixed(0)} awaiting approval`, severity: "Medium" });
+    if (overdue.length > 0) {
+      const topTask = overdue[0];
+      items.push({ id: topTask.id, title: `Overdue Task`, sub: topTask.title, severity: "High", type: "task" });
+    }
+    if (totalPending > 500) {
+      items.push({ id: "pending", title: "High pending expenses", sub: `$${totalPending.toFixed(0)} awaiting approval`, severity: "Medium", type: "finance" });
+    }
     return items.slice(0, 3);
   }, [apiData, tasks, totalPending]);
 
   const pendingApprovals = useMemo(() => {
     if (apiData?.insights?.approvals?.items && apiData.insights.approvals.items.length > 0) {
       return apiData.insights.approvals.items.slice(0, 4).map((a: any) => ({
+        id: a.id,
         title: a.title,
         sub: `${a.submittedBy} • $${a.amount ?? ""}`,
         type: a.type === "finance" ? "Finance" : "Reimbursement",
+        rawType: a.type
       }));
     }
-    const items: { title: string; sub: string; type: string }[] = [];
+    const items: { id: string; title: string; sub: string; type: string; rawType: "finance" | "reimbursement" }[] = [];
     expenses.filter((e) => e.status === "pending").slice(0, 2).forEach((e) =>
-      items.push({ title: e.description, sub: `${e.submittedBy} • $${e.amount}`, type: "Finance" })
+      items.push({ id: e.id, title: e.description, sub: `${e.submittedBy} • $${e.amount}`, type: "Finance", rawType: "finance" })
     );
     reimbursements.filter((r) => r.status === "pending").slice(0, 2).forEach((r) =>
-      items.push({ title: r.description, sub: `${r.submittedBy} • $${r.amount}`, type: "Reimbursement" })
+      items.push({ id: r.id, title: r.description, sub: `${r.submittedBy} • $${r.amount}`, type: "Reimbursement", rawType: "reimbursement" })
     );
     return items;
   }, [apiData, expenses, reimbursements]);
@@ -234,15 +280,30 @@ function PresidentDashboardContent() {
             >
               <DashboardList>
                 {upcomingEvents.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No upcoming events</p>}
-                {upcomingEvents.map((e) => (
-                  <DashboardListItem
-                    key={e.id}
-                    title={e.title}
-                    subtitle={`${format(new Date(e.startDate), "MMM d • h:mm a")} • ${e.location || "TBD"}`}
-                    metadata={e.capacity ? `${e.registered || 0}/${e.capacity} Reg` : "Open"}
-                    icon={<Calendar className="h-4 w-4" />}
-                  />
-                ))}
+                {upcomingEvents.map((e) => {
+                  const isFull = e.capacity ? (e.registered || 0) >= e.capacity : false;
+                  const isActioning = actioningId === `rsvp-${e.id}`;
+                  return (
+                    <DashboardListItem
+                      key={e.id}
+                      title={e.title}
+                      subtitle={`${format(new Date(e.startDate), "MMM d • h:mm a")} • ${e.location || "TBD"}`}
+                      metadata={e.capacity ? `${e.registered || 0}/${e.capacity} Reg` : "Open"}
+                      icon={<Calendar className="h-4 w-4" />}
+                      action={
+                        <Button 
+                          size="xs" 
+                          variant="secondary" 
+                          className="h-6 text-[10px] px-2"
+                          disabled={isFull || isActioning}
+                          onClick={(ev) => handleRSVP(e, ev)}
+                        >
+                          {isActioning ? <Loader2 className="h-3 w-3 animate-spin" /> : (isFull ? "Full" : "RSVP")}
+                        </Button>
+                      }
+                    />
+                  );
+                })}
               </DashboardList>
             </Widget>
           </ExpandableTile>
@@ -257,15 +318,32 @@ function PresidentDashboardContent() {
             <Widget title="Risk Alerts" className="h-full">
               <DashboardList>
                 {risks.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No active risks</p>}
-                {risks.map((r: { title: string; sub: string; severity: string }, i: number) => (
-                  <DashboardListItem
-                    key={i}
-                    title={r.title}
-                    subtitle={r.sub}
-                    metadata={r.severity}
-                    icon={<AlertTriangle className={`h-4 w-4 ${r.severity === "High" ? "text-destructive" : "text-amber-500"}`} />}
-                  />
-                ))}
+                {risks.map((r: any, i: number) => {
+                  const isActioning = actioningId === `task-${r.id}`;
+                  return (
+                    <DashboardListItem
+                      key={i}
+                      title={r.title}
+                      subtitle={r.sub}
+                      metadata={r.severity}
+                      icon={<AlertTriangle className={`h-4 w-4 ${r.severity === "High" ? "text-destructive" : "text-amber-500"}`} />}
+                      action={
+                        r.type === "task" ? (
+                          <Button 
+                            size="icon-xs" 
+                            variant="outline" 
+                            title="Mark Done"
+                            className="h-6 w-6 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                            disabled={isActioning}
+                            onClick={(e) => handleResolveTask(r.id, e)}
+                          >
+                            {isActioning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                          </Button>
+                        ) : undefined
+                      }
+                    />
+                  );
+                })}
               </DashboardList>
             </Widget>
           </ExpandableTile>
@@ -290,27 +368,57 @@ function PresidentDashboardContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
                 <DashboardList>
                   {pendingApprovals.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No pending approvals</p>}
-                  {pendingApprovals.slice(0, 2).map((a: { title: string; sub: string; type: string }, i: number) => (
-                    <DashboardListItem
-                      key={i}
-                      title={a.title}
-                      subtitle={a.sub}
-                      metadata={a.type}
-                      icon={<CheckCircle className="h-4 w-4 text-primary" />}
-                    />
-                  ))}
-                </DashboardList>
-                {pendingApprovals.length > 2 && (
-                  <DashboardList>
-                    {pendingApprovals.slice(2, 4).map((a: { title: string; sub: string; type: string }, i: number) => (
+                  {pendingApprovals.slice(0, 2).map((a: any, i: number) => {
+                    const isActioning = actioningId === `approve-${a.id}`;
+                    return (
                       <DashboardListItem
                         key={i}
                         title={a.title}
                         subtitle={a.sub}
                         metadata={a.type}
-                        icon={<CheckCircle className="h-4 w-4 text-amber-500" />}
+                        icon={<DollarSign className="h-4 w-4 text-primary" />}
+                        action={
+                          <Button 
+                            size="icon-xs" 
+                            variant="outline" 
+                            title={`Approve ${a.type}`}
+                            className="h-6 w-6 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                            disabled={isActioning}
+                            onClick={(e) => handleApprove(a.id, a.rawType, e)}
+                          >
+                            {isActioning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                          </Button>
+                        }
                       />
-                    ))}
+                    );
+                  })}
+                </DashboardList>
+                {pendingApprovals.length > 2 && (
+                  <DashboardList>
+                    {pendingApprovals.slice(2, 4).map((a: any, i: number) => {
+                      const isActioning = actioningId === `approve-${a.id}`;
+                      return (
+                        <DashboardListItem
+                          key={i}
+                          title={a.title}
+                          subtitle={a.sub}
+                          metadata={a.type}
+                          icon={<DollarSign className="h-4 w-4 text-amber-500" />}
+                          action={
+                            <Button 
+                              size="icon-xs" 
+                              variant="outline" 
+                              title={`Approve ${a.type}`}
+                              className="h-6 w-6 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                              disabled={isActioning}
+                              onClick={(e) => handleApprove(a.id, a.rawType, e)}
+                            >
+                              {isActioning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                            </Button>
+                          }
+                        />
+                      );
+                    })}
                   </DashboardList>
                 )}
               </div>
