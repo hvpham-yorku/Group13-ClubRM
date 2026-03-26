@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { Bell, Search, ChevronDown, User, Settings, LogOut, ShieldCheck, DollarSign, FileText, Building2, Calendar, CheckSquare, Users } from "lucide-react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { Bell, Search, ChevronDown, User, Settings, LogOut, ShieldCheck, DollarSign, FileText, Building2, Calendar, CheckSquare, Users, Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -136,12 +136,59 @@ export function TopBar() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Recent Searches
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("recentSearches");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const saveRecentSearch = useCallback((query: string) => {
+    if (!query.trim()) return;
+    setRecentSearches((prev) => {
+      const filtered = prev.filter((q) => q.toLowerCase() !== query.toLowerCase());
+      const updated = [query, ...filtered].slice(0, 5);
+      localStorage.setItem("recentSearches", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const clearRecentSearches = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRecentSearches([]);
+    localStorage.removeItem("recentSearches");
+    searchInputRef.current?.focus();
+  }, []);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K or Cmd+K
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setSearchOpen(true);
+      }
+      // Escape to close
+      if (e.key === "Escape" && searchOpen) {
+        setSearchOpen(false);
+        searchInputRef.current?.blur();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [searchOpen]);
 
   // Close search dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
       }
     }
@@ -228,10 +275,11 @@ export function TopBar() {
         </DropdownMenu>
       </div>
 
-      <div className="relative flex-1 max-w-xl" ref={searchRef}>
+      <div className="relative flex-1 max-w-xl" ref={searchContainerRef}>
         <div className="flex items-center gap-2 bg-muted/40 hover:bg-muted/60 px-3 py-1.5 rounded-md border border-border/50 focus-within:border-primary/50 transition-all group">
           <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search events, tasks, members, finance, documents, sponsors..."
             className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground/70"
@@ -239,10 +287,44 @@ export function TopBar() {
             onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
             onFocus={() => setSearchOpen(true)}
           />
-          {searchQuery && (
-            <button onClick={() => { setSearchQuery(""); setSearchOpen(false); }} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+          {searchQuery ? (
+            <button onClick={() => { setSearchQuery(""); setSearchOpen(false); }} className="text-muted-foreground hover:text-foreground text-xs p-1 rounded hover:bg-muted transition-colors">✕</button>
+          ) : (
+            <div className="hidden sm:flex items-center gap-1 text-[10px] text-muted-foreground font-mono bg-background/50 border border-border/40 px-1.5 py-0.5 rounded pointer-events-none select-none">
+              <span className="text-[11px] leading-none">⌘</span>K
+            </div>
           )}
         </div>
+
+        {/* Recent Searches Dropdown */}
+        {searchOpen && searchQuery.length < 2 && recentSearches.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/50 rounded-lg shadow-xl z-50 overflow-hidden">
+            <div className="px-3 py-2 border-b border-border/30 flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Recent Searches</span>
+              <button onClick={clearRecentSearches} className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors">
+                <Trash2 className="h-3 w-3" /> Clear
+              </button>
+            </div>
+            {recentSearches.map((query, i) => (
+              <button
+                key={i}
+                className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-left border-b border-border/20 last:border-0 group"
+                onClick={() => {
+                  setSearchQuery(query);
+                  saveRecentSearch(query);
+                  // We don't navigate immediately here, we just fill the input so the user sees results
+                  // (They can press enter or click a result to navigate)
+                  searchInputRef.current?.focus();
+                }}
+              >
+                <Clock className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <span className="text-sm font-medium flex-1 truncate">{query}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Regular Search Results Dropdown */}
         {searchOpen && searchResults.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/50 rounded-lg shadow-xl z-50 overflow-hidden max-h-[420px] overflow-y-auto">
             <div className="px-3 py-2 border-b border-border/30 flex items-center justify-between">
@@ -255,7 +337,12 @@ export function TopBar() {
                 <button
                   key={i}
                   className="flex items-center gap-3 w-full px-4 py-2.5 hover:bg-muted/50 transition-colors text-left border-b border-border/20 last:border-0"
-                  onClick={() => { navigate({ pathname: r.route, search: `?search=${encodeURIComponent(r.label)}` }); setSearchQuery(""); setSearchOpen(false); }}
+                  onClick={() => { 
+                    saveRecentSearch(searchQuery);
+                    navigate({ pathname: r.route, search: `?search=${encodeURIComponent(r.label)}` }); 
+                    setSearchQuery(""); 
+                    setSearchOpen(false); 
+                  }}
                 >
                   <span className={cn("flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase whitespace-nowrap", cfg.color)}>
                     {cfg.icon}{r.type}
