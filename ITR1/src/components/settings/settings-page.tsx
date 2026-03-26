@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { supabaseUntyped as db } from "@/lib/supabase"
-import { useTheme } from "@/context/theme-context"
+import { type AccentColor, useTheme } from "@/context/theme-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -59,8 +59,17 @@ const ROLES_CONFIG = [
   { role: "Administrator", permissions: ["all", "settings.all"], color: "text-red-400", description: "System configuration and role management" },
 ]
 
+const ACCENT_OPTIONS: { name: string; value: AccentColor; className: string }[] = [
+  { name: "Green", value: "green", className: "bg-emerald-500" },
+  { name: "Blue", value: "blue", className: "bg-blue-500" },
+  { name: "Purple", value: "purple", className: "bg-violet-500" },
+  { name: "Pink", value: "pink", className: "bg-pink-500" },
+  { name: "Orange", value: "orange", className: "bg-orange-500" },
+  { name: "Red", value: "red", className: "bg-red-500" },
+]
+
 export function SettingsPage() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, accentColor, setAccentColor } = useTheme()
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const [org, setOrg] = useState<OrgSettings>({
     name: "ClubRM",
@@ -371,22 +380,23 @@ export function SettingsPage() {
             <div>
               <h3 className="text-sm font-semibold mb-3">Accent Color</h3>
               <div className="flex items-center gap-3">
-                {[
-                  { name: "Green", class: "bg-emerald-500" },
-                  { name: "Blue", class: "bg-blue-500" },
-                  { name: "Purple", class: "bg-violet-500" },
-                  { name: "Pink", class: "bg-pink-500" },
-                  { name: "Orange", class: "bg-orange-500" },
-                  { name: "Red", class: "bg-red-500" },
-                ].map((color) => (
+                {ACCENT_OPTIONS.map((color) => (
                   <button
                     key={color.name}
-                    className={cn("h-8 w-8 rounded-full transition-transform hover:scale-110", color.class)}
+                    type="button"
+                    aria-label={`Use ${color.name.toLowerCase()} accent color`}
+                    aria-pressed={accentColor === color.value}
+                    className={cn(
+                      "h-8 w-8 rounded-full transition-all hover:scale-110",
+                      color.className,
+                      accentColor === color.value && "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
+                    )}
                     title={color.name}
+                    onClick={() => setAccentColor(color.value)}
                   />
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Accent color customization will be available in a future update.</p>
+              <p className="text-xs text-muted-foreground mt-2">Accent color is applied instantly and saved on this device.</p>
             </div>
           </div>
         </TabsContent>
