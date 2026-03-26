@@ -1,7 +1,41 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { renderHook, act } from "@testing-library/react"
 import { EventsProvider, useEvents } from "../../src/context/events-context"
 import type { ReactNode } from "react"
+
+// 1. Hoist the mock data and Supabase object
+const { mockEvents, mockSupabase } = vi.hoisted(() => {
+  const events = [
+    { 
+      id: "e1", 
+      title: "Seed Event", 
+      start_date: new Date().toISOString(), 
+      end_date: new Date().toISOString(),
+      all_day: false 
+    }
+  ];
+  return {
+    mockEvents: events,
+    mockSupabase: {
+      from: vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockReturnThis(),
+        then: vi.fn((cb) => cb({ data: events, error: null })),
+      })),
+    }
+  };
+});
+
+// 2. Mock the Supabase library - providing BOTH exports
+vi.mock("../../src/lib/supabase", () => ({
+  supabase: mockSupabase,
+  supabaseUntyped: mockSupabase,
+}));
 
 function wrapper({ children }: { children: ReactNode }) {
   return <EventsProvider>{children}</EventsProvider>
@@ -21,10 +55,10 @@ describe("EventsContext", () => {
       result.current.addEvent({
         id: "test-event",
         title: "Test Event",
-        start: new Date(),
-        end: new Date(),
+        startDate: new Date(),
+        endDate: new Date(),
         color: "blue",
-        isAllDay: false,
+        allDay: false,
         visibility: "public",
         status: "upcoming",
       })

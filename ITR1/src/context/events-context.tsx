@@ -227,8 +227,8 @@ function toRow(e: CalendarEvent) {
   return {
     title: e.title,
     description: e.description,
-    start_date: new Date(e.startDate).toISOString(),
-    end_date: new Date(e.endDate).toISOString(),
+    start_date: e.startDate ? new Date(e.startDate).toISOString() : new Date().toISOString(),
+    end_date: e.endDate ? new Date(e.endDate).toISOString() : new Date().toISOString(),
     all_day: e.allDay,
     location: e.location,
     color_id: e.colorId,
