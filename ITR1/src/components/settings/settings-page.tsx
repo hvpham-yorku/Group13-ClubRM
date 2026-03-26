@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { supabaseUntyped as db } from "@/lib/supabase"
+import { useTheme } from "@/context/theme-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -59,6 +60,7 @@ const ROLES_CONFIG = [
 ]
 
 export function SettingsPage() {
+  const { theme, setTheme } = useTheme()
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const [org, setOrg] = useState<OrgSettings>({
     name: "ClubRM",
@@ -79,7 +81,6 @@ export function SettingsPage() {
     memberJoined: false,
   })
 
-  const [theme, setTheme] = useState<"dark" | "light" | "system">("dark")
   const [saved, setSaved] = useState(false)
 
   // Load settings from Supabase
@@ -105,11 +106,13 @@ export function SettingsPage() {
         if (data.notification_prefs && typeof data.notification_prefs === "object") {
           setNotifications((prev) => ({ ...prev, ...data.notification_prefs }))
         }
-        if (data.theme) setTheme(data.theme as "dark" | "light" | "system")
+        if (data.theme === "dark" || data.theme === "light" || data.theme === "system") {
+          setTheme(data.theme)
+        }
       }
     }
     load()
-  }, [])
+  }, [setTheme])
 
   const handleSave = useCallback(async () => {
     const payload = {

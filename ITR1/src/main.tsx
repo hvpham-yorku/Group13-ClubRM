@@ -8,6 +8,7 @@ import { EventsProvider } from './context/events-context.tsx'
 import { TasksProvider } from './context/tasks-context.tsx'
 import { FinanceProvider } from './context/finance-context.tsx'
 import { MembersProvider } from './context/members-context.tsx'
+import { ThemeProvider } from './context/theme-context.tsx'
 import App from './App.tsx'
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
@@ -38,19 +39,21 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
     <BrowserRouter>
-      <AuthProvider>
-        <RoleProvider>
-          <MembersProvider>
-            <EventsProvider>
-              <TasksProvider>
-                <FinanceProvider>
-                  <App />
-                </FinanceProvider>
-              </TasksProvider>
-            </EventsProvider>
-          </MembersProvider>
-        </RoleProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RoleProvider>
+            <MembersProvider>
+              <EventsProvider>
+                <TasksProvider>
+                  <FinanceProvider>
+                    <App />
+                  </FinanceProvider>
+                </TasksProvider>
+              </EventsProvider>
+            </MembersProvider>
+          </RoleProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </ErrorBoundary>
 )
