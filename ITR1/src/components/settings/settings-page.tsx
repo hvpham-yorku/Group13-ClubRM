@@ -313,16 +313,22 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notifications[item.key]}
+                    aria-label={item.label}
                     className={cn(
-                      "relative h-6 w-11 rounded-full transition-colors",
-                      notifications[item.key] ? "bg-primary" : "bg-muted"
+                      "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      notifications[item.key]
+                        ? "border-primary/60 bg-primary/90 shadow-[0_0_0_4px_color-mix(in_oklab,var(--color-primary)_14%,transparent)]"
+                        : "border-border bg-muted/70 hover:bg-muted"
                     )}
                     onClick={() => setNotifications((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
                   >
                     <span
                       className={cn(
-                        "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform shadow-sm",
-                        notifications[item.key] ? "translate-x-5.5" : "translate-x-0.5"
+                        "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-1 ring-black/5 transition-transform duration-200",
+                        notifications[item.key] ? "translate-x-6" : "translate-x-1"
                       )}
                     />
                   </button>
