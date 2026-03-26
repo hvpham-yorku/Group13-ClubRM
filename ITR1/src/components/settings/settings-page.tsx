@@ -164,6 +164,7 @@ export function SettingsPage() {
     }
 
     window.localStorage.setItem(NOTIFICATION_PREFS_STORAGE_KEY, JSON.stringify(notifications))
+    window.dispatchEvent(new Event("clubrm-settings-updated"))
 
     let activeSettingsId = settingsId
 

@@ -31,6 +31,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRole, type Role } from "@/context/role-context";
 import { useAuth } from "@/context/auth-context";
 
+interface NotificationPrefs {
+  emailDigest: boolean
+  taskAssigned: boolean
+  eventReminder: boolean
+  financeAlerts: boolean
+  memberJoined: boolean
+}
+
 const ROLES: Role[] = [
   "President",
   "VP Internal",
@@ -42,6 +50,27 @@ const ROLES: Role[] = [
   "Administrator",
 ];
 
+const NOTIFICATION_PREFS_STORAGE_KEY = "clubrm-notification-prefs";
+const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  emailDigest: true,
+  taskAssigned: true,
+  eventReminder: true,
+  financeAlerts: true,
+  memberJoined: false,
+};
+
+function readNotificationPrefs(): NotificationPrefs {
+  try {
+    const stored = localStorage.getItem(NOTIFICATION_PREFS_STORAGE_KEY);
+    if (!stored) return DEFAULT_NOTIFICATION_PREFS;
+    const parsed = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") return DEFAULT_NOTIFICATION_PREFS;
+    return { ...DEFAULT_NOTIFICATION_PREFS, ...parsed };
+  } catch {
+    return DEFAULT_NOTIFICATION_PREFS;
+  }
+}
+
 export function TopBar() {
   const { role, setRole } = useRole();
   const { user, signOut } = useAuth();
@@ -50,42 +79,85 @@ export function TopBar() {
   const { tasks } = useTasks();
   const { members } = useMembers();
   const { expenses, reimbursements } = useFinance();
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(() => readNotificationPrefs());
+
+  useEffect(() => {
+    const syncPrefs = () => setNotificationPrefs(readNotificationPrefs());
+
+    window.addEventListener("storage", syncPrefs);
+    window.addEventListener("clubrm-settings-updated", syncPrefs as EventListener);
+    return () => {
+      window.removeEventListener("storage", syncPrefs);
+      window.removeEventListener("clubrm-settings-updated", syncPrefs as EventListener);
+    };
+  }, []);
 
   // Build real notifications from context data
   const notifications = useMemo(() => {
     const items: { id: string; title: string; sub: string; time: string; route: string; read: boolean }[] = [];
     const now = new Date();
+    const currentMember = user?.email
+      ? members.find((member) => member.email.toLowerCase() === user.email?.toLowerCase())
+      : undefined;
 
-    // Pending expenses
-    const pendingExp = expenses.filter((e) => e.status === "pending");
-    if (pendingExp.length > 0) {
-      items.push({ id: "n-exp", title: `${pendingExp.length} expense(s) awaiting approval`, sub: `Total: $${pendingExp.reduce((s, e) => s + e.amount, 0).toFixed(0)}`, time: "Now", route: "/finance", read: false });
+    if (notificationPrefs.financeAlerts) {
+      const pendingExp = expenses.filter((e) => e.status === "pending");
+      if (pendingExp.length > 0) {
+        items.push({ id: "n-exp", title: `${pendingExp.length} expense(s) awaiting approval`, sub: `Total: $${pendingExp.reduce((s, e) => s + e.amount, 0).toFixed(0)}`, time: "Now", route: "/finance", read: false });
+      }
+
+      const pendingReim = reimbursements.filter((r) => r.status === "pending");
+      if (pendingReim.length > 0) {
+        items.push({ id: "n-reim", title: `${pendingReim.length} reimbursement(s) pending`, sub: `Total: $${pendingReim.reduce((s, r) => s + r.amount, 0).toFixed(0)}`, time: "Now", route: "/finance", read: false });
+      }
     }
 
-    // Pending reimbursements
-    const pendingReim = reimbursements.filter((r) => r.status === "pending");
-    if (pendingReim.length > 0) {
-      items.push({ id: "n-reim", title: `${pendingReim.length} reimbursement(s) pending`, sub: `Total: $${pendingReim.reduce((s, r) => s + r.amount, 0).toFixed(0)}`, time: "Now", route: "/finance", read: false });
+    if (notificationPrefs.taskAssigned && currentMember) {
+      const assignedTasks = tasks.filter((task) => task.assignees.includes(currentMember.id) && task.status !== "done");
+      if (assignedTasks.length > 0) {
+        items.push({
+          id: "n-task-assigned",
+          title: `${assignedTasks.length} task(s) assigned to you`,
+          sub: assignedTasks.slice(0, 2).map((task) => task.title).join(", "),
+          time: "Now",
+          route: "/tasks",
+          read: false,
+        });
+      }
     }
 
-    // Overdue tasks
-    const overdue = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < now && t.status !== "done");
-    if (overdue.length > 0) {
-      items.push({ id: "n-task", title: `${overdue.length} overdue task(s)`, sub: overdue.slice(0, 2).map((t) => t.title).join(", "), time: "Now", route: "/tasks", read: false });
+    if (notificationPrefs.eventReminder) {
+      const upcoming = events.filter((e) => {
+        const start = new Date(e.startDate);
+        const diff = start.getTime() - now.getTime();
+        return diff > 0 && diff < 48 * 60 * 60 * 1000;
+      });
+      upcoming.forEach((e) => {
+        items.push({ id: `n-ev-${e.id}`, title: `Upcoming: ${e.title}`, sub: e.location || "No location", time: "Soon", route: "/events", read: false });
+      });
     }
 
-    // Upcoming events (within 48h)
-    const upcoming = events.filter((e) => {
-      const start = new Date(e.startDate);
-      const diff = start.getTime() - now.getTime();
-      return diff > 0 && diff < 48 * 60 * 60 * 1000;
-    });
-    upcoming.forEach((e) => {
-      items.push({ id: `n-ev-${e.id}`, title: `Upcoming: ${e.title}`, sub: e.location || "No location", time: "Soon", route: "/events", read: false });
-    });
+    if (notificationPrefs.memberJoined) {
+      const recentMembers = members.filter((member) => {
+        const joinedAt = new Date(member.joinDate);
+        const diff = now.getTime() - joinedAt.getTime();
+        return diff >= 0 && diff < 30 * 24 * 60 * 60 * 1000;
+      });
+
+      recentMembers.slice(0, 3).forEach((member) => {
+        items.push({
+          id: `n-member-${member.id}`,
+          title: `${member.name} joined the club`,
+          sub: `${member.role} • ${member.department}`,
+          time: "Recently",
+          route: "/members",
+          read: false,
+        });
+      });
+    }
 
     return items;
-  }, [expenses, reimbursements, tasks, events]);
+  }, [events, expenses, members, notificationPrefs, reimbursements, tasks, user?.email]);
 
   const [readNotifs, setReadNotifs] = useState<Set<string>>(() => {
     try {
