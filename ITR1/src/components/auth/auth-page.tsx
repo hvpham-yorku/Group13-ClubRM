@@ -85,7 +85,7 @@ export function AuthPage() {
         </div>
 
         {/* Form Card */}
-        <div className="bg-card border border-border/50 rounded-xl p-6 space-y-6 shadow-lg shadow-black/5">
+        <div className="bg-card text-card-foreground border border-border/50 rounded-xl p-6 space-y-6 shadow-lg shadow-black/5">
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "signup" && (
               <div className="space-y-2">
@@ -95,6 +95,7 @@ export function AuthPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="John Doe"
+                  className="bg-background/80"
                   required
                   autoComplete="name"
                 />
@@ -109,6 +110,7 @@ export function AuthPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@yorku.ca"
+                className="bg-background/80"
                 required
                 autoComplete="email"
               />
@@ -123,6 +125,7 @@ export function AuthPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
+                  className="bg-background/80 pr-11"
                   required
                   autoComplete={mode === "login" ? "current-password" : "new-password"}
                   minLength={6}
