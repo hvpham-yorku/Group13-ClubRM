@@ -2,18 +2,46 @@
 
 ## Team Meetings
 
-### Feb 6, 2026 - Documentation Handling and UI Design Discussion
+### March 20th to March 27th 2026 - ITR3 Planning & Refactoring Strategy
 
-- **Attendees:** Yusuf Garba, Shivam Patel, Taziz Ahsan, Ashdeep Ashdeep Singh, Daniel Kyere.
-- **Agenda:** Finalizing ITR1 Roles and Expectations
-- **Decisions:** Yusuf Garba and Naeem Baig created docs and UI features (through Figma) to get the team organized; visualizations were created for better team productivity
-- **Rationale:** Split work of the project by feature. Yusuf assigned the Task page, Naeem assigned the Events Page, Taziz assigned the Dashboard, Daniel assigned the Login Screen, Ashdeep assigned the members page, and Shivam assigned with general database work and Web Scraper.
+- **Attendees:** Yusuf Garba, Shivam Patel, Taziz Ahsan, Ashdeep Singh, Daniel Kyere.
+- **Agenda:** Addressing code smells and finalizing 15 end-to-end user stories.
+- **Decisions:** Ensure that the team knows what to complete for the final draft of the project as well as understanding what are the necessary design changes and code smells that need to be taken into account
+- **Rationale:** To meet ITR3 quality standards and ensure the system is release-ready
 
 ---
 
 # Task Tracking & Estimates
 
 | User Story | Developer | Task | Est. Time | Actual Time Status |
+
+Developer Story: UI Decomposition
+Developer: Yusuf Garba
+Task: Split DashboardPage into StatsCard and Activity components to resolve "Large Class" smell
+Est. Time: 6 hours
+Actual Time: 6 hours
+Status: Completed
+
+Developer Story: Search Standardization
+Developer: Naeem Baig
+Task: Implement SearchStrategy interface to unify search logic across Finance and Contacts modules
+Est. Time: 5 hours
+Actual Time: 8 hours
+Status: Completed
+
+Developer Story: Data Layer Hardening
+Developer: Shivam Patel
+Task: Replace primitive data types with Transaction and Event domain objects for validation
+Est. Time: 4 hours
+Actual Time: 4 hours
+Status: Completed
+
+Developer Story: Logic Decoupling
+Developer: Taziz Ahsan
+Task: Extract search and filter logic from ContactsPage.tsx into useContactSearch hook
+Est. Time: 4 hours
+Actual Time: 5 hours
+Status: Completed
 
 User Story: Centralized Contact and Organization Management
 Developer: Taziz Ahsan
@@ -27,7 +55,7 @@ Developer: Daniel Kyere
 Task: Configure the login screen to ensure personal information is kept personal with no data leakage or disclosure of unauthorized access
 Est. Time: 4 days
 Actual TIme: Exceeded 4 days
-Status: In Progress
+Status: Completed
 
 User Story: Sophisticated Sorting
 Developer: Naeem Baig, Yusuf Garba, Ashdeep Ashdeep Singh, and Taziz Ahsan
@@ -48,13 +76,6 @@ Developer: Taziz Ahsan
 Task: Configure and implement the dialog and logic to add new professionals to our database
 Est. Time: 5 days
 Actual Time: 4 days
-Status: Completed
-
-User Story: Notion UI Configuration for Simplistic Look
-Developer: Naeem Baig, Yusuf Garba, Taziz Ahsan, Ashdeep Ashdeep Singh, and Daniel Kyere
-Task: Gain inspiration from Notion's UI for a sleek, simplistic UI to appeal to new users.
-Est. Time: 2 weeks
-Actual Time: 2 weeks
 Status: Completed
 
 User Story: Event & Calendar Management
@@ -78,13 +99,6 @@ Est. Time: 3 days
 Actual Time: 2 days
 Status: Completed
 
-User Story: Reusable UI Components
-Developer: Naeem Baig
-Task: Build shared UI primitives (Dialog, Select, Popover, Tabs, Checkbox, ScrollArea, Label) using Radix UI + TailwindCSS to maintain consistent styling across pages
-Est. Time: 1 day
-Actual Time: 1 day
-Status: Completed
-
 User Story: Customizable Dashboard Engine
 Developer: Taziz Ahsan
 Task: Implement a persistent drag-and-drop layout system using @dnd-kit across all 8 role-based dashboards, including widget visibility management.
@@ -106,66 +120,11 @@ Est. Time: 3 days
 Actual Time: 2 days
 Status: Completed
 
-User Story: Premium UI Polish and Global Search
-Developer: Taziz Ahsan
-Task: Overhaul sidebar aesthetics, fix collapse behavior glitches, and implement global search persistence with automatic calendar navigation.
-Est. Time: 2 days
-Actual Time: 2 days
-Status: Completed
-
 User Story: Omniscient Global Search & Navigator
 Developer: Taziz Ahsan
 Task: Implement cross-module indexing for all 6 primary modules, build keyboard-driven UX (Ctrl+K), and develop persistent search history engine.
 Est. Time: 4 days
 Actual Time: 4 days
-Status: Completed
-
-User Story: Omniscient Global Search & Navigator
-Developer: Taziz Ahsan
-Developer Story: Multi-Module Search Indexing Logic
-Task: Implement client-side indexing for Finance models (Expenses/Income)
-Est. Time: 1 day
-Actual Time: 1 day
-Status: Completed
-
-User Story: Omniscient Global Search & Navigator
-Developer: Taziz Ahsan
-Developer Story: Multi-Module Search Indexing Logic
-Task: Integrate Document metadata indexing with Supabase pre-fetch
-Est. Time: 0.5 days
-Actual Time: 0.5 days
-Status: Completed
-
-User Story: Omniscient Global Search & Navigator
-Developer: Taziz Ahsan
-Developer Story: Advanced Command-K Navigation & UX
-Task: Implement global keyboard event listener for Ctrl+K/Cmd+K focus traps
-Est. Time: 0.5 days
-Actual Time: 0.5 days
-Status: Completed
-
-User Story: Interactive Dashboard Command Engine
-Developer: Taziz Ahsan
-Developer Story: Context-Aware Dashboard Mutations
-Task: Engineer slot-based entity action system for DashboardListItem
-Est. Time: 1.5 days
-Actual Time: 1.5 days
-Status: Completed
-
-User Story: Interactive Dashboard Command Engine
-Developer: Taziz Ahsan
-Developer Story: Context-Aware Dashboard Mutations
-Task: Implement RSVP logic and Quick Approvals context integration
-Est. Time: 1 day
-Actual Time: 1 day
-Status: Completed
-
-User Story: Interactive Dashboard Command Engine
-Developer: Taziz Ahsan
-Developer Story: Dashboard Logic Fallback & Resilience
-Task: Develop useDashboardInsights hook to mirror Vercel API production logic
-Est. Time: 2 days
-Actual Time: 2 days
 Status: Completed
 
 User Story: End-to-End Professional Relationship CRM
@@ -178,56 +137,8 @@ Status: Completed
 
 User Story: End-to-End Professional Relationship CRM
 Developer: Taziz Ahsan
-Developer Story: Global CRM State & Directory Architecture
-Task: Design and build the /contacts directory with entity extraction logic
-Est. Time: 1 day
-Actual Time: 1 day
-Status: Completed
-
-User Story: End-to-End Professional Relationship CRM
-Developer: Taziz Ahsan
 Developer Story: Contact Lifecycle & Visualization Sheets
 Task: Implement Contact Profile Visualization Sheet with LinkedIn integration
-Est. Time: 1 day
-Actual Time: 1 day
-Status: Completed
-
-User Story: End-to-End Professional Relationship CRM
-Developer: Taziz Ahsan
-Developer Story: Contact Lifecycle & Visualization Sheets
-Task: Develop the 'Add Contact' dialog with validation and logic
-Est. Time: 1 day
-Actual Time: 1 day
-Status: Completed
-
-User Story: Dynamic Club Analytics & Growth Feed
-Developer: Taziz Ahsan
-Developer Story: Real-time Growth Feed Simulation
-Task: Implement simulated live marketing feed using useEffect timers
-Est. Time: 1 day
-Actual Time: 1 day
-Status: Completed
-
-User Story: Dynamic Club Analytics & Growth Feed
-Developer: Taziz Ahsan
-Developer Story: Reports & Analytics Engine
-Task: Engineer global cross-filtering engine for Report charts
-Est. Time: 2 days
-Actual Time: 2 days
-Status: Completed
-
-User Story: Data-Driven Financial Intelligence Suite
-Developer: Taziz Ahsan
-Developer Story: Financial UX Standardisation
-Task: Implement interactive dynamic column sorting across all financial tables
-Est. Time: 1 day
-Actual Time: 1 day
-Status: Completed
-
-User Story: Production-Grade Reliability & Verification Framework
-Developer: Taziz Ahsan
-Developer Story: Deterministic Testing Architecture
-Task: Refactor React Providers to support synchronous injection of initialData
 Est. Time: 1 day
 Actual Time: 1 day
 Status: Completed
@@ -240,21 +151,37 @@ Est. Time: 3 days
 Actual Time: 3 days
 Status: Completed
 
-User Story: Production-Grade Reliability & Verification Framework
-Developer: Taziz Ahsan
-Developer Story: Data Layer Hardening
-Task: Implement global error handling to neutralize JSON parsing and Date exceptions
-Est. Time: 1 day
-Actual Time: 1 day
-Status: Completed
+User Story: Onboarding Flow
+Developer: Ashdeep Ashdeep Singh
+Developer Story: End-to-End Authentication & Profile Initialization
+Task: Design and implement a multi-step "Welcome" wizard for first-time users to improve user experience and authorization
+Est. Time: 3 days
+Actual Time: 3 days
+Status: In Progress
+
+User Story: Social Media & External Profile Integration
+Developer: Shivam Patel
+Developer Story: OAuth Integration and External Data Mapping
+Task: Implement logic to automatically fetch and map bios from external APIs to the local CRM database.
+Est. Time: 3 days
+Actual Time: 3 days
+Status: In Progress
+
+User Story: Tracking Documents in Database
+Developer: Yusuf Garba
+Developer Story: Database Storage Integration
+Task: Implement a Document Upload system using Supabase Storage buckets.
+Est. Time: 3 days
+Actual Time: 3 days
+Status: In Progress
 
 ---
 
 ## Concerns
 
 
-- **Time management:** Some tasks exceeded original estimates due to the complexity of multi-view components (e.g., Kanban drag-and-drop, Gantt timeline). Better upfront planning and breaking tasks into smaller subtasks could help mitigate this in future iterations.
-- **Testing coverage:** Test files were added late in ITR1. For ITR2, tests should be written alongside feature development to catch regressions early.
+- **Time management:** A lot of our group members underestimated just how daunting the project would be and were not on tasks with the work that they had to put out consistently
+- **Testing coverage:** Test files were an after thought in the software development cycle and the team aims to improve upon them and add more details to them and ensure that all unit tests pass
 - **Coordination:** With each team member working on separate pages, ensuring UI consistency required extra effort. The shared UI primitives helped, but a design system document would further improve this.
 
 
@@ -271,4 +198,5 @@ Status: Completed
 
 - **Original Plan (ITR0):** We had the plan to make our very own CRM (ClubRM) to be able to do everything that other CRMs (like Salesforce, Monday, and Zoho) but built specifically for student associations and clubs, essentially pitching a business tool used in the industry but would be used for students, by students.
 - **Revised Plan (ITR1):** After talking to the customer, we still have the general idea down, but downsized a bit to ensure that we are able to deliver and prioritize an easier time for our users and to also ensure that the simplicity in its design would attract more users.
-- **Reason for Change:** Customer Feedback and Time Considerations.
+- **Revised Plan (ITR3):** During ITR3, we had to revise our schedule to address a bottleneck. We had repeatedly pushed back the implementation of the Professional Contact Page in favor of core infrastructure. In the final weeks, we shifted priorities to ensure this page was fully functional with end-to-end database connectivity, as it is a core value proposition for our customer.
+- **Reason for Change:** Time Considerations and Ensuring that Final Product is implemented before Deadline.
