@@ -1,5 +1,3 @@
-// src/hooks/use-google-calendar.ts
-
 import { useState, useCallback } from "react"
 import {
   signInWithGoogle,
@@ -59,7 +57,7 @@ export function useGoogleCalendar() {
       try {
         result = await addEventToGoogleCalendar(gEvent, token)
       } catch (err) {
-        // Token expired — re-authenticate once
+        // Token expired re-authenticate once
         if (err instanceof Error && err.message === "UNAUTHENTICATED") {
           token = await signInWithGoogle()
           result = await addEventToGoogleCalendar(gEvent, token)
