@@ -121,63 +121,68 @@ export function TasksPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex h-full flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.06),transparent_32%),radial-gradient(circle_at_right,rgba(16,185,129,0.12),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.03),transparent_55%)]" />
-        <div className="relative flex flex-col gap-6 px-6 py-7 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+        <div className="relative flex flex-col gap-4 px-5 py-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-xl space-y-2.5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
               <Sparkles className="h-3.5 w-3.5" />
               Task Command Center
             </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Tasks</h1>
-              <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                A calmer workspace for planning, tracking, and reviewing execution without the page fighting for attention.
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                <h1 className="text-3xl font-bold tracking-tight">Tasks</h1>
+                <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                  {view} view
+                </p>
+              </div>
+              <p className="max-w-lg text-sm leading-6 text-muted-foreground">
+                Plan, track, and review execution without wasting space on decoration.
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">{viewDescriptions[view]}</p>
+            <p className="text-xs text-muted-foreground">{viewDescriptions[view]}</p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[520px]">
-            <div className="rounded-2xl border border-border/60 bg-background/70 p-4 backdrop-blur">
-              <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[430px]">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-3 backdrop-blur">
+              <p className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 <ClipboardList className="h-3.5 w-3.5" />
                 Active
               </p>
-              <p className="mt-3 text-3xl font-bold tracking-tight">{activeTaskCount}</p>
-              <p className="mt-1 text-xs text-muted-foreground">tasks still in motion</p>
+              <p className="mt-1.5 text-xl font-bold tracking-tight">{activeTaskCount}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">tasks still in motion</p>
             </div>
-            <div className="rounded-2xl border border-amber-500/20 bg-background/70 p-4 backdrop-blur">
-              <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-amber-400">
+            <div className="rounded-2xl border border-amber-500/20 bg-background/70 p-3 backdrop-blur">
+              <p className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-amber-400">
                 <CircleDot className="h-3.5 w-3.5" />
                 Urgent
               </p>
-              <p className="mt-3 text-3xl font-bold tracking-tight">{urgentTaskCount}</p>
-              <p className="mt-1 text-xs text-muted-foreground">need immediate attention</p>
+              <p className="mt-1.5 text-xl font-bold tracking-tight">{urgentTaskCount}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">need immediate attention</p>
             </div>
-            <div className="rounded-2xl border border-emerald-500/20 bg-background/70 p-4 backdrop-blur">
-              <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-400">
+            <div className="rounded-2xl border border-emerald-500/20 bg-background/70 p-3 backdrop-blur">
+              <p className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-400">
                 <Workflow className="h-3.5 w-3.5" />
                 Done
               </p>
-              <p className="mt-3 text-3xl font-bold tracking-tight">{doneTaskCount}</p>
-              <p className="mt-1 text-xs text-muted-foreground">completed tasks logged</p>
+              <p className="mt-1.5 text-xl font-bold tracking-tight">{doneTaskCount}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">completed tasks logged</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/50 bg-card/85 p-4 shadow-sm backdrop-blur">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+      <section className="rounded-2xl border border-border/50 bg-card/85 p-3.5 shadow-sm backdrop-blur">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-1 flex-col gap-2.5 lg:flex-row lg:items-center">
             <div className="relative w-full lg:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search tasks..."
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="h-11 rounded-xl border-border/60 bg-background/70 pl-10"
+                className="h-10 rounded-xl border-border/60 bg-background/70 pl-10"
               />
             </div>
 
@@ -208,7 +213,7 @@ export function TasksPage() {
                 variant={hasFilters ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
-                className="h-11 gap-2 rounded-xl"
+                className="h-10 gap-2 rounded-xl"
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 Filters
@@ -241,7 +246,7 @@ export function TasksPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 xl:items-end">
+          <div className="flex flex-col gap-2 xl:items-end">
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center rounded-xl border border-border/60 bg-background/70 p-1">
                 {views.map((v) => (
@@ -261,13 +266,13 @@ export function TasksPage() {
                 ))}
               </div>
 
-              <Button onClick={() => handleCreateTask()} size="sm" className="h-11 gap-2 rounded-xl px-4 shadow-lg shadow-primary/15">
+              <Button onClick={() => handleCreateTask()} size="sm" className="h-10 gap-2 rounded-xl px-4 shadow-lg shadow-primary/15">
                 <Plus className="h-4 w-4" />
                 New Task
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              {searchQuery ? `Searching for “${searchQuery}”` : "Use views and filters to shape the workspace."}
+              {searchQuery ? `Searching for "${searchQuery}"` : "Use views and filters to shape the workspace."}
             </p>
           </div>
         </div>
@@ -367,7 +372,7 @@ export function TasksPage() {
       )}
 
       {/* View content */}
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/50 bg-card/70 p-4 shadow-sm backdrop-blur">
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/50 bg-card/70 p-3 shadow-sm backdrop-blur">
         {view === "board" && (
           <BoardView
             onTaskClick={handleTaskClick}
