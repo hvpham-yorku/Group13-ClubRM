@@ -171,12 +171,12 @@ export function OnboardingPage() {
                         </button>
                       ))}
                     </div>
-                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
-                      <div className="flex items-center gap-2 font-semibold text-amber-300">
+                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
+                      <div className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300">
                         <Lock className="h-4 w-4" />
                         Reserved roles
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-amber-100/80">
+                      <p className="mt-2 text-xs leading-5 text-amber-700/90 dark:text-amber-100/80">
                         {RESERVED_ROLES.join(" and ")} are assigned by the organization and cannot be self-selected during onboarding.
                       </p>
                     </div>

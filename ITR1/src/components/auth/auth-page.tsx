@@ -54,7 +54,7 @@ export function AuthPage() {
             <div className="mx-auto w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
               <Users className="h-6 w-6 text-emerald-400" />
             </div>
-            <h1 className="text-2xl font-bold">Check your email</h1>
+            <h1 className="text-2xl font-bold text-foreground">Check your email</h1>
             <p className="text-sm text-muted-foreground">
               We've sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account, then come back and sign in.
             </p>
@@ -78,7 +78,7 @@ export function AuthPage() {
           <div className="mx-auto w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
             <Users className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">ClubRM</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">ClubRM</h1>
           <p className="text-sm text-muted-foreground">
             {mode === "login" ? "Sign in to manage your club" : "Create your account and finish setup in one welcome flow"}
           </p>
