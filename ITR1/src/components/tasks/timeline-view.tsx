@@ -3,6 +3,7 @@ import { useTasks } from "@/context/tasks-context"
 import { type Task, PRIORITY_CONFIG, getColumn, getMember } from "./types"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { CalendarRange } from "lucide-react"
 import {
   startOfMonth,
   endOfMonth,
@@ -87,16 +88,19 @@ export function TimelineView({
   }
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card overflow-hidden flex flex-col h-full">
+    <div className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col h-full shadow-sm">
       {/* Month header */}
-      <div className="border-b border-border/50 px-4 py-2.5 bg-muted/30">
-        <div className="text-sm font-semibold">{format(currentDate, "MMMM yyyy")}</div>
+      <div className="border-b border-border/50 px-4 py-3 bg-muted/20">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <CalendarRange className="h-4 w-4 text-primary" />
+          {format(currentDate, "MMMM yyyy")}
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Task labels */}
         <div className="w-[260px] shrink-0 border-r border-border/50 overflow-auto">
-          <div className="h-10 border-b border-border/30 px-3 flex items-center">
+          <div className="h-10 border-b border-border/30 px-3 flex items-center bg-muted/10">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Task</span>
           </div>
           {filteredTasks.map((task) => {
@@ -134,8 +138,10 @@ export function TimelineView({
             )
           })}
           {filteredTasks.length === 0 && (
-            <div className="flex items-center justify-center h-24 text-xs text-muted-foreground">
-              No tasks with dates
+            <div className="flex h-28 flex-col items-center justify-center gap-2 px-4 text-center text-xs text-muted-foreground">
+              <CalendarRange className="h-4 w-4 text-muted-foreground/60" />
+              <span className="font-medium text-foreground/80">No dated tasks</span>
+              <span>Add start or due dates to see work plotted on the timeline.</span>
             </div>
           )}
         </div>
@@ -222,8 +228,8 @@ export function TimelineView({
                   <button
                     onClick={() => onTaskClick(task)}
                     className={cn(
-                      "absolute top-2 h-8 rounded-md border flex items-center px-2 text-[11px] font-medium truncate transition-all",
-                      "hover:shadow-lg hover:z-20 hover:scale-y-110",
+                      "absolute top-2 h-8 rounded-lg border flex items-center px-2.5 text-[11px] font-medium truncate transition-all",
+                      "hover:shadow-lg hover:shadow-primary/10 hover:z-20 hover:scale-y-110",
                       "focus:outline-none focus:ring-2 focus:ring-primary/50",
                       column.color
                     )}

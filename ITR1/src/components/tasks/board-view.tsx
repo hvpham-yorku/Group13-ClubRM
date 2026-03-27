@@ -21,7 +21,7 @@ import { useTasks } from "@/context/tasks-context"
 import { type Task, type TaskStatus, TASK_COLUMNS } from "./types"
 import { TaskCard } from "./task-card"
 import { cn } from "@/lib/utils"
-import { Plus } from "lucide-react"
+import { Plus, Sparkles } from "lucide-react"
 import { useDroppable } from "@dnd-kit/core"
 
 interface BoardViewProps {
@@ -72,29 +72,29 @@ function DroppableColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex flex-col min-w-[280px] max-w-[320px] flex-1 rounded-xl border border-border/50 bg-muted/20 transition-colors duration-200",
+        "flex flex-col min-w-[292px] max-w-[340px] flex-1 rounded-2xl border border-border/50 bg-background/40 shadow-sm transition-colors duration-200",
         isOver && "border-primary/50 bg-primary/5"
       )}
     >
       {/* Column header */}
-      <div className="flex items-center justify-between px-3.5 py-3 border-b border-border/30">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-border/30">
         <div className="flex items-center gap-2">
-          <div className={cn("h-2.5 w-2.5 rounded-full", column.dotColor)} />
+          <div className={cn("h-2.5 w-2.5 rounded-full shadow-[0_0_12px_currentColor]", column.dotColor)} />
           <span className="text-sm font-semibold">{column.title}</span>
-          <span className="text-xs text-muted-foreground bg-muted rounded-full px-1.5 py-0.5 tabular-nums">
+          <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5 tabular-nums">
             {tasks.length}
           </span>
         </div>
         <button
           onClick={onCreateTask}
-          className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
           <Plus className="h-4 w-4" />
         </button>
       </div>
 
       {/* Task cards */}
-      <div className="flex-1 overflow-auto p-2 space-y-2">
+      <div className="flex-1 overflow-auto p-3 space-y-3">
         <SortableContext
           items={tasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
@@ -105,8 +105,10 @@ function DroppableColumn({
         </SortableContext>
 
         {tasks.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-24 text-muted-foreground/50 text-xs">
-            <span>No tasks</span>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/50 bg-muted/20 px-4 py-8 text-center text-xs text-muted-foreground">
+            <Sparkles className="mb-2 h-4 w-4 text-muted-foreground/60" />
+            <span className="font-medium text-foreground/80">No tasks here yet</span>
+            <span className="mt-1">Add one or drag work into this lane.</span>
           </div>
         )}
       </div>
