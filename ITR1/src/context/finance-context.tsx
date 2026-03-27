@@ -42,14 +42,14 @@ export const SEED_INCOME: Income[] = [
   { id: "i8j9k0l1-m2n3-4o4p-5q6r-7s8t9u0v1w2x", source: "TechCorp Sponsorship - Gold Tier", amount: 5000, type: "sponsorship", date: d(15, m - 1) },
 ]
 
-// ---- Row mappers ----
+// Rows
 function toExpense(row: Record<string, unknown>): Expense {
   return {
     id: row.id as string,
     description: row.description as string,
     amount: Number(row.amount),
     category: row.category as string,
-    date: new Date(row.date as string),
+    date: row.date ? new Date(row.date as string) : new Date(),
     status: row.status as ExpenseStatus,
     submittedBy: row.submitted_by as string,
     approvedBy: (row.approved_by as string) || undefined,
@@ -62,7 +62,7 @@ function expenseToRow(e: Expense) {
     description: e.description,
     amount: e.amount,
     category: e.category,
-    date: new Date(e.date).toISOString().split("T")[0],
+    date: e.date ? new Date(e.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     status: e.status,
     submitted_by: e.submittedBy,
     approved_by: e.approvedBy || null,
@@ -78,7 +78,7 @@ function toReimbursement(row: Record<string, unknown>): Reimbursement {
     amount: Number(row.amount),
     description: row.description as string,
     category: row.category as string,
-    date: new Date(row.date as string),
+    date: row.date ? new Date(row.date as string) : new Date(),
     status: row.status as ReimbursementStatus,
     receiptUrl: (row.receipt_url as string) || undefined,
     approvedBy: (row.approved_by as string) || undefined,
@@ -86,13 +86,14 @@ function toReimbursement(row: Record<string, unknown>): Reimbursement {
     notes: (row.notes as string) || undefined,
   }
 }
+
 function reimbursementToRow(r: Reimbursement) {
   return {
     submitted_by: r.submittedBy,
     amount: r.amount,
     description: r.description,
     category: r.category,
-    date: new Date(r.date).toISOString().split("T")[0],
+    date: r.date ? new Date(r.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     status: r.status,
     receipt_url: r.receiptUrl || null,
     approved_by: r.approvedBy || null,
@@ -107,17 +108,18 @@ function toIncome(row: Record<string, unknown>): Income {
     source: row.source as string,
     amount: Number(row.amount),
     type: row.type as Income["type"],
-    date: new Date(row.date as string),
+    date: row.date ? new Date(row.date as string) : new Date(),
     notes: (row.notes as string) || undefined,
     recurring: row.recurring as boolean | undefined,
   }
 }
+
 function incomeToRow(i: Income) {
   return {
     source: i.source,
     amount: i.amount,
     type: i.type,
-    date: new Date(i.date).toISOString().split("T")[0],
+    date: i.date ? new Date(i.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     notes: i.notes || null,
     recurring: i.recurring || false,
   }
@@ -158,16 +160,18 @@ export function FinanceProvider({
   const [reimbursements, setReimbursements] = useState<Reimbursement[]>(initialReimbursements)
   const [income, setIncome] = useState<Income[]>(initialIncome)
 
+<<<<<<< HEAD
+=======
+  // Finance Data
+>>>>>>> task-page
   useEffect(() => {
     if (initialExpenses.length > 0 || initialIncome.length > 0 || initialReimbursements.length > 0) return
     async function load() {
-      // Budget
       const { data: budgetData } = await supabase.from("budgets").select("*").limit(1).single()
       if (budgetData) {
         setBudget({ totalBudget: Number(budgetData.total_budget), termLabel: budgetData.term_label as string })
       }
 
-      // Expenses
       const { data: expData, error: expErr } = await supabase.from("expenses").select("*").order("date", { ascending: false })
       if (expErr) {
         console.error("Failed to load expenses:", expErr)

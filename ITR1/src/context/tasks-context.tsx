@@ -342,7 +342,11 @@ function toRow(t: Task) {
     due_date: t.dueDate ? new Date(t.dueDate).toISOString() : null,
     start_date: t.startDate ? new Date(t.startDate).toISOString() : null,
     completed_at: t.completedAt ? new Date(t.completedAt).toISOString() : null,
+<<<<<<< HEAD
     dependencies: t.dependencies || [],
+=======
+    dependencies: t.dependencies,
+>>>>>>> task-page
     subtasks: JSON.parse(JSON.stringify(t.subtasks || [])),
     section: t.section || null,
   }

@@ -229,6 +229,7 @@ function toRow(e: CalendarEvent) {
   
   return {
     title: e.title,
+<<<<<<< HEAD
     description: e.description || "",
     start_date: isNaN(start.getTime()) ? new Date().toISOString() : start.toISOString(),
     end_date: isNaN(end.getTime()) ? new Date().toISOString() : end.toISOString(),
@@ -238,6 +239,17 @@ function toRow(e: CalendarEvent) {
     tags: e.tags || [],
     collaborators: e.collaborators || [],
     created_by: e.createdBy || "",
+=======
+    description: e.description,
+    start_date: e.startDate ? new Date(e.startDate).toISOString() : new Date().toISOString(),
+    end_date: e.endDate ? new Date(e.endDate).toISOString() : new Date().toISOString(),
+    all_day: e.allDay,
+    location: e.location,
+    color_id: e.colorId,
+    tags: e.tags,
+    collaborators: e.collaborators,
+    created_by: e.createdBy,
+>>>>>>> task-page
     capacity: e.capacity ?? null,
     registered: e.registered ?? null,
     is_public: e.isPublic ?? true,

@@ -277,9 +277,18 @@ export default defineConfig(({ mode }) => {
       },
     },
     test: {
-      environment: 'jsdom',
+      globals: true, 
+      environment: 'happy-dom',
       include: ['test/**/*.test.{ts,tsx}'],
+<<<<<<< HEAD
       setupFiles: ['./test/setup.ts'],
+=======
+      server: {
+        deps: {
+          inline: [/html-encoding-sniffer/, /@exodus\/bytes/],
+        },
+      },
+>>>>>>> task-page
     },
   }
 })
