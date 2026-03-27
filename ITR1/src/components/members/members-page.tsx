@@ -52,7 +52,11 @@ import {
   Eye,
   LayoutGrid,
   List,
+  Linkedin,
+  ExternalLink,
 } from "lucide-react"
+import { LinkedInSearchDialog } from "@/components/members/linkedin-search-dialog"
+import type { LinkedInResult } from "@/lib/linkedin-search"
 
 const ALL_ROLES: Role[] = [
   "President",
@@ -77,12 +81,7 @@ const ROLE_COLORS: Record<string, string> = {
 }
 
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
 
 function getAvatarColor(name: string) {
@@ -108,6 +107,7 @@ export function MembersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [view, setView] = useState<"grid" | "table">("grid")
   const [addOpen, setAddOpen] = useState(false)
+  const [linkedinOpen, setLinkedinOpen] = useState(false)
   const [detailMember, setDetailMember] = useState<Member | null>(null)
   const [editMember, setEditMember] = useState<Member | null>(null)
 
@@ -118,6 +118,7 @@ export function MembersPage() {
   const [formRole, setFormRole] = useState<Role>("Executive")
   const [formDept, setFormDept] = useState<string>(DEPARTMENTS[0])
   const [formYear, setFormYear] = useState<string>(YEARS[0])
+  const [formLinkedin, setFormLinkedin] = useState("")
 
   const filtered = useMemo(() => {
     return members.filter((m) => {
@@ -139,6 +140,14 @@ export function MembersPage() {
     setFormRole("Executive")
     setFormDept(DEPARTMENTS[0])
     setFormYear(YEARS[0])
+    setFormLinkedin("")
+  }
+
+  function handleLinkedInSelect(result: LinkedInResult) {
+    setFormName(result.name)
+    setFormLinkedin(result.url)
+    // Re-open the add dialog after LinkedIn search closes
+    setTimeout(() => setAddOpen(true), 100)
   }
 
   function handleAdd() {
@@ -155,7 +164,8 @@ export function MembersPage() {
       year: formYear,
       tasksCompleted: 0,
       eventsAttended: 0,
-    })
+      linkedinUrl: formLinkedin.trim() || undefined,
+    } as Member)
     resetForm()
     setAddOpen(false)
   }
@@ -166,8 +176,7 @@ export function MembersPage() {
     setEditMember(null)
   }
 
-  const statusMeta = (status: string) =>
-    MEMBER_STATUSES.find((s) => s.value === status)
+  const statusMeta = (status: string) => MEMBER_STATUSES.find((s) => s.value === status)
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -236,9 +245,7 @@ export function MembersPage() {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               {MEMBER_STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -249,34 +256,21 @@ export function MembersPage() {
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
               {ALL_ROLES.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
+                <SelectItem key={r} value={r}>{r}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-          <Button
-            variant={view === "grid" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setView("grid")}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant={view === "grid" ? "default" : "ghost"} size="sm" onClick={() => setView("grid")} className="h-8 w-8 p-0">
             <LayoutGrid className="h-4 w-4" />
           </Button>
-          <Button
-            variant={view === "table" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setView("table")}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant={view === "table" ? "default" : "ghost"} size="sm" onClick={() => setView("table")} className="h-8 w-8 p-0">
             <List className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Results count */}
       <p className="text-xs text-muted-foreground">
         Showing {filtered.length} of {members.length} members
       </p>
@@ -307,6 +301,11 @@ export function MembersPage() {
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditMember(member) }}>
                       <Pencil className="h-4 w-4 mr-2" /> Edit
                     </DropdownMenuItem>
+                    {(member as any).linkedinUrl && (
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open((member as any).linkedinUrl, "_blank") }}>
+                        <Linkedin className="h-4 w-4 mr-2 text-[#0A66C2]" /> LinkedIn
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMember(member.id) }}>
                       <Trash2 className="h-4 w-4 mr-2" /> Remove
@@ -323,6 +322,9 @@ export function MembersPage() {
                 <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", statusMeta(member.status)?.color)}>
                   {statusMeta(member.status)?.label}
                 </span>
+                {(member as any).linkedinUrl && (
+                  <Linkedin className="h-3 w-3 text-[#0A66C2] ml-auto" />
+                )}
               </div>
               <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/30 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
@@ -362,7 +364,12 @@ export function MembersPage() {
                         {getInitials(member.name)}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{member.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium text-sm">{member.name}</p>
+                          {(member as any).linkedinUrl && (
+                            <Linkedin className="h-3 w-3 text-[#0A66C2]" />
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{member.email}</p>
                       </div>
                     </div>
@@ -392,6 +399,11 @@ export function MembersPage() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditMember(member) }}>
                           <Pencil className="h-4 w-4 mr-2" /> Edit
                         </DropdownMenuItem>
+                        {(member as any).linkedinUrl && (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open((member as any).linkedinUrl, "_blank") }}>
+                            <Linkedin className="h-4 w-4 mr-2 text-[#0A66C2]" /> LinkedIn
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMember(member.id) }}>
                           <Trash2 className="h-4 w-4 mr-2" /> Remove
@@ -406,6 +418,16 @@ export function MembersPage() {
         </div>
       )}
 
+      {/* LinkedIn Search Dialog */}
+      <LinkedInSearchDialog
+        open={linkedinOpen}
+        onClose={() => {
+          setLinkedinOpen(false)
+          setTimeout(() => setAddOpen(true), 100)
+        }}
+        onSelect={handleLinkedInSelect}
+      />
+
       {/* Add Member Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
@@ -413,6 +435,39 @@ export function MembersPage() {
             <DialogTitle>Add New Member</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* LinkedIn search button */}
+            <Button
+              variant="outline"
+              className="w-full gap-2 border-[#0A66C2]/30 text-[#0A66C2] hover:bg-[#0A66C2]/5 hover:border-[#0A66C2]/50"
+              onClick={() => {
+                setAddOpen(false)
+                setTimeout(() => setLinkedinOpen(true), 150)
+              }}
+            >
+              <Linkedin className="h-4 w-4" />
+              Find on LinkedIn
+            </Button>
+
+            {/* LinkedIn URL display if already selected */}
+            {formLinkedin && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-[#0A66C2]/5 border border-[#0A66C2]/20 rounded-lg">
+                <Linkedin className="h-4 w-4 text-[#0A66C2] shrink-0" />
+                <p className="text-xs text-[#0A66C2] truncate flex-1">{formLinkedin}</p>
+                <a href={formLinkedin} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  <ExternalLink className="h-3.5 w-3.5 text-[#0A66C2]" />
+                </a>
+              </div>
+            )}
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border/50" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-background px-2 text-muted-foreground">or fill in manually</span>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Full Name *</Label>
               <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="John Doe" />
@@ -431,9 +486,7 @@ export function MembersPage() {
                 <Select value={formRole} onValueChange={(v) => setFormRole(v as Role)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {ALL_ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
-                    ))}
+                    {ALL_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -442,9 +495,7 @@ export function MembersPage() {
                 <Select value={formYear} onValueChange={setFormYear}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {YEARS.map((y) => (
-                      <SelectItem key={y} value={y}>{y}</SelectItem>
-                    ))}
+                    {YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -454,9 +505,7 @@ export function MembersPage() {
               <Select value={formDept} onValueChange={setFormDept}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {DEPARTMENTS.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
-                  ))}
+                  {DEPARTMENTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -482,13 +531,24 @@ export function MembersPage() {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium border", ROLE_COLORS[detailMember.role])}>
                     {detailMember.role}
                   </span>
                   <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium", statusMeta(detailMember.status)?.color)}>
                     {statusMeta(detailMember.status)?.label}
                   </span>
+                  {(detailMember as any).linkedinUrl && (
+                    <a
+                      href={(detailMember as any).linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-[#0A66C2]/10 text-[#0A66C2] border border-[#0A66C2]/20 hover:bg-[#0A66C2]/20 transition-colors"
+                    >
+                      <Linkedin className="h-3 w-3" /> LinkedIn
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  )}
                 </div>
 
                 {detailMember.bio && (
@@ -563,15 +623,21 @@ export function MembersPage() {
                   <Label>Phone</Label>
                   <Input value={editMember.phone} onChange={(e) => setEditMember({ ...editMember, phone: e.target.value })} />
                 </div>
+                <div className="space-y-2">
+                  <Label>LinkedIn URL</Label>
+                  <Input
+                    value={(editMember as any).linkedinUrl ?? ""}
+                    onChange={(e) => setEditMember({ ...editMember, linkedinUrl: e.target.value } as any)}
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Role</Label>
                     <Select value={editMember.role} onValueChange={(v) => setEditMember({ ...editMember, role: v as Role })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {ALL_ROLES.map((r) => (
-                          <SelectItem key={r} value={r}>{r}</SelectItem>
-                        ))}
+                        {ALL_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -580,9 +646,7 @@ export function MembersPage() {
                     <Select value={editMember.status} onValueChange={(v) => setEditMember({ ...editMember, status: v as Member["status"] })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {MEMBER_STATUSES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                        ))}
+                        {MEMBER_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -593,9 +657,7 @@ export function MembersPage() {
                     <Select value={editMember.department} onValueChange={(v) => setEditMember({ ...editMember, department: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {DEPARTMENTS.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
+                        {DEPARTMENTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -604,9 +666,7 @@ export function MembersPage() {
                     <Select value={editMember.year} onValueChange={(v) => setEditMember({ ...editMember, year: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {YEARS.map((y) => (
-                          <SelectItem key={y} value={y}>{y}</SelectItem>
-                        ))}
+                        {YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
