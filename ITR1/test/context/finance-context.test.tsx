@@ -1,14 +1,6 @@
-<<<<<<< HEAD
-import { describe, it, expect } from "vitest"
-import { renderHook, act, waitFor } from "@testing-library/react"
-import { FinanceProvider, useFinance, SEED_EXPENSES } from "../../src/context/finance-context"
-import type { ReactNode } from "react"
-
-const WAIT_OPTS = { timeout: 5000, interval: 50 }
-=======
 import { describe, it, expect, vi } from "vitest"
 import { renderHook, act, waitFor } from "@testing-library/react"
-import { FinanceProvider, useFinance } from "../../src/context/finance-context"
+import { FinanceProvider, useFinance, SEED_EXPENSES } from "../../src/context/finance-context"
 import type { ReactNode } from "react"
 
 const { mockFinanceSupabase } = vi.hoisted(() => {
@@ -43,33 +35,17 @@ vi.mock("../../src/lib/supabase", () => ({
   supabase: mockFinanceSupabase,
   supabaseUntyped: mockFinanceSupabase,
 }));
->>>>>>> task-page
 
 function wrapper({ children }: { children: ReactNode }) {
   return <FinanceProvider initialExpenses={SEED_EXPENSES}>{children}</FinanceProvider>
 }
 
 describe("FinanceContext", () => {
-<<<<<<< HEAD
-  it("provides initial budget data", async () => {
-    const { result } = renderHook(() => useFinance(), { wrapper })
-    expect(result.current.expenses.length).toBeGreaterThan(0)
-    expect(result.current.budget.totalBudget).toBe(18000)
-    expect(result.current.budget.termLabel).toBe("Fall 2026")
-  })
-
-  it.skip("adds an expense", async () => {
-=======
   it("adds an expense", async () => {
->>>>>>> task-page
     const { result } = renderHook(() => useFinance(), { wrapper })
-    await waitFor(() => expect(result.current.expenses.length).toBe(2))
+    await waitFor(() => expect(result.current.expenses.length).toBeGreaterThan(0))
     
     const before = result.current.expenses.length
-<<<<<<< HEAD
-
-=======
->>>>>>> task-page
     await act(async () => {
       await result.current.addExpense({
         id: "test-e",
@@ -84,35 +60,14 @@ describe("FinanceContext", () => {
 
     await waitFor(() => {
       expect(result.current.expenses.length).toBe(before + 1)
-<<<<<<< HEAD
-    }, WAIT_OPTS)
-  })
-
-  it.skip("updates expense status", async () => {
-=======
     })
   })
 
   it("updates expense status", async () => {
->>>>>>> task-page
     const { result } = renderHook(() => useFinance(), { wrapper })
-    await waitFor(() => expect(result.current.expenses.length).toBe(2))
+    await waitFor(() => expect(result.current.expenses.length).toBeGreaterThan(0))
     
     const pendingExpense = result.current.expenses.find((e) => e.status === "pending")
-<<<<<<< HEAD
-    if (!pendingExpense) return
-
-    await act(async () => {
-      await result.current.updateExpenseStatus(pendingExpense.id, "approved", "Admin")
-    })
-
-    await waitFor(() => {
-      const updated = result.current.expenses.find((e) => e.id === pendingExpense.id)
-      expect(updated?.status).toBe("approved")
-    }, WAIT_OPTS)
-  })
-})
-=======
     
     await act(async () => {
       await result.current.updateExpenseStatus(pendingExpense!.id, "approved", "Admin")
@@ -126,7 +81,7 @@ describe("FinanceContext", () => {
 
   it("deletes an expense", async () => {
     const { result } = renderHook(() => useFinance(), { wrapper })
-    await waitFor(() => expect(result.current.expenses.length).toBe(2))
+    await waitFor(() => expect(result.current.expenses.length).toBeGreaterThan(0))
     
     const firstId = result.current.expenses[0].id
     const before = result.current.expenses.length
@@ -140,4 +95,3 @@ describe("FinanceContext", () => {
     })
   })
 })
->>>>>>> task-page

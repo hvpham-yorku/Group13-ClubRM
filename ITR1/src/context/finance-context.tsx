@@ -160,10 +160,6 @@ export function FinanceProvider({
   const [reimbursements, setReimbursements] = useState<Reimbursement[]>(initialReimbursements)
   const [income, setIncome] = useState<Income[]>(initialIncome)
 
-<<<<<<< HEAD
-=======
-  // Finance Data
->>>>>>> task-page
   useEffect(() => {
     if (initialExpenses.length > 0 || initialIncome.length > 0 || initialReimbursements.length > 0) return
     async function load() {

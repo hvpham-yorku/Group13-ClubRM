@@ -1,10 +1,6 @@
-<<<<<<< HEAD
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
-=======
-import { useState, useMemo, useCallback, useEffect } from "react"
->>>>>>> task-page
 import { supabaseUntyped as db } from "@/lib/supabase"
 import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
@@ -28,22 +24,17 @@ interface Document {
 }
 
 export function DocumentsPage() {
-<<<<<<< HEAD
-  const [searchParams] = useSearchParams()
-  const [documents, setDocuments] = useState<Document[]>([])
+  // Navigation & Auth
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
+  const userOrgId = user?.user_metadata?.organization_id
   const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
-  const [search, setSearch] = useState(searchParams.get("search") || "")
-  const [categoryFilter, setCategoryFilter] = useState<string>("all")
-  const [typeFilter, setTypeFilter] = useState<string>("all")
-  const [view, setView] = useState<"grid" | "list">("grid")
-=======
-  // State 
+
+  // App State 
   const [documents, setDocuments] = useState<Document[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
->>>>>>> task-page
+  const [search, setSearch] = useState(searchParams.get("search") || "")
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "all")
   const [addOpen, setAddOpen] = useState(false)
   
   // Upload States
@@ -52,11 +43,15 @@ export function DocumentsPage() {
   const [formName, setFormName] = useState("")
   const [formCategory, setFormCategory] = useState<DocCategory>("other")
 
-  const { user } = useAuth()
-  const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
-  const userOrgId = user?.user_metadata?.organization_id
+  // Sync Search Params with State
+  useEffect(() => {
+    const params: Record<string, string> = {}
+    if (search) params.search = search
+    if (categoryFilter !== "all") params.category = categoryFilter
+    setSearchParams(params, { replace: true })
+  }, [search, categoryFilter, setSearchParams])
 
-  // Data Fetching
+  // Data Fetching Logic
   const transformDoc = (row: any): Document => ({
     id: row.id,
     name: row.name,
@@ -68,17 +63,23 @@ export function DocumentsPage() {
 
   const fetchDocs = useCallback(async () => {
     setIsLoading(true)
-    let query = db.from("documents").select("*").order("created_at", { ascending: false })
-    if (userOrgId) query = query.eq('organization_id', userOrgId)
+    try {
+      let query = db.from("documents").select("*").order("created_at", { ascending: false })
+      if (userOrgId) query = query.eq('organization_id', userOrgId)
 
-    const { data, error } = await query
-    if (!error && data) setDocuments(data.map(transformDoc))
-    setIsLoading(false)
+      const { data, error } = await query
+      if (error) throw error
+      if (data) setDocuments(data.map(transformDoc))
+    } catch (err) {
+      console.error("Error fetching docs:", err)
+    } finally {
+      setIsLoading(false)
+    }
   }, [userOrgId])
 
   useEffect(() => { fetchDocs() }, [fetchDocs])
 
-  // Handlers 
+  // Computed Values
   const filtered = useMemo(() => {
     return documents.filter((d) => {
       const matchesSearch = !search || d.name.toLowerCase().includes(search.toLowerCase())
@@ -88,25 +89,40 @@ export function DocumentsPage() {
   }, [documents, search, categoryFilter])
 
   const stats = useMemo(() => {
-    const totalSize = documents.reduce((acc, doc) => acc + parseFloat(doc.size || "0"), 0)
+    const totalSize = documents.reduce((acc, doc) => {
+      const val = parseFloat(doc.size.replace(/[^\d.-]/g, ''))
+      return acc + (isNaN(val) ? 0 : val)
+    }, 0)
     return { count: documents.length, size: totalSize.toFixed(2) + " MB" }
   }, [documents])
 
+  // Handlers
   const handleDownload = async (path: string, name: string) => {
-    const { data, error } = await db.storage.from('azure-planbstorage').download(path)
-    if (error) return alert("Download failed")
-    const url = URL.createObjectURL(data)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = name
-    a.click()
+    try {
+      const { data, error } = await db.storage.from('azure-planbstorage').download(path)
+      if (error) throw error
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = name
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert("Download failed")
+    }
   }
 
   const handleDelete = async (id: string, storagePath: string) => {
     if (!confirm("Are you sure? This cannot be undone.")) return
-    await db.storage.from('azure-planbstorage').remove([storagePath])
-    await db.from('documents').delete().eq('id', id)
-    setDocuments((prev) => prev.filter((doc) => doc.id !== id))
+    try {
+      await db.storage.from('azure-planbstorage').remove([storagePath])
+      await db.from('documents').delete().eq('id', id)
+      setDocuments((prev) => prev.filter((doc) => doc.id !== id))
+    } catch (e) {
+      alert("Delete failed")
+    }
   }
 
   const handleAdd = async () => {
@@ -114,9 +130,10 @@ export function DocumentsPage() {
     setIsUploading(true)
     try {
       const path = `${userOrgId || 'gen'}/${Date.now()}_${selectedFile.name}`
-      await db.storage.from('azure-planbstorage').upload(path, selectedFile)
+      const { error: uploadError } = await db.storage.from('azure-planbstorage').upload(path, selectedFile)
+      if (uploadError) throw uploadError
       
-      const { data, error } = await db.from("documents").insert({
+      const { data, error: dbError } = await db.from("documents").insert({
         name: formName.trim(),
         category: formCategory,
         size: `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`,
@@ -125,10 +142,17 @@ export function DocumentsPage() {
         organization_id: userOrgId || null
       }).select().single()
 
-      if (error) throw error
+      if (dbError) throw dbError
       setDocuments(prev => [transformDoc(data), ...prev])
       setAddOpen(false)
-    } catch (e) { alert("Upload failed") } finally { setIsUploading(false) }
+      // Reset form
+      setSelectedFile(null)
+      setFormName("")
+    } catch (e) { 
+      alert("Upload failed") 
+    } finally { 
+      setIsUploading(false) 
+    }
   }
 
   const getCategoryIcon = (cat: string) => {
@@ -142,6 +166,7 @@ export function DocumentsPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Resource Vault</h1>
@@ -162,6 +187,7 @@ export function DocumentsPage() {
         </div>
       </div>
 
+      {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-card/50 p-2 rounded-2xl border">
         <Tabs value={categoryFilter} onValueChange={setCategoryFilter} className="w-full sm:w-auto">
           <TabsList className="bg-transparent gap-1">
@@ -174,10 +200,16 @@ export function DocumentsPage() {
         </Tabs>
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Filter by name..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-background/50 border-none shadow-inner" />
+          <Input 
+            placeholder="Filter by name..." 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+            className="pl-9 bg-background/50 border-none shadow-inner" 
+          />
         </div>
       </div>
 
+      {/* Content Area */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
           <Loader2 className="animate-spin h-10 w-10 mb-4 opacity-20" />
@@ -224,27 +256,41 @@ export function DocumentsPage() {
           <DialogHeader><DialogTitle>Secure Upload</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="border-2 border-dashed rounded-xl p-8 text-center hover:bg-muted/50 transition-colors cursor-pointer relative">
-              <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => {
-                const file = e.target.files?.[0] || null
-                setSelectedFile(file)
-                if (file) setFormName(file.name)
-              }} />
+              <input 
+                type="file" 
+                className="absolute inset-0 opacity-0 cursor-pointer" 
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null
+                  setSelectedFile(file)
+                  if (file) setFormName(file.name)
+                }} 
+              />
               <HardDrive className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
               <p className="text-xs text-muted-foreground font-medium">
                 {selectedFile ? selectedFile.name : "Click or drag to choose file"}
               </p>
             </div>
-            <Input placeholder="Internal Label" value={formName} onChange={(e) => setFormName(e.target.value)} />
-            <select className="w-full bg-background border rounded-md p-2 text-sm" value={formCategory} onChange={(e) => setFormCategory(e.target.value as DocCategory)}>
-              <option value="governance">Governance</option>
-              <option value="finance">Finance</option>
-              <option value="events">Events</option>
-              <option value="other">Other</option>
-            </select>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider opacity-60">Internal Label</label>
+              <Input placeholder="Document name..." value={formName} onChange={(e) => setFormName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider opacity-60">Category</label>
+              <select 
+                className="w-full bg-background border rounded-md p-2 text-sm" 
+                value={formCategory} 
+                onChange={(e) => setFormCategory(e.target.value as DocCategory)}
+              >
+                <option value="governance">Governance</option>
+                <option value="finance">Finance</option>
+                <option value="events">Events</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
           </div>
           <DialogFooter>
             <Button onClick={handleAdd} disabled={isUploading || !selectedFile} className="w-full">
-              {isUploading ? <Loader2 className="animate-spin" /> : "Initiate Upload"}
+              {isUploading ? <><Loader2 className="animate-spin mr-2 h-4 w-4" /> Processing...</> : "Initiate Upload"}
             </Button>
           </DialogFooter>
         </DialogContent>
