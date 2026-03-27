@@ -58,6 +58,9 @@ export function AuthPage() {
             <p className="text-sm text-muted-foreground">
               We've sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account, then come back and sign in.
             </p>
+            <p className="text-xs text-muted-foreground">
+              After sign-in, we'll walk you through a short welcome setup for your name and role.
+            </p>
           </div>
           <Button variant="outline" className="w-full" onClick={() => { setSignupSuccess(false); setMode("login") }}>
             Back to Sign In
@@ -77,7 +80,7 @@ export function AuthPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">ClubRM</h1>
           <p className="text-sm text-muted-foreground">
-            {mode === "login" ? "Sign in to manage your club" : "Create your account"}
+            {mode === "login" ? "Sign in to manage your club" : "Create your account and finish setup in one welcome flow"}
           </p>
         </div>
 
