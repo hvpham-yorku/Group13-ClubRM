@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useFinance } from "@/context/finance-context"
 import { useAuth } from "@/context/auth-context"
 import {
@@ -31,13 +32,27 @@ import {
   Clock,
   DollarSign,
   Banknote,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react"
+import {
+  Select as UISelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+type SortKey = "date" | "amount" | "submittedBy"
 
 export function ReimbursementsTab() {
   const { reimbursements, addReimbursement, updateReimbursementStatus } = useFinance()
   const { user } = useAuth()
   const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
+  const [searchParams] = useSearchParams()
 
+  const [search, setSearch] = useState(searchParams.get("search") || "")
   const [filterStatus, setFilterStatus] = useState<ReimbursementStatus | "all">("all")
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -46,12 +61,41 @@ export function ReimbursementsTab() {
   const [newCategory, setNewCategory] = useState("events")
   const [newDate, setNewDate] = useState(format(new Date(), "yyyy-MM-dd"))
   const [newNotes, setNewNotes] = useState("")
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: "asc" | "desc" }>({ key: "date", direction: "desc" })
 
   const filtered = useMemo(() => {
-    return reimbursements
+    return [...reimbursements]
       .filter((r) => filterStatus === "all" || r.status === filterStatus)
-      .sort((a, b) => b.date.getTime() - a.date.getTime())
-  }, [reimbursements, filterStatus])
+      .sort((a, b) => {
+        const dir = sortConfig.direction === "asc" ? 1 : -1
+        switch (sortConfig.key) {
+          case "date":
+            return (a.date.getTime() - b.date.getTime()) * dir
+          case "amount":
+            return (a.amount - b.amount) * dir
+          case "submittedBy":
+            return a.submittedBy.localeCompare(b.submittedBy) * dir
+          default:
+            return 0
+        }
+      })
+  }, [reimbursements, filterStatus, sortConfig])
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig((current) => ({
+      key,
+      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+    }))
+  }
+
+  const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
+    if (sortConfig.key !== columnKey) return <ArrowUpDown className="h-3 w-3 opacity-40 inline-block ml-1" />
+    return sortConfig.direction === "asc" ? (
+      <ArrowUp className="h-3 w-3 inline-block ml-1" />
+    ) : (
+      <ArrowDown className="h-3 w-3 inline-block ml-1" />
+    )
+  }
 
   const grouped = useMemo(() => {
     const groups: Record<string, Reimbursement[]> = {
@@ -135,13 +179,22 @@ export function ReimbursementsTab() {
 
         return (
           <div key={status} className="rounded-xl border border-border/50 bg-card overflow-hidden">
-            <div className="flex items-center gap-2 px-5 py-3 border-b border-border/30 bg-muted/20">
-              <div className={cn("h-2.5 w-2.5 rounded-full", config.dotColor)} />
-              <span className="text-sm font-semibold capitalize">{config.label}</span>
-              <span className="text-xs text-muted-foreground bg-muted rounded-full px-1.5 py-0.5 tabular-nums">
-                {items.length}
-              </span>
-            </div>
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-border/30 bg-muted/20">
+                <div className={cn("h-2.5 w-2.5 rounded-full", config.dotColor)} />
+                <span className="text-sm font-semibold capitalize">{config.label}</span>
+                <span className="text-xs text-muted-foreground bg-muted rounded-full px-1.5 py-0.5 tabular-nums">
+                  {items.length}
+                </span>
+                
+                <div className="ml-auto flex items-center gap-4">
+                  <button onClick={() => handleSort("date")} className="text-[10px] uppercase font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center">
+                    Date <SortIcon columnKey="date" />
+                  </button>
+                  <button onClick={() => handleSort("amount")} className="text-[10px] uppercase font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center">
+                    Amount <SortIcon columnKey="amount" />
+                  </button>
+                </div>
+              </div>
 
             <div className="divide-y divide-border/20">
               {items.map((r) => {

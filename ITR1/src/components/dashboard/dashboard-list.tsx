@@ -7,6 +7,7 @@ interface ListItemProps {
   subtitle?: string;
   metadata?: string;
   icon?: React.ReactNode;
+  action?: React.ReactNode;
   onClick?: () => void;
   className?: string;
 }
@@ -16,6 +17,7 @@ export function DashboardListItem({
   subtitle,
   metadata,
   icon,
+  action,
   onClick,
   className,
 }: ListItemProps) {
@@ -39,6 +41,11 @@ export function DashboardListItem({
       {metadata && (
         <div className="text-xs font-mono text-muted-foreground whitespace-nowrap">
           {metadata}
+        </div>
+      )}
+      {action && (
+        <div className="ml-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          {action}
         </div>
       )}
     </div>

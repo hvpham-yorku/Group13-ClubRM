@@ -14,6 +14,7 @@ const TasksPage = React.lazy(() => import("@/components/tasks/tasks-page").then(
 const MembersPage = React.lazy(() => import("@/components/members/members-page").then((m) => ({ default: m.MembersPage })));
 const FinancePage = React.lazy(() => import("@/components/finance/finance-page").then((m) => ({ default: m.FinancePage })));
 const ExternalPage = React.lazy(() => import("@/components/external/external-page").then((m) => ({ default: m.ExternalPage })));
+const ContactsPage = React.lazy(() => import("@/components/contacts/contacts-page").then((m) => ({ default: m.ContactsPage })));
 const MarketingPage = React.lazy(() => import("@/components/marketing/marketing-page").then((m) => ({ default: m.MarketingPage })));
 const DocumentsPage = React.lazy(() => import("@/components/documents/documents-page").then((m) => ({ default: m.DocumentsPage })));
 const ReportsPage = React.lazy(() => import("@/components/reports/reports-page").then((m) => ({ default: m.ReportsPage })));
@@ -63,6 +64,7 @@ function App() {
         <Route path="/events" element={<EventsPage />} />
         <Route path="/finance" element={<FinancePage />} />
         <Route path="/external" element={<ExternalPage />} />
+        <Route path="/contacts" element={<ContactsPage />} />
         <Route path="/marketing" element={<MarketingPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/reports" element={<ReportsPage />} />

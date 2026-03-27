@@ -10,7 +10,7 @@ function d(day: number): Date {
   return new Date(y, m, day)
 }
 
-const SEED_TASKS: Task[] = [
+export const SEED_TASKS: Task[] = [
   {
     id: "t1",
     title: "Design event poster for Tech Talk",
@@ -334,16 +334,16 @@ function toTask(row: Record<string, unknown>): Task {
 function toRow(t: Task) {
   return {
     title: t.title,
-    description: t.description,
+    description: t.description || "",
     status: t.status,
     priority: t.priority,
-    assignees: t.assignees,
-    tags: t.tags,
+    assignees: t.assignees || [],
+    tags: t.tags || [],
     due_date: t.dueDate ? new Date(t.dueDate).toISOString() : null,
     start_date: t.startDate ? new Date(t.startDate).toISOString() : null,
     completed_at: t.completedAt ? new Date(t.completedAt).toISOString() : null,
-    dependencies: t.dependencies,
-    subtasks: JSON.parse(JSON.stringify(t.subtasks)),
+    dependencies: t.dependencies || [],
+    subtasks: JSON.parse(JSON.stringify(t.subtasks || [])),
     section: t.section || null,
   }
 }
@@ -359,10 +359,11 @@ interface TasksContextType {
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined)
 
-export function TasksProvider({ children }: { children: React.ReactNode }) {
-  const [tasks, setTasks] = useState<Task[]>([])
+export function TasksProvider({ children, initialTasks = [] }: { children: React.ReactNode, initialTasks?: Task[] }) {
+  const [tasks, setTasks] = useState<Task[]>(initialTasks)
 
   useEffect(() => {
+    if (initialTasks.length > 0) return
     async function load() {
       const { data, error } = await supabase.from("tasks").select("*").order("created_at", { ascending: true })
       if (error) {

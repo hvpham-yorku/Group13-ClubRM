@@ -22,53 +22,24 @@ const SEED_BUDGET: Budget = {
   termLabel: "Fall 2026",
 }
 
-const SEED_EXPENSES: Expense[] = [
-  { id: "e1", description: "Venue deposit - Main Hall", amount: 250, category: "events", date: d(5), status: "approved", submittedBy: "Sarah Smith", approvedBy: "Emily Chen" },
-  { id: "e2", description: "Marketing flyers (200 copies)", amount: 89, category: "marketing", date: d(3), status: "pending", submittedBy: "Lisa Wang" },
-  { id: "e3", description: "Snacks for exec meeting", amount: 45, category: "food", date: d(1), status: "approved", submittedBy: "Mike Johnson", approvedBy: "Emily Chen" },
-  { id: "e4", description: "Photography for Tech Talk", amount: 150, category: "events", date: d(8), status: "approved", submittedBy: "Sarah Smith", approvedBy: "Emily Chen" },
-  { id: "e5", description: "Domain renewal - clubrm.org", amount: 35, category: "technology", date: d(2), status: "approved", submittedBy: "Tom Davis", approvedBy: "Emily Chen" },
-  { id: "e6", description: "Banner & signage for Valentine Social", amount: 120, category: "marketing", date: d(6), status: "approved", submittedBy: "Lisa Wang", approvedBy: "Emily Chen" },
-  { id: "e7", description: "Catering deposit - Valentine Social", amount: 200, category: "food", date: d(7), status: "approved", submittedBy: "Emily Chen", approvedBy: "John Doe" },
-  { id: "e8", description: "AV equipment rental", amount: 180, category: "events", date: d(9), status: "pending", submittedBy: "Sarah Smith" },
-  { id: "e9", description: "Google Workspace subscription", amount: 72, category: "technology", date: d(1), status: "approved", submittedBy: "Tom Davis", approvedBy: "Emily Chen" },
-  { id: "e10", description: "Instagram ad campaign", amount: 50, category: "marketing", date: d(4), status: "approved", submittedBy: "Lisa Wang", approvedBy: "Emily Chen" },
-  { id: "e11", description: "Speaker gift cards (x3)", amount: 75, category: "events", date: d(10), status: "pending", submittedBy: "Alex Brown" },
-  { id: "e12", description: "Office supplies - notebooks, pens", amount: 32, category: "operations", date: d(2), status: "approved", submittedBy: "Mike Johnson", approvedBy: "Emily Chen" },
-  { id: "e13", description: "Zoom Pro annual plan", amount: 150, category: "technology", date: d(1), status: "approved", submittedBy: "Tom Davis", approvedBy: "Emily Chen" },
-  { id: "e14", description: "Pizza for study session", amount: 85, category: "food", date: d(11), status: "pending", submittedBy: "Rachel Kim" },
-  { id: "e15", description: "T-shirt printing samples", amount: 45, category: "marketing", date: d(9), status: "denied", submittedBy: "Lisa Wang", notes: "Wait until full order is confirmed" },
-  { id: "e16", description: "Networking dinner - 20 people", amount: 380, category: "food", date: d(12), status: "approved", submittedBy: "Alex Brown", approvedBy: "Emily Chen" },
-  { id: "e17", description: "Workshop materials - 3D printing", amount: 95, category: "events", date: d(10), status: "approved", submittedBy: "David Park", approvedBy: "Emily Chen" },
-  { id: "e18", description: "Volunteer appreciation gifts", amount: 60, category: "operations", date: d(11), status: "pending", submittedBy: "Mike Johnson" },
-  { id: "e19", description: "January venue rental", amount: 300, category: "events", date: d(15, m - 1), status: "approved", submittedBy: "Sarah Smith", approvedBy: "Emily Chen" },
-  { id: "e20", description: "January marketing materials", amount: 110, category: "marketing", date: d(10, m - 1), status: "approved", submittedBy: "Lisa Wang", approvedBy: "Emily Chen" },
-  { id: "e21", description: "January catering", amount: 220, category: "food", date: d(20, m - 1), status: "approved", submittedBy: "Emily Chen", approvedBy: "John Doe" },
-  { id: "e22", description: "December social event", amount: 450, category: "events", date: d(10, m - 2), status: "approved", submittedBy: "Sarah Smith", approvedBy: "Emily Chen" },
-  { id: "e23", description: "December marketing push", amount: 200, category: "marketing", date: d(5, m - 2), status: "approved", submittedBy: "Lisa Wang", approvedBy: "Emily Chen" },
+export const SEED_EXPENSES: Expense[] = [
+  { id: "e1f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b", description: "Venue deposit - Main Hall", amount: 250, category: "events", date: d(5), status: "approved", submittedBy: "Sarah Smith", approvedBy: "Emily Chen" },
+  { id: "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f6g", description: "Marketing flyers (200 copies)", amount: 89, category: "marketing", date: d(3), status: "pending", submittedBy: "Lisa Wang" },
+  { id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", description: "Snacks for exec meeting", amount: 45, category: "food", date: d(1), status: "approved", submittedBy: "Mike Johnson", approvedBy: "Emily Chen" },
+  { id: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e", description: "Photography for Tech Talk", amount: 150, category: "events", date: d(8), status: "approved", submittedBy: "Sarah Smith", approvedBy: "Emily Chen" },
+  { id: "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f", description: "Domain renewal - clubrm.org", amount: 35, category: "technology", date: d(2), status: "approved", submittedBy: "Tom Davis", approvedBy: "Emily Chen" },
+  { id: "d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7g", description: "Banner & signage for Valentine Social", amount: 120, category: "marketing", date: d(6), status: "approved", submittedBy: "Lisa Wang", approvedBy: "Emily Chen" },
 ]
 
-const SEED_REIMBURSEMENTS: Reimbursement[] = [
-  { id: "r1", submittedBy: "John Doe", amount: 145, description: "Food for networking event", category: "food", date: d(5), status: "pending" },
-  { id: "r2", submittedBy: "Sarah Smith", amount: 89, description: "Office supplies", category: "operations", date: d(4), status: "pending" },
-  { id: "r3", submittedBy: "Alex Brown", amount: 35, description: "Uber to sponsor meeting", category: "operations", date: d(6), status: "pending" },
-  { id: "r4", submittedBy: "Lisa Wang", amount: 62, description: "Canva Pro subscription (1 month)", category: "technology", date: d(1), status: "approved", approvedBy: "Emily Chen" },
-  { id: "r5", submittedBy: "Tom Davis", amount: 28, description: "USB drives for workshop", category: "technology", date: d(2), status: "approved", approvedBy: "Emily Chen" },
-  { id: "r6", submittedBy: "Mike Johnson", amount: 95, description: "Decorations for Valentine Social", category: "events", date: d(7), status: "approved", approvedBy: "Emily Chen", paidDate: d(9) },
-  { id: "r7", submittedBy: "Rachel Kim", amount: 40, description: "Printing costs for handouts", category: "marketing", date: d(3), status: "paid", approvedBy: "Emily Chen", paidDate: d(8) },
-  { id: "r8", submittedBy: "David Park", amount: 110, description: "Emergency supplies for workshop", category: "events", date: d(8), status: "denied", notes: "Not pre-approved; submit for next time" },
+export const SEED_REIMBURSEMENTS: Reimbursement[] = [
+  { id: "e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7g8h", submittedBy: "John Doe", amount: 145, description: "Food for networking event", category: "food", date: d(5), status: "pending" },
+  { id: "f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7g8h9i", submittedBy: "Sarah Smith", amount: 89, description: "Office supplies", category: "operations", date: d(4), status: "pending" },
+  { id: "g6h7i8j9-k0l1-4m2n-3o4p-5q6r7s8t9u0v", submittedBy: "Alex Brown", amount: 35, description: "Uber to sponsor meeting", category: "operations", date: d(6), status: "pending" },
 ]
 
-const SEED_INCOME: Income[] = [
-  { id: "i1", source: "Member Dues - Fall Term (42 members)", amount: 4200, type: "dues", date: d(1, m - 2), recurring: true },
-  { id: "i2", source: "TechCorp Sponsorship - Gold Tier", amount: 5000, type: "sponsorship", date: d(15, m - 1) },
-  { id: "i3", source: "StartupX Sponsorship - Silver Tier", amount: 2000, type: "sponsorship", date: d(20, m - 1) },
-  { id: "i4", source: "Bake Sale Fundraiser", amount: 340, type: "fundraising", date: d(5) },
-  { id: "i5", source: "LocalBiz Sponsorship - Bronze", amount: 1500, type: "sponsorship", date: d(8) },
-  { id: "i6", source: "Alumni Donation - Class of 2024", amount: 500, type: "donation", date: d(10) },
-  { id: "i7", source: "Hackathon Entry Fees (50 teams)", amount: 2500, type: "fundraising", date: d(3) },
-  { id: "i8", source: "Merch Sales - Stickers & Pins", amount: 185, type: "other", date: d(7) },
-  { id: "i9", source: "Winter term dues carry-over", amount: 800, type: "dues", date: d(1, m - 2) },
+export const SEED_INCOME: Income[] = [
+  { id: "h7i8j9k0-l1m2-4n3o-4p5q-6r7s8t9u0v1w", source: "Member Dues - Fall Term (42 members)", amount: 4200, type: "dues", date: d(1, m - 2), recurring: true },
+  { id: "i8j9k0l1-m2n3-4o4p-5q6r-7s8t9u0v1w2x", source: "TechCorp Sponsorship - Gold Tier", amount: 5000, type: "sponsorship", date: d(15, m - 1) },
 ]
 
 // ---- Row mappers ----
@@ -171,14 +142,24 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined)
 
-export function FinanceProvider({ children }: { children: React.ReactNode }) {
+export function FinanceProvider({ 
+  children, 
+  initialExpenses = [], 
+  initialIncome = [], 
+  initialReimbursements = [] 
+}: { 
+  children: React.ReactNode,
+  initialExpenses?: Expense[],
+  initialIncome?: Income[],
+  initialReimbursements?: Reimbursement[]
+}) {
   const [budget, setBudget] = useState<Budget>(SEED_BUDGET)
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [reimbursements, setReimbursements] = useState<Reimbursement[]>([])
-  const [income, setIncome] = useState<Income[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
+  const [reimbursements, setReimbursements] = useState<Reimbursement[]>(initialReimbursements)
+  const [income, setIncome] = useState<Income[]>(initialIncome)
 
-  // Load all finance data on mount
   useEffect(() => {
+    if (initialExpenses.length > 0 || initialIncome.length > 0 || initialReimbursements.length > 0) return
     async function load() {
       // Budget
       const { data: budgetData } = await supabase.from("budgets").select("*").limit(1).single()
@@ -244,17 +225,23 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   )
 
   const addExpense = useCallback(async (expense: Expense) => {
-    const row = expenseToRow(expense)
+    const row = expenseToRow({...expense, id: crypto.randomUUID()})
     const { data, error } = await supabase.from("expenses").insert(row).select().single()
-    if (error) { console.error("Failed to add expense:", error); return }
+    if (error) { 
+      console.error("Failed to add expense:", error)
+      throw error
+    }
     if (data) setExpenses((prev) => [toExpense(data), ...prev])
   }, [])
 
   const updateExpenseStatus = useCallback(async (id: string, status: ExpenseStatus, approvedBy?: string) => {
     const update: { status: string; approved_by?: string } = { status }
     if (approvedBy) update.approved_by = approvedBy
-    const { error } = await supabase.from("expenses").update(update).eq("id", id)
-    if (error) { console.error("Failed to update expense:", error); return }
+    const { error } = await supabase.from("expenses").update(update as any).eq("id", id)
+    if (error) { 
+      console.error("Failed to update expense:", error)
+      throw error
+    }
     setExpenses((prev) =>
       prev.map((e) => (e.id === id ? { ...e, status, approvedBy: approvedBy || e.approvedBy } : e))
     )
@@ -262,14 +249,20 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const deleteExpense = useCallback(async (id: string) => {
     const { error } = await supabase.from("expenses").delete().eq("id", id)
-    if (error) { console.error("Failed to delete expense:", error); return }
+    if (error) {
+       console.error("Failed to delete expense:", error)
+       throw error
+    }
     setExpenses((prev) => prev.filter((e) => e.id !== id))
   }, [])
 
   const addReimbursement = useCallback(async (reimbursement: Reimbursement) => {
-    const row = reimbursementToRow(reimbursement)
+    const row = reimbursementToRow({...reimbursement, id: crypto.randomUUID()})
     const { data, error } = await supabase.from("reimbursements").insert(row).select().single()
-    if (error) { console.error("Failed to add reimbursement:", error); return }
+    if (error) { 
+      console.error("Failed to add reimbursement:", error)
+      throw error
+    }
     if (data) setReimbursements((prev) => [toReimbursement(data), ...prev])
   }, [])
 
@@ -278,8 +271,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       const update: { status: string; approved_by?: string; paid_date?: string } = { status }
       if (approvedBy) update.approved_by = approvedBy
       if (status === "paid") update.paid_date = new Date().toISOString().split("T")[0]
-      const { error } = await supabase.from("reimbursements").update(update).eq("id", id)
-      if (error) { console.error("Failed to update reimbursement:", error); return }
+      const { error } = await supabase.from("reimbursements").update(update as any).eq("id", id)
+      if (error) { 
+        console.error("Failed to update reimbursement:", error)
+        throw error
+      }
       setReimbursements((prev) =>
         prev.map((r) =>
           r.id === id

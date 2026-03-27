@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react"
+import { useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { supabaseUntyped as db } from "@/lib/supabase"
 import { useAuth } from "@/context/auth-context"
@@ -128,10 +129,11 @@ function toRow(d: Document) {
 }
 
 export function DocumentsPage() {
+  const [searchParams] = useSearchParams()
   const [documents, setDocuments] = useState<Document[]>([])
   const { user } = useAuth()
   const currentUserName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Unknown"
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(searchParams.get("search") || "")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [view, setView] = useState<"grid" | "list">("grid")

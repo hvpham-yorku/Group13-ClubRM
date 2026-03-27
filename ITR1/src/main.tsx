@@ -8,7 +8,11 @@ import { EventsProvider } from './context/events-context.tsx'
 import { TasksProvider } from './context/tasks-context.tsx'
 import { FinanceProvider } from './context/finance-context.tsx'
 import { MembersProvider } from './context/members-context.tsx'
+<<<<<<< HEAD
 import { ThemeProvider } from './context/theme-context.tsx'
+=======
+import { SponsorsProvider } from './context/sponsors-context.tsx'
+>>>>>>> taziz-itr3
 import App from './App.tsx'
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
@@ -39,6 +43,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
     <BrowserRouter>
+<<<<<<< HEAD
       <ThemeProvider>
         <AuthProvider>
           <RoleProvider>
@@ -54,6 +59,23 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           </RoleProvider>
         </AuthProvider>
       </ThemeProvider>
+=======
+      <AuthProvider>
+        <RoleProvider>
+          <MembersProvider>
+            <EventsProvider>
+              <TasksProvider>
+                <FinanceProvider>
+                  <SponsorsProvider>
+                    <App />
+                  </SponsorsProvider>
+                </FinanceProvider>
+              </TasksProvider>
+            </EventsProvider>
+          </MembersProvider>
+        </RoleProvider>
+      </AuthProvider>
+>>>>>>> taziz-itr3
     </BrowserRouter>
   </ErrorBoundary>
 )

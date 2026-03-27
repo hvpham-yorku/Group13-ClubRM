@@ -8,6 +8,10 @@ export interface SponsorContact {
   title: string
   email: string
   phone: string
+  organization: string
+  linkedIn?: string
+  tags: string[]
+  createdAt: string
 }
 
 export interface Interaction {
@@ -75,7 +79,7 @@ export function formatCurrency(amount: number): string {
 
 export const SEED_SPONSORS: Sponsor[] = [
   {
-    id: "s1",
+    id: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     company: "TechNova Solutions",
     tier: "platinum",
     status: "active",
@@ -85,51 +89,50 @@ export const SEED_SPONSORS: Sponsor[] = [
     industry: "Technology",
     notes: "Interested in co-hosting a hackathon in Winter 2026.",
     contacts: [
-      { id: "c1", name: "Jennifer Wu", title: "Campus Relations Manager", email: "j.wu@technova.com", phone: "(416) 555-1001" },
-      { id: "c2", name: "Raj Patel", title: "VP Marketing", email: "r.patel@technova.com", phone: "(416) 555-1002" },
+      { id: "e1f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b", name: "Jennifer Wu", title: "Campus Relations Manager", email: "j.wu@technova.com", phone: "(416) 555-1001", organization: "TechNova Solutions", tags: ["University Relations", "Hackathon"], createdAt: "2025-09-15", linkedIn: "https://linkedin.com/in/jenniferwu" },
+      { id: "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f6g", name: "Raj Patel", title: "VP Marketing", email: "r.patel@technova.com", phone: "(416) 555-1002", organization: "TechNova Solutions", tags: ["Marketing", "Decision Maker"], createdAt: "2025-09-15", linkedIn: "https://linkedin.com/in/rajpatel" },
     ],
     interactions: [
-      { id: "i1", type: "meeting", date: "2026-02-10", summary: "Discussed hackathon sponsorship details and brand placement.", contactId: "c1" },
-      { id: "i2", type: "email", date: "2026-02-05", summary: "Sent sponsorship renewal proposal for 2026-27.", contactId: "c1" },
-      { id: "i3", type: "call", date: "2026-01-20", summary: "Initial check-in for new term.", contactId: "c2" },
+      { id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", type: "meeting", date: "2026-02-10", summary: "Discussed hackathon sponsorship details and brand placement.", contactId: "e1f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b" },
+      { id: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e", type: "email", date: "2026-02-05", summary: "Sent sponsorship renewal proposal for 2026-27.", contactId: "e1f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b" },
+      { id: "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f", type: "call", date: "2026-01-20", summary: "Initial check-in for new term.", contactId: "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f6g" },
     ],
   },
   {
-    id: "s2",
-    company: "MapleLeaf Capital",
+    id: "2f9a9412-1f4f-4a34-a3f2-1d5d9c2a6327",
+    company: "Global Bank Corp",
     tier: "gold",
     status: "active",
     amount: 3000,
-    startDate: "2025-10-01",
-    endDate: "2026-09-30",
+    startDate: "2025-10-15",
+    endDate: "2026-10-14",
     industry: "Finance & Banking",
+    notes: "Prefer email communication for initial outreach.",
     contacts: [
-      { id: "c3", name: "Michael Torres", title: "Community Engagement Lead", email: "m.torres@maplecap.ca", phone: "(416) 555-2001" },
+      { id: "d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7g", name: "Sarah Jenkins", title: "Global Talent Lead", email: "s.jenkins@globalbank.com", phone: "(416) 555-2001", organization: "Global Bank Corp", tags: ["Talent", "Recruitment"], createdAt: "2025-10-20" },
     ],
     interactions: [
-      { id: "i4", type: "event", date: "2026-01-25", summary: "Attended our Finance Workshop as guest speaker.", contactId: "c3" },
-      { id: "i5", type: "email", date: "2026-01-10", summary: "Confirmed speaking slot for Finance Workshop.", contactId: "c3" },
+      { id: "e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7g8h", type: "call", date: "2026-02-15", summary: "Talent acquisition strategy session.", contactId: "d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7g" },
     ],
   },
   {
-    id: "s3",
-    company: "ByteCraft Studios",
+    id: "3e5f2a1a-4b6c-4d8e-9f0a-1b2c3d4e5f6g",
+    company: "Quantum Consulting",
     tier: "silver",
-    status: "active",
+    status: "pending",
     amount: 1500,
     startDate: "2026-01-01",
     endDate: "2026-12-31",
-    industry: "Technology",
+    industry: "Consulting",
     contacts: [
-      { id: "c4", name: "Anna Schmidt", title: "HR Director", email: "a.schmidt@bytecraft.io", phone: "(647) 555-3001" },
+      { id: "f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7g8h9i", name: "Anna Schmidt", title: "HR Director", email: "a.schmidt@quantum.io", phone: "(647) 555-3001", organization: "Quantum Consulting", tags: ["Recruiting", "HR"], createdAt: "2026-01-05" },
     ],
     interactions: [
-      { id: "i6", type: "proposal", date: "2025-12-15", summary: "Sent silver tier sponsorship proposal.", contactId: "c4" },
-      { id: "i7", type: "meeting", date: "2025-12-01", summary: "Coffee chat to introduce our club.", contactId: "c4" },
+      { id: "g6h7i8j9-k0l1-4m2n-3o4p-5q6r7s8t9u0v", type: "proposal", date: "2025-12-15", summary: "Sent silver tier sponsorship proposal.", contactId: "f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7g8h9i" },
     ],
   },
   {
-    id: "s4",
+    id: "4d6e1c2b-3a5f-4d8e-9f0a-1b2c3d4e5f6g",
     company: "Campus Eats Co.",
     tier: "bronze",
     status: "active",
@@ -138,14 +141,12 @@ export const SEED_SPONSORS: Sponsor[] = [
     endDate: "2026-04-30",
     industry: "Food & Beverage",
     contacts: [
-      { id: "c5", name: "Derek Chan", title: "Owner", email: "derek@campuseats.ca", phone: "(416) 555-4001" },
+      { id: "h7i8j9k0-l1m2-4n3o-4p5q-6r7s8t9u0v1w", name: "Derek Chan", title: "Owner", email: "derek@campuseats.ca", phone: "(416) 555-4001", organization: "Campus Eats Co.", tags: ["Catering", "Local Vendor"], createdAt: "2025-09-05" },
     ],
-    interactions: [
-      { id: "i8", type: "email", date: "2026-02-01", summary: "Arranged catering discount for Valentine Social event.", contactId: "c5" },
-    ],
+    interactions: [],
   },
   {
-    id: "s5",
+    id: "5c7d1e2f-1a3b-4c5d-6e7f-8a9b0c1d2e3f",
     company: "Innovate Consulting",
     tier: "prospect",
     status: "prospect",
@@ -154,14 +155,12 @@ export const SEED_SPONSORS: Sponsor[] = [
     industry: "Consulting",
     notes: "Warm lead from LinkedIn. Interested in recruiting pipeline.",
     contacts: [
-      { id: "c6", name: "Samantha Green", title: "Talent Acquisition", email: "s.green@innovateconsulting.ca", phone: "(905) 555-5001" },
+      { id: "i8j9k0l1-m2n3-4o4p-5q6r-7s8t9u0v1w2x", name: "Samantha Green", title: "Talent Acquisition", email: "s.green@innovateconsulting.ca", phone: "(905) 555-5001", organization: "Innovate Consulting", tags: ["Potential Speaker", "Recruiting"], createdAt: "2026-02-15" },
     ],
-    interactions: [
-      { id: "i9", type: "email", date: "2026-02-15", summary: "Cold outreach introducing the club and sponsorship tiers.", contactId: "c6" },
-    ],
+    interactions: [],
   },
   {
-    id: "s6",
+    id: "6b5a4d3c-2e1f-4a0b-9c8d-7e6f5a4b3c2d",
     company: "UrbanPrint Media",
     tier: "gold",
     status: "churned",
@@ -171,10 +170,8 @@ export const SEED_SPONSORS: Sponsor[] = [
     industry: "Media & Entertainment",
     notes: "Budget cuts caused them to drop sponsorship. Keep warm for future.",
     contacts: [
-      { id: "c7", name: "Karen Osei", title: "Partnerships Manager", email: "k.osei@urbanprint.ca", phone: "(416) 555-6001" },
+      { id: "j9k0l1m2-n3o4-4p5q-6r7s-8t9u0v1w2x3y", name: "Karen Osei", title: "Partnerships Manager", email: "k.osei@urbanprint.ca", phone: "(416) 555-6001", organization: "UrbanPrint Media", tags: ["Past Sponsor"], createdAt: "2024-09-05" },
     ],
-    interactions: [
-      { id: "i10", type: "call", date: "2025-07-10", summary: "Informed us they won't renew due to internal budget cuts.", contactId: "c7" },
-    ],
+    interactions: [],
   },
 ]

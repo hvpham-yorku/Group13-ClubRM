@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react"
 import { useSearchParams } from "react-router-dom"
 import { type Campaign, type CampaignStatus, type PostPlatform, SEED_CAMPAIGNS, CAMPAIGN_STATUS_CONFIG, PLATFORM_CONFIG, POST_STATUS_CONFIG, formatNumber } from "./types"
 import { supabase } from "@/lib/supabase"
+import { useTasks } from "@/context/tasks-context"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,6 +34,7 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import { format } from "date-fns"
 import {
   Search,
   Plus,
@@ -48,6 +50,9 @@ import {
   Calendar,
   DollarSign,
   ArrowUpRight,
+  Activity,
+  User,
+  ExternalLink,
 } from "lucide-react"
 
 const PIE_COLORS = ["#f472b6", "#38bdf8", "#3b82f6", "#a78bfa", "#818cf8"]
@@ -109,6 +114,36 @@ export function MarketingPage() {
   const [formBudget, setFormBudget] = useState("")
   const [formStart, setFormStart] = useState("")
   const [formEnd, setFormEnd] = useState("")
+
+  const { tasks } = useTasks()
+  const [liveFeed, setLiveFeed] = useState<{ id: string; type: string; user: string; content: string; time: string; platform: PostPlatform }[]>([])
+
+  // Simulate live social interactions
+  useEffect(() => {
+    const users = ["@alex_tech", "@jane_doe", "@club_fan", "@sponsor_rep", "@student_org"]
+    const contents = [
+      "Just shared the new campaign! Looks awesome.",
+      "Can't wait for the spring hackathon!",
+      "Great to see such active engagement this term.",
+      "TechCorp is proud to support this initiative.",
+      "Highly recommend joining this club for anyone interested in tech.",
+    ]
+    const platforms: PostPlatform[] = ["twitter", "instagram", "linkedin", "tiktok"]
+
+    const interval = setInterval(() => {
+      const newItem = {
+        id: `feed-${Date.now()}`,
+        type: Math.random() > 0.3 ? "mention" : "share",
+        user: users[Math.floor(Math.random() * users.length)],
+        content: contents[Math.floor(Math.random() * contents.length)],
+        time: "Just now",
+        platform: platforms[Math.floor(Math.random() * platforms.length)],
+      }
+      setLiveFeed((prev) => [newItem, ...prev].slice(0, 10))
+    }, 8000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   const filtered = useMemo(() => {
     return campaigns.filter((c) => {
@@ -276,6 +311,10 @@ export function MarketingPage() {
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="calendar">Content Calendar</TabsTrigger>
+            <TabsTrigger value="live-feed" className="relative">
+              Live Feed
+              <span className="absolute -top-1 -right-1 h-2 w-2 bg-rose-500 rounded-full animate-pulse" />
+            </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -476,6 +515,60 @@ export function MarketingPage() {
             </div>
           </div>
         </TabsContent>
+
+        {/* Live Feed Tab */}
+        <TabsContent value="live-feed">
+          <div className="max-w-2xl mx-auto space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Activity className="h-4 w-4 text-emerald-400" />
+                Real-time Social Mentions
+              </h3>
+              <span className="text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full animate-pulse border border-emerald-500/20">
+                LIVE
+              </span>
+            </div>
+            
+            <div className="space-y-3">
+              {liveFeed.length === 0 && (
+                <div className="bg-card border border-dashed border-border/50 rounded-xl p-12 text-center text-muted-foreground">
+                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                  <p className="text-sm">Listening for new interactions...</p>
+                </div>
+              )}
+              {liveFeed.map((item) => (
+                <div key={item.id} className="bg-card border border-border/50 rounded-xl p-4 flex gap-4 animate-in slide-in-from-right-4 duration-500">
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold">{item.user}</span>
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-md font-bold border", PLATFORM_CONFIG[item.platform].color)}>
+                          {PLATFORM_CONFIG[item.platform].icon}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{item.time}</span>
+                    </div>
+                    <p className="text-sm text-balance">{item.content}</p>
+                    <div className="flex items-center gap-4 mt-2">
+                      <button className="text-[10px] text-muted-foreground hover:text-emerald-400 flex items-center gap-1 transition-colors">
+                        <Heart className="h-3 w-3" /> Like
+                      </button>
+                      <button className="text-[10px] text-muted-foreground hover:text-blue-400 flex items-center gap-1 transition-colors">
+                        <MessageCircle className="h-3 w-3" /> Reply
+                      </button>
+                      <button className="text-[10px] text-muted-foreground hover:text-violet-400 flex items-center gap-1 transition-colors">
+                        <Share2 className="h-3 w-3" /> Share
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Campaign Detail Dialog */}
@@ -562,6 +655,49 @@ export function MarketingPage() {
                         )}
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Related Tasks */}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center justify-between">
+                    Related Tasks
+                    <span className="text-[10px] font-normal lowercase bg-muted px-1.5 py-0.5 rounded border border-border/50">via tags</span>
+                  </h4>
+                  <div className="space-y-2">
+                    {tasks.filter(t => 
+                      t.section === "Marketing" && 
+                      (t.tags.some(tag => selectedCampaign.name.toLowerCase().includes(tag.toLowerCase())) ||
+                       t.tags.some(tag => selectedCampaign.tags.some(ct => ct.toLowerCase() === tag.toLowerCase())))
+                    ).length > 0 ? (
+                      tasks.filter(t => 
+                        t.section === "Marketing" && 
+                        (t.tags.some(tag => selectedCampaign.name.toLowerCase().includes(tag.toLowerCase())) ||
+                         t.tags.some(tag => selectedCampaign.tags.some(ct => ct.toLowerCase() === tag.toLowerCase())))
+                      ).map(task => (
+                        <div key={task.id} className="bg-muted/30 rounded-lg p-3 flex items-center justify-between group hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className={cn("h-1.5 w-1.5 rounded-full", task.status === 'done' ? 'bg-emerald-500' : 'bg-amber-500')} />
+                            <div>
+                              <p className="text-sm font-medium">{task.title}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-muted-foreground capitalize">{task.status.replace('_', ' ')}</span>
+                                {task.dueDate && (
+                                  <span className="text-[10px] text-muted-foreground">· {format(task.dueDate, "MMM d")}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon-xs" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 border border-dashed border-border/30 rounded-lg text-xs text-muted-foreground">
+                        No specific tasks linked to this campaign.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
