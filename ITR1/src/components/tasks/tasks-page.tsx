@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { useSearchParams } from "react-router-dom"
 import { useTasks } from "@/context/tasks-context"
 import {
@@ -33,11 +33,15 @@ import {
   Flag,
   LayoutGrid,
   Search,
+  Sparkles,
+  SlidersHorizontal,
+  ClipboardList,
+  CircleDot,
 } from "lucide-react"
 import { format, addMonths } from "date-fns"
 
 export function TasksPage() {
-  const { addTask, updateTask, deleteTask } = useTasks()
+  const { tasks, addTask, updateTask, deleteTask } = useTasks()
 
   const [view, setView] = useState<TaskView>("board")
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -104,116 +108,175 @@ export function TasksPage() {
   ]
 
   const hasFilters = filterAssignee || filterPriority
+  const activeTaskCount = useMemo(() => tasks.filter((task) => task.status !== "done").length, [tasks])
+  const urgentTaskCount = useMemo(() => tasks.filter((task) => task.priority === "urgent" && task.status !== "done").length, [tasks])
+  const doneTaskCount = useMemo(() => tasks.filter((task) => task.status === "done").length, [tasks])
+
+  const viewDescriptions: Record<TaskView, string> = {
+    board: "Plan work by lane and keep momentum visible at a glance.",
+    list: "Scan priorities quickly with a structured operational view.",
+    timeline: "Track due dates and sequencing across the month.",
+    calendar: "See delivery load against the calendar in one place.",
+    workflow: "Visualize task flow and dependencies with more context.",
+  }
 
   return (
-    <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
-
-          {/* Date navigation for timeline/calendar */}
-          {(view === "timeline" || view === "calendar") && (
-            <div className="flex items-center gap-1 ml-2">
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => setCurrentDate((d) => addMonths(d, -1))}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm font-medium text-muted-foreground min-w-[100px] text-center">
-                {format(currentDate, "MMM yyyy")}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => setCurrentDate((d) => addMonths(d, 1))}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+    <div className="flex h-full flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.06),transparent_32%),radial-gradient(circle_at_right,rgba(16,185,129,0.12),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.03),transparent_55%)]" />
+        <div className="relative flex flex-col gap-6 px-6 py-7 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              Task Command Center
             </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Search bar */}
-          <div className="relative w-48 hidden sm:block">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-8 h-9 text-xs"
-            />
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Tasks</h1>
+              <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+                A calmer workspace for planning, tracking, and reviewing execution without the page fighting for attention.
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">{viewDescriptions[view]}</p>
           </div>
 
-          {/* Group by (list view only) */}
-          {view === "list" && (
-            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5 border border-border/50">
-              <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground ml-2" />
-              {(["status", "priority", "assignee", "section"] as const).map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setGroupBy(g)}
-                  className={cn(
-                    "px-2 py-1 rounded-md text-[11px] font-medium transition-all capitalize",
-                    groupBy === g
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
+          <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[520px]">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4 backdrop-blur">
+              <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <ClipboardList className="h-3.5 w-3.5" />
+                Active
+              </p>
+              <p className="mt-3 text-3xl font-bold tracking-tight">{activeTaskCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">tasks still in motion</p>
+            </div>
+            <div className="rounded-2xl border border-amber-500/20 bg-background/70 p-4 backdrop-blur">
+              <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-amber-400">
+                <CircleDot className="h-3.5 w-3.5" />
+                Urgent
+              </p>
+              <p className="mt-3 text-3xl font-bold tracking-tight">{urgentTaskCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">need immediate attention</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-500/20 bg-background/70 p-4 backdrop-blur">
+              <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-400">
+                <Workflow className="h-3.5 w-3.5" />
+                Done
+              </p>
+              <p className="mt-3 text-3xl font-bold tracking-tight">{doneTaskCount}</p>
+              <p className="mt-1 text-xs text-muted-foreground">completed tasks logged</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border/50 bg-card/85 p-4 shadow-sm backdrop-blur">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative w-full lg:max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="h-11 rounded-xl border-border/60 bg-background/70 pl-10"
+              />
+            </div>
+
+            {(view === "timeline" || view === "calendar") && (
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/70 px-2 py-1.5 lg:min-w-[180px]">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => setCurrentDate((d) => addMonths(d, -1))}
                 >
-                  {g}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Filter toggle */}
-          <Button
-            variant={hasFilters ? "default" : "outline"}
-            size="xs"
-            onClick={() => setShowFilters(!showFilters)}
-            className="gap-1"
-          >
-            <Filter className="h-3.5 w-3.5" />
-            Filters
-            {hasFilters && (
-              <span className="bg-primary-foreground/20 rounded-full px-1 text-[10px]">
-                {(filterAssignee ? 1 : 0) + (filterPriority ? 1 : 0)}
-              </span>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium text-muted-foreground min-w-[100px] text-center">
+                  {format(currentDate, "MMM yyyy")}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => setCurrentDate((d) => addMonths(d, 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             )}
-          </Button>
 
-          {/* View switcher */}
-          <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border/50">
-            {views.map((v) => (
-              <button
-                key={v.value}
-                onClick={() => setView(v.value)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
-                  view === v.value
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={hasFilters ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="h-11 gap-2 rounded-xl"
               >
-                {v.icon}
-                {v.label}
-              </button>
-            ))}
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Filters
+                {hasFilters && (
+                  <span className="rounded-full bg-primary-foreground/20 px-1.5 text-[10px]">
+                    {(filterAssignee ? 1 : 0) + (filterPriority ? 1 : 0)}
+                  </span>
+                )}
+              </Button>
+
+              {view === "list" && (
+                <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-background/70 p-1">
+                  <LayoutGrid className="ml-2 h-3.5 w-3.5 text-muted-foreground" />
+                  {(["status", "priority", "assignee", "section"] as const).map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGroupBy(g)}
+                      className={cn(
+                        "rounded-lg px-2.5 py-1.5 text-[11px] font-medium capitalize transition-all",
+                        groupBy === g
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          <Button onClick={() => handleCreateTask()} size="sm" className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            New Task
-          </Button>
+          <div className="flex flex-col gap-3 xl:items-end">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center rounded-xl border border-border/60 bg-background/70 p-1">
+                {views.map((v) => (
+                  <button
+                    key={v.value}
+                    onClick={() => setView(v.value)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-200",
+                      view === v.value
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {v.icon}
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+
+              <Button onClick={() => handleCreateTask()} size="sm" className="h-11 gap-2 rounded-xl px-4 shadow-lg shadow-primary/15">
+                <Plus className="h-4 w-4" />
+                New Task
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {searchQuery ? `Searching for “${searchQuery}”` : "Use views and filters to shape the workspace."}
+            </p>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Filter bar */}
       {showFilters && (
-        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg border border-border/50 bg-muted/20 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="animate-in fade-in slide-in-from-top-2 duration-200 rounded-2xl border border-border/50 bg-card/85 p-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3">
           {/* Assignee filter */}
           <div className="flex items-center gap-2">
             <Users className="h-3.5 w-3.5 text-muted-foreground" />
@@ -299,11 +362,12 @@ export function TasksPage() {
               </button>
             </>
           )}
+          </div>
         </div>
       )}
 
       {/* View content */}
-      <div className="flex-1 min-h-0">
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/50 bg-card/70 p-4 shadow-sm backdrop-blur">
         {view === "board" && (
           <BoardView
             onTaskClick={handleTaskClick}
@@ -348,7 +412,7 @@ export function TasksPage() {
             searchQuery={searchQuery}
           />
         )}
-      </div>
+      </section>
 
       {/* Task modal */}
       <TaskModal
