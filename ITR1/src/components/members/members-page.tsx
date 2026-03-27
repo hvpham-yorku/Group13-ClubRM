@@ -53,6 +53,9 @@ import {
   Eye,
   LayoutGrid,
   List,
+  Sparkles,
+  SlidersHorizontal,
+  ArrowUpRight,
 } from "lucide-react"
 
 const ALL_ROLES: Role[] = [
@@ -210,113 +213,153 @@ export function MembersPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Members</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your club's roster, roles, and member information
-          </p>
-        </div>
-        <Button onClick={() => setAddOpen(true)} className="gap-2">
-          <UserPlus className="h-4 w-4" />
-          Add Member
-        </Button>
-      </div>
+      <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_35%),radial-gradient(circle_at_right,rgba(34,197,94,0.18),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.03),transparent_55%)]" />
+        <div className="relative flex flex-col gap-6 px-6 py-7 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              Member Directory
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Members</h1>
+              <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+                Manage your club roster with a clearer view of participation, roles, and member health across the organization.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="rounded-full border border-border/60 bg-background/60 px-3 py-1">Live roster overview</span>
+              <span className="rounded-full border border-border/60 bg-background/60 px-3 py-1">Role and status filters</span>
+              <span className="rounded-full border border-border/60 bg-background/60 px-3 py-1">Profile-focused member cards</span>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card border border-border/50 rounded-xl p-4 space-y-1">
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row">
+            <div className="min-w-[180px] rounded-2xl border border-border/60 bg-background/70 p-4 backdrop-blur">
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Visible Now</p>
+              <div className="mt-2 flex items-end justify-between">
+                <div>
+                  <p className="text-3xl font-bold">{filtered.length}</p>
+                  <p className="text-xs text-muted-foreground">filtered members</p>
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-primary" />
+              </div>
+            </div>
+            <Button onClick={() => setAddOpen(true)} className="h-auto min-w-[180px] gap-2 rounded-2xl px-5 py-4 text-sm font-semibold shadow-lg shadow-primary/15">
+              <UserPlus className="h-4 w-4" />
+              Add Member
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Users className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Total</span>
           </div>
-          <p className="text-2xl font-bold">{stats.total}</p>
+          <p className="mt-4 text-3xl font-bold tracking-tight">{stats.total}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Everyone currently in the directory</p>
         </div>
-        <div className="bg-card border border-border/50 rounded-xl p-4 space-y-1">
+        <div className="rounded-2xl border border-emerald-500/20 bg-card p-5 shadow-sm shadow-emerald-500/5">
           <div className="flex items-center gap-2 text-emerald-400">
             <UserCheck className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Active</span>
           </div>
-          <p className="text-2xl font-bold">{stats.active}</p>
+          <p className="mt-4 text-3xl font-bold tracking-tight">{stats.active}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Currently participating members</p>
         </div>
-        <div className="bg-card border border-border/50 rounded-xl p-4 space-y-1">
+        <div className="rounded-2xl border border-slate-500/20 bg-card p-5 shadow-sm shadow-slate-500/5">
           <div className="flex items-center gap-2 text-slate-400">
             <UserX className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Inactive</span>
           </div>
-          <p className="text-2xl font-bold">{stats.inactive}</p>
+          <p className="mt-4 text-3xl font-bold tracking-tight">{stats.inactive}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Members currently off-cycle</p>
         </div>
-        <div className="bg-card border border-border/50 rounded-xl p-4 space-y-1">
+        <div className="rounded-2xl border border-violet-500/20 bg-card p-5 shadow-sm shadow-violet-500/5">
           <div className="flex items-center gap-2 text-violet-400">
             <GraduationCap className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Alumni</span>
           </div>
-          <p className="text-2xl font-bold">{stats.alumni}</p>
+          <p className="mt-4 text-3xl font-bold tracking-tight">{stats.alumni}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Graduated members retained in history</p>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2 flex-1 w-full sm:w-auto">
-          <div className="relative flex-1 sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search members..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-9"
-            />
+      <section className="rounded-2xl border border-border/50 bg-card/80 p-4 shadow-sm backdrop-blur">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
+            <div className="relative flex-1 md:max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search members..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="h-11 rounded-xl border-border/60 bg-background/70 pl-10"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-xs text-muted-foreground">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Filters
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-11 w-[150px] rounded-xl border-border/60 bg-background/70">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  {MEMBER_STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="h-11 w-[170px] rounded-xl border-border/60 bg-background/70">
+                  <SelectValue placeholder="Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {ALL_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              {MEMBER_STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {ALL_ROLES.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-          <Button
-            variant={view === "grid" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setView("grid")}
-            className="h-8 w-8 p-0"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={view === "table" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setView("table")}
-            className="h-8 w-8 p-0"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
 
-      {/* Results count */}
-      <p className="text-xs text-muted-foreground">
-        Showing {filtered.length} of {members.length} members
-      </p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              Showing <span className="font-semibold text-foreground">{filtered.length}</span> of{" "}
+              <span className="font-semibold text-foreground">{members.length}</span> members
+            </p>
+            <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-background/70 p-1">
+              <Button
+                variant={view === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setView("grid")}
+                className="h-9 w-9 rounded-lg p-0"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={view === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setView("table")}
+                className="h-9 w-9 rounded-lg p-0"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Grid View */}
       {view === "grid" && (
@@ -324,9 +367,10 @@ export function MembersPage() {
           {filtered.map((member) => (
             <div
             key={member.id}
-            className="group bg-card border border-border/50 rounded-xl p-5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
+            className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10 cursor-pointer"
             onClick={() => setDetailMember(member)}
             >
+              <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent)]" />
               <div className="flex items-start justify-between mb-4">
                 <MemberAvatar member={member} className="h-12 w-12 text-sm" />
                 <DropdownMenu>
@@ -349,9 +393,11 @@ export function MembersPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              <h3 className="font-semibold text-sm">{member.name}</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{member.email}</p>
-              <div className="flex items-center gap-2 mt-3">
+              <div className="relative">
+                <h3 className="font-semibold text-base">{member.name}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{member.email}</p>
+              </div>
+              <div className="mt-4 flex min-h-[44px] flex-wrap items-start gap-2">
                 <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium border", ROLE_COLORS[member.role])}>
                   {member.role}
                 </span>
@@ -359,13 +405,19 @@ export function MembersPage() {
                   {statusMeta(member.status)?.label}
                 </span>
               </div>
-              <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/30 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <CheckSquare className="h-3 w-3" /> {member.tasksCompleted} tasks
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" /> {member.eventsAttended} events
-                </span>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-border/40 bg-background/60 p-3">
+                  <p className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <CheckSquare className="h-3 w-3" /> Tasks
+                  </p>
+                  <p className="mt-1 text-lg font-semibold">{member.tasksCompleted}</p>
+                </div>
+                <div className="rounded-xl border border-border/40 bg-background/60 p-3">
+                  <p className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <Calendar className="h-3 w-3" /> Events
+                  </p>
+                  <p className="mt-1 text-lg font-semibold">{member.eventsAttended}</p>
+                </div>
               </div>
             </div>
           ))}
@@ -374,10 +426,10 @@ export function MembersPage() {
 
        {/* Table View */}
        {view === "table" && (
-        <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
+              <TableRow className="hover:bg-transparent bg-muted/20">
                 <TableHead>Member</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
