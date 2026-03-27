@@ -51,7 +51,7 @@ const ROLES: Role[] = [
   "Administrator",
 ];
 
-<<<<<<< HEAD
+// --- FROM YOUR BRANCH: Notification Preferences ---
 const NOTIFICATION_PREFS_STORAGE_KEY = "clubrm-notification-prefs";
 const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   emailDigest: true,
@@ -73,7 +73,7 @@ function readNotificationPrefs(): NotificationPrefs {
   }
 }
 
-=======
+// --- FROM TAZIZ'S BRANCH: Search Type Config ---
 /** Type badge config for search result categories */
 const SEARCH_TYPE_CONFIG: Record<string, { color: string; icon: React.ReactNode }> = {
   Event:    { color: "bg-pink-500/20 text-pink-400",    icon: <Calendar   className="h-3 w-3" /> },
@@ -84,7 +84,6 @@ const SEARCH_TYPE_CONFIG: Record<string, { color: string; icon: React.ReactNode 
   Sponsor:  { color: "bg-sky-500/20 text-sky-400",      icon: <Building2  className="h-3 w-3" /> },
 };
 
->>>>>>> taziz-itr3
 export function TopBar() {
   const { role, setRole } = useRole();
   const { user, signOut } = useAuth();
@@ -92,10 +91,18 @@ export function TopBar() {
   const { events } = useEvents();
   const { tasks } = useTasks();
   const { members } = useMembers();
-<<<<<<< HEAD
-  const { expenses, reimbursements } = useFinance();
+  
+  // Combined useFinance: You needed expenses/reimbursements, Taziz needed income
+  const { expenses, reimbursements, income } = useFinance();
+  
+  // Your notification state
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(() => readNotificationPrefs());
 
+  // Taziz's lightweight search index states
+  const [searchSponsors, setSearchSponsors] = useState<{ id: string; company: string; industry: string; tier: string }[]>([]);
+  const [searchDocs, setSearchDocs] = useState<{ id: string; name: string; category: string; tags: string[] }[]>([]);
+
+  // Effect 1: Your notification sync listener
   useEffect(() => {
     const syncPrefs = () => setNotificationPrefs(readNotificationPrefs());
 
@@ -105,15 +112,10 @@ export function TopBar() {
       window.removeEventListener("storage", syncPrefs);
       window.removeEventListener("clubrm-settings-updated", syncPrefs as EventListener);
     };
-=======
-  const { expenses, reimbursements, income } = useFinance();
+  }, []);
 
-  // Lightweight search index for modules without a context (Supabase direct)
-  const [searchSponsors, setSearchSponsors] = useState<{ id: string; company: string; industry: string; tier: string }[]>([]);
-  const [searchDocs, setSearchDocs] = useState<{ id: string; name: string; category: string; tags: string[] }[]>([]);
-
+  // Effect 2: Taziz's Supabase fetcher for the search index
   useEffect(() => {
-    // Fetch sponsors and documents once for search index
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = supabase as any;
     Promise.all([
@@ -123,7 +125,6 @@ export function TopBar() {
       if (sponsorsRes.data) setSearchSponsors(sponsorsRes.data);
       if (docsRes.data) setSearchDocs(docsRes.data);
     });
->>>>>>> taziz-itr3
   }, []);
 
   // Build real notifications from context data
