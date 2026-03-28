@@ -9,11 +9,7 @@ import {
   Megaphone,
   FileText,
   BarChart,
-<<<<<<< HEAD
-  Contact,
-=======
-  UserCircle,
->>>>>>> shivam
+  Contact, // Using Contact from HEAD
 } from "lucide-react";
 
 import {
@@ -51,39 +47,37 @@ const items: SidebarItem[] = [
   { title: "Tasks", url: "/tasks", icon: CheckSquare, badge: "overdueTasks" },
   { title: "Events", url: "/events", icon: Calendar, badge: "eventRisks" },
   { title: "Members", url: "/members", icon: Users },
-<<<<<<< HEAD
-  { title: "Finance", url: "/finance", icon: DollarSign, roles: ["President", "VP Finance", "Administrator"], badge: "pendingExpenses" },
-  { title: "External", url: "/external", icon: Handshake, roles: ["President", "VP External", "Administrator"] },
-  { title: "Contacts", url: "/contacts", icon: Contact, roles: ["President", "VP External", "Administrator"] },
-  { title: "Marketing", url: "/marketing", icon: Megaphone, roles: ["President", "Marketing", "Administrator"] },
-  { title: "Reports", url: "/reports", icon: BarChart, roles: ["President", "VP Internal", "VP Finance", "VP Events", "VP External", "Marketing", "Administrator"] },
-=======
-  {
-    title: "Finance",
-    url: "/finance",
-    icon: DollarSign,
-    roles: ["President", "VP Finance", "Administrator"],
-    badge: "pendingExpenses",
+  { 
+    title: "Finance", 
+    url: "/finance", 
+    icon: DollarSign, 
+    roles: ["President", "VP Finance", "Administrator"], 
+    badge: "pendingExpenses" 
   },
-  {
-    title: "External",
-    url: "/external",
-    icon: Handshake,
-    roles: ["President", "VP External", "Administrator"],
+  { 
+    title: "External", 
+    url: "/external", 
+    icon: Handshake, 
+    roles: ["President", "VP External", "Administrator"] 
   },
-  {
-    title: "Marketing",
-    url: "/marketing",
-    icon: Megaphone,
-    roles: ["President", "Marketing", "Administrator"],
+  { 
+    title: "Contacts", 
+    url: "/contacts", 
+    icon: Contact, 
+    roles: ["President", "VP External", "Administrator"] 
   },
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: BarChart,
-    roles: ["President", "VP Internal", "VP Finance", "VP Events", "VP External", "Marketing", "Administrator"],
+  { 
+    title: "Marketing", 
+    url: "/marketing", 
+    icon: Megaphone, 
+    roles: ["President", "Marketing", "Administrator"] 
   },
->>>>>>> shivam
+  { 
+    title: "Reports", 
+    url: "/reports", 
+    icon: BarChart, 
+    roles: ["President", "VP Internal", "VP Finance", "VP Events", "VP External", "Marketing", "Administrator"] 
+  },
   { title: "Documents", url: "/documents", icon: FileText },
   {
     title: "Settings",
@@ -99,7 +93,6 @@ export function AppSidebar() {
   const { tasks } = useTasks();
   const { expenses } = useFinance();
   const { events } = useEvents();
-  const { user } = useAuth();
 
   const filteredItems = items.filter((item) => !item.roles || item.roles.includes(role));
 
@@ -139,10 +132,6 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === item.url}
                     tooltip={item.title}
-<<<<<<< HEAD
-                    // Added h-11 and items-center to ensure the row is stable for the badge
-=======
->>>>>>> shivam
                     className="h-11 px-3 group/btn hover:bg-primary/20 hover:text-primary data-[active=true]:bg-[var(--primary-dark)] data-[active=true]:text-primary-foreground transition-all duration-300 flex items-center justify-between"
                   >
                     <Link to={item.url} className="flex items-center gap-3 w-full">
@@ -150,10 +139,6 @@ export function AppSidebar() {
                       <span className="font-medium flex-1 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:hidden overflow-hidden whitespace-nowrap">
                         {item.title}
                       </span>
-<<<<<<< HEAD
-                      {/* The Badge is now INSIDE the flex button but pushed to the right */}
-=======
->>>>>>> shivam
                       {item.badge && badges[item.badge] && (
                         <SidebarMenuBadge 
                           className="ml-auto z-20 bg-primary text-primary-foreground ring-2 ring-sidebar transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0"
