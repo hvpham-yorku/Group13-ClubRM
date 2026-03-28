@@ -1,24 +1,23 @@
 import { createClient } from '@supabase/supabase-js'
-<<<<<<< HEAD
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-=======
 import type { Database } from './database.types'
 
+// 1. Get environment variables once
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
+// 2. Safety check
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Check your .env file.')
 }
 
-export const supabase = createClient<Database>(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder')
+// 3. Create the typed client (Main export)
+// We use placeholders to prevent the app from crashing entirely if env vars are missing
+export const supabase = createClient<Database>(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder'
+)
 
-// Cast of the same client for tables not yet in generated Database types (documents, notifications, org_settings)
-// Uses the SAME instance — no duplicate GoTrue/auth session conflicts
+// 4. Create the untyped client (Alias export)
+// This satisfies your documents-page and settings-page that use "supabaseUntyped"
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabaseUntyped = supabase as any
->>>>>>> 3e82175cbc695093c3747484475bbd7ee4fa9602

@@ -24,6 +24,7 @@ export interface Sponsor {
   logo?: string
   tier: SponsorTier
   status: SponsorStatus
+
   amount: number
   startDate: string
   endDate?: string

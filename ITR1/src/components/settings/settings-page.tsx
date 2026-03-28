@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
+// Use supabaseUntyped to bypass strict type checking for org_settings
 import { supabaseUntyped as db } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -86,10 +87,15 @@ export function SettingsPage() {
   useEffect(() => {
     async function load() {
       const { data, error } = await db.from("org_settings").select("*").limit(1).single()
+      
       if (error) {
-        console.error("Failed to load settings:", error)
+        // If the table is empty (PGRST116), we just stop here and use the defaults
+        if (error.code !== 'PGRST116') {
+          console.error("Failed to load settings:", error)
+        }
         return
       }
+
       if (data) {
         setSettingsId(data.id)
         setOrg({
@@ -124,6 +130,7 @@ export function SettingsPage() {
       notification_prefs: notifications,
       theme,
     }
+
     if (settingsId) {
       const { error } = await db.from("org_settings").update(payload).eq("id", settingsId)
       if (error) console.error("Failed to save settings:", error)
@@ -351,7 +358,7 @@ export function SettingsPage() {
                     "h-20 rounded-lg mb-3 flex items-center justify-center",
                     t === "dark" ? "bg-zinc-900 border border-zinc-800" :
                     t === "light" ? "bg-white border border-gray-200" :
-                    "bg-linear-to-r from-zinc-900 to-white border border-zinc-500"
+                    "bg-gradient-to-r from-zinc-900 to-white border border-zinc-500"
                   )}>
                     <Settings className={cn("h-6 w-6", t === "light" ? "text-gray-600" : "text-gray-400")} />
                   </div>
