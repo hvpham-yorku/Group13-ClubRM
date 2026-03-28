@@ -97,20 +97,24 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === item.url}
                     tooltip={item.title}
-                    className="h-11 px-3 group/btn hover:bg-primary/20 hover:text-primary data-[active=true]:bg-primary data-[active=true]:text-black transition-all duration-300"
+                    // Added h-11 and items-center to ensure the row is stable for the badge
+                    className="h-11 px-3 group/btn hover:bg-primary/20 hover:text-primary data-[active=true]:bg-[var(--primary-dark)] data-[active=true]:text-primary-foreground transition-all duration-300 flex items-center justify-between"
                   >
-                    <Link to={item.url} className="flex items-center gap-3">
-                      <item.icon className="h-5 w-5 shrink-0 group-hover/btn:text-primary group-data-[active=true]/btn:text-black transition-transform duration-300" />
-                      <span className="font-medium transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:hidden overflow-hidden whitespace-nowrap">
+                    <Link to={item.url} className="flex items-center gap-3 w-full">
+                      <item.icon className="h-5 w-5 shrink-0 transition-transform duration-300" />
+                      <span className="font-medium flex-1 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:hidden overflow-hidden whitespace-nowrap">
                         {item.title}
                       </span>
+                      {/* The Badge is now INSIDE the flex button but pushed to the right */}
+                      {item.badge && badges[item.badge] && (
+                        <SidebarMenuBadge 
+                          className="ml-auto z-20 bg-primary text-primary-foreground ring-2 ring-sidebar transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0"
+                        >
+                          {badges[item.badge]}
+                        </SidebarMenuBadge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
-                  {item.badge && badges[item.badge] && (
-                    <SidebarMenuBadge className="bg-destructive text-destructive-foreground transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0">
-                      {badges[item.badge]}
-                    </SidebarMenuBadge>
-                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

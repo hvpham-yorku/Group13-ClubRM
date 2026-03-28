@@ -127,7 +127,6 @@ function getSystemTheme(): ResolvedTheme {
   if (typeof window === "undefined") {
     return "dark"
   }
-
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
 }
 
@@ -144,6 +143,10 @@ function applyAccent(accentColor: AccentColor, theme: ResolvedTheme) {
 
   root.style.setProperty("--primary", tokens.primary)
   root.style.setProperty("--primary-foreground", tokens.primaryForeground)
+  
+  // Create a darker variant for active state backgrounds
+  root.style.setProperty("--primary-dark", `oklch(from ${tokens.primary} calc(l - 0.2) c h)`)
+
   root.style.setProperty("--accent", tokens.accent)
   root.style.setProperty("--accent-foreground", tokens.accentForeground)
   root.style.setProperty("--ring", tokens.primary)
@@ -155,22 +158,13 @@ function applyAccent(accentColor: AccentColor, theme: ResolvedTheme) {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<ThemePreference>(() => {
-    if (typeof window === "undefined") {
-      return "dark"
-    }
-
+    if (typeof window === "undefined") return "dark"
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
-    if (storedTheme === "dark" || storedTheme === "light" || storedTheme === "system") {
-      return storedTheme
-    }
-
+    if (storedTheme === "dark" || storedTheme === "light" || storedTheme === "system") return storedTheme
     return "system"
   })
   const [accentColor, setAccentColor] = useState<AccentColor>(() => {
-    if (typeof window === "undefined") {
-      return "red"
-    }
-
+    if (typeof window === "undefined") return "red"
     const storedAccent = window.localStorage.getItem(ACCENT_STORAGE_KEY)
     return isAccentColor(storedAccent) ? storedAccent : "red"
   })
@@ -178,18 +172,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-
     const syncTheme = () => {
       const nextResolvedTheme = theme === "system" ? getSystemTheme() : theme
       setResolvedTheme(nextResolvedTheme)
       applyTheme(nextResolvedTheme)
       applyAccent(accentColor, nextResolvedTheme)
     }
-
     syncTheme()
     window.localStorage.setItem(THEME_STORAGE_KEY, theme)
     window.localStorage.setItem(ACCENT_STORAGE_KEY, accentColor)
-
     mediaQuery.addEventListener("change", syncTheme)
     return () => mediaQuery.removeEventListener("change", syncTheme)
   }, [accentColor, theme])
@@ -203,9 +194,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() {
   const context = useContext(ThemeContext)
-  if (!context) {
-    throw new Error("useTheme must be used within a ThemeProvider")
-  }
-
+  if (!context) throw new Error("useTheme must be used within a ThemeProvider")
   return context
 }
