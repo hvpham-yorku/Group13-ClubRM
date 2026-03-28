@@ -2,50 +2,25 @@ import { StatCard } from "../stat-card"
 import { Widget } from "../widget"
 import { ProgressBar } from "../progress-bar"
 import { DashboardList, DashboardListItem } from "../dashboard-list"
-import { Eye, Heart, Share2, Megaphone, TrendingUp, Settings2, RotateCcw, Save, Plus } from "lucide-react"
+import { Eye, Heart, Share2, Megaphone, TrendingUp } from "lucide-react"
 import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider"
 import { SortableWidget } from "../customization/sortable-widget"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
 import { useTasks } from "@/context/tasks-context"
 import { useMemo } from "react"
-
-const WIDGET_TITLES: Record<string, string> = {
-  "total-reach": "Total Reach",
-  "engagement-rate": "Engagement Rate",
-  "active-campaigns": "Active Campaigns",
-  "campaign-performance": "Campaign Performance",
-  "top-posts": "Top Posts",
-  "scheduled-posts": "Scheduled Posts"
-}
-
-const DEFAULT_WIDGETS = [
-  "total-reach",
-  "engagement-rate",
-  "active-campaigns",
-  "campaign-performance",
-  "top-posts",
-  "scheduled-posts"
-]
+import { DashboardControls } from "../customization/dashboard-controls"
+import { MARKETING_WIDGET_TITLES, MARKETING_DEFAULT_WIDGETS } from "../widget-config"
 
 export function MarketingDashboard() {
   return (
-    <DashboardLayoutProvider role="Marketing" defaultWidgets={DEFAULT_WIDGETS}>
+    <DashboardLayoutProvider role="Marketing" defaultWidgets={MARKETING_DEFAULT_WIDGETS}>
       <MarketingDashboardContent />
     </DashboardLayoutProvider>
   )
 }
 
 function MarketingDashboardContent() {
-  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout()
+  const { isCustomizing, layout, visibleWidgets } = useDashboardLayout()
   const { tasks } = useTasks()
 
   const marketingTasks = useMemo(() => tasks.filter(t => t.section === "Marketing"), [tasks])
@@ -158,39 +133,10 @@ function MarketingDashboardContent() {
           <p className="text-sm text-muted-foreground">Manage your outreach and brand visibility.</p>
         </div>
         <div className="flex items-center gap-2">
-          {isCustomizing ? (
-            <>
-              {Array.from(visibleWidgets).length < DEFAULT_WIDGETS.length && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 border-dashed text-primary hover:text-primary/80">
-                      <Plus className="h-4 w-4" />
-                      Add Widget
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {DEFAULT_WIDGETS.filter(id => !visibleWidgets.has(id)).map(id => (
-                      <DropdownMenuItem key={id} onClick={() => toggleWidgetVisibility(id)}>
-                        {WIDGET_TITLES[id] || id}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              <Button variant="outline" size="sm" onClick={resetLayout} className="gap-2 transition-all duration-300">
-                <RotateCcw className="h-4 w-4" /> Reset layout
-              </Button>
-              <Button variant="default" size="sm" onClick={() => setIsCustomizing(false)} className="gap-2 bg-primary text-black hover:bg-primary/90 transition-all duration-300">
-                <Save className="h-4 w-4" /> Stop customizing
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsCustomizing(true)} className="gap-2 transition-all duration-300">
-              <Settings2 className="h-4 w-4" /> Customize
-            </Button>
-          )}
+          <DashboardControls
+            defaultWidgets={MARKETING_DEFAULT_WIDGETS}
+            widgetTitles={MARKETING_WIDGET_TITLES}
+          />
         </div>
       </div>
 

@@ -2,52 +2,27 @@ import { StatCard } from "../stat-card"
 import { Widget } from "../widget"
 import { ProgressBar } from "../progress-bar"
 import { DashboardList, DashboardListItem } from "../dashboard-list"
-import { Shield, Users, Server, Activity, CheckCircle, AlertTriangle, Settings2, RotateCcw, Save, Plus } from "lucide-react"
+import { Shield, Users, Server, Activity, CheckCircle, AlertTriangle } from "lucide-react"
 import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider"
 import { SortableWidget } from "../customization/sortable-widget"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
 import { useMembers } from "@/context/members-context"
 import { useTasks } from "@/context/tasks-context"
 import { useEvents } from "@/context/events-context"
 import { useMemo } from "react"
-
-const WIDGET_TITLES: Record<string, string> = {
-  "system-health": "System Health",
-  "total-users": "Total Users",
-  "active-roles": "Active Roles",
-  "role-distribution": "Role Distribution",
-  "system-activity": "System Activity",
-  "system-alerts": "System Alerts"
-}
-
-const DEFAULT_WIDGETS = [
-  "system-health",
-  "total-users",
-  "active-roles",
-  "role-distribution",
-  "system-activity",
-  "system-alerts"
-]
+import { DashboardControls } from "../customization/dashboard-controls"
+import { ADMIN_WIDGET_TITLES, ADMIN_DEFAULT_WIDGETS } from "../widget-config"
 
 export function AdminDashboard() {
   return (
-    <DashboardLayoutProvider role="Administrator" defaultWidgets={DEFAULT_WIDGETS}>
+    <DashboardLayoutProvider role="Administrator" defaultWidgets={ADMIN_DEFAULT_WIDGETS}>
       <AdminDashboardContent />
     </DashboardLayoutProvider>
   )
 }
 
 function AdminDashboardContent() {
-  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout()
+  const { isCustomizing, layout, visibleWidgets } = useDashboardLayout()
   const { members, stats: memberStats } = useMembers()
   const { tasks } = useTasks()
   const { events } = useEvents()
@@ -172,57 +147,10 @@ function AdminDashboardContent() {
           <p className="text-sm text-muted-foreground">Monitor platform health and user activity.</p>
         </div>
         <div className="flex items-center gap-2">
-          {isCustomizing ? (
-            <>
-              {Array.from(visibleWidgets).length < DEFAULT_WIDGETS.length && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 border-dashed text-primary hover:text-primary/80">
-                      <Plus className="h-4 w-4" />
-                      Add Widget
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {DEFAULT_WIDGETS.filter(id => !visibleWidgets.has(id)).map(id => (
-                      <DropdownMenuItem key={id} onClick={() => toggleWidgetVisibility(id)}>
-                        {WIDGET_TITLES[id] || id}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={resetLayout}
-                className="gap-2 transition-all duration-300"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Layout
-              </Button>
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={() => setIsCustomizing(false)}
-                className="gap-2 bg-primary text-black hover:bg-primary/90 transition-all duration-300"
-              >
-                <Save className="h-4 w-4" />
-                Stop Customizing
-              </Button>
-            </>
-          ) : (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setIsCustomizing(true)}
-              className="gap-2 transition-all duration-300"
-            >
-              <Settings2 className="h-4 w-4" />
-              Customize Workspace
-            </Button>
-          )}
+          <DashboardControls
+            defaultWidgets={ADMIN_DEFAULT_WIDGETS}
+            widgetTitles={ADMIN_WIDGET_TITLES}
+          />
         </div>
       </div>
 
