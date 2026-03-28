@@ -52,8 +52,6 @@ import {
   Eye,
   LayoutGrid,
   List,
-  Linkedin,
-  ExternalLink,
 } from "lucide-react"
 
 const ALL_ROLES: Role[] = [
@@ -108,14 +106,12 @@ export function MembersPage() {
   const [detailMember, setDetailMember] = useState<Member | null>(null)
   const [editMember, setEditMember] = useState<Member | null>(null)
 
-  // Add form state
   const [formName, setFormName] = useState("")
   const [formEmail, setFormEmail] = useState("")
   const [formPhone, setFormPhone] = useState("")
   const [formRole, setFormRole] = useState<Role>("Executive")
   const [formDept, setFormDept] = useState<string>(DEPARTMENTS[0])
   const [formYear, setFormYear] = useState<string>(YEARS[0])
-  const [formLinkedin, setFormLinkedin] = useState("")
 
   const filtered = useMemo(() => {
     return members.filter((m) => {
@@ -137,7 +133,6 @@ export function MembersPage() {
     setFormRole("Executive")
     setFormDept(DEPARTMENTS[0])
     setFormYear(YEARS[0])
-    setFormLinkedin("")
   }
 
   function handleAdd() {
@@ -154,8 +149,7 @@ export function MembersPage() {
       year: formYear,
       tasksCompleted: 0,
       eventsAttended: 0,
-      linkedinUrl: formLinkedin.trim() || undefined,
-    } as Member)
+    })
     resetForm()
     setAddOpen(false)
   }
@@ -291,11 +285,6 @@ export function MembersPage() {
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditMember(member) }}>
                       <Pencil className="h-4 w-4 mr-2" /> Edit
                     </DropdownMenuItem>
-                    {member.linkedinUrl && (
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(member.linkedinUrl, "_blank") }}>
-                        <Linkedin className="h-4 w-4 mr-2 text-[#0A66C2]" /> LinkedIn
-                      </DropdownMenuItem>
-                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMember(member.id) }}>
                       <Trash2 className="h-4 w-4 mr-2" /> Remove
@@ -312,9 +301,6 @@ export function MembersPage() {
                 <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", statusMeta(member.status)?.color)}>
                   {statusMeta(member.status)?.label}
                 </span>
-                {member.linkedinUrl && (
-                  <Linkedin className="h-3 w-3 text-[#0A66C2] ml-auto" />
-                )}
               </div>
               <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/30 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
@@ -354,10 +340,7 @@ export function MembersPage() {
                         {getInitials(member.name)}
                       </div>
                       <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-medium text-sm">{member.name}</p>
-                          {member.linkedinUrl && <Linkedin className="h-3 w-3 text-[#0A66C2]" />}
-                        </div>
+                        <p className="font-medium text-sm">{member.name}</p>
                         <p className="text-xs text-muted-foreground">{member.email}</p>
                       </div>
                     </div>
@@ -387,11 +370,6 @@ export function MembersPage() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditMember(member) }}>
                           <Pencil className="h-4 w-4 mr-2" /> Edit
                         </DropdownMenuItem>
-                        {member.linkedinUrl && (
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(member.linkedinUrl, "_blank") }}>
-                            <Linkedin className="h-4 w-4 mr-2 text-[#0A66C2]" /> LinkedIn
-                          </DropdownMenuItem>
-                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMember(member.id) }}>
                           <Trash2 className="h-4 w-4 mr-2" /> Remove
@@ -424,33 +402,6 @@ export function MembersPage() {
             <div className="space-y-2">
               <Label>Phone</Label>
               <Input value={formPhone} onChange={(e) => setFormPhone(e.target.value)} placeholder="(416) 555-0000" />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
-                LinkedIn Profile URL
-              </Label>
-              <div className="relative">
-                <Input
-                  value={formLinkedin}
-                  onChange={(e) => setFormLinkedin(e.target.value)}
-                  placeholder="https://linkedin.com/in/username"
-                />
-                {formLinkedin && (
-                  <a
-                    href={formLinkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0A66C2] hover:opacity-70 transition-opacity"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                )}
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Find the profile on LinkedIn, copy the URL from your browser and paste it here
-              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -510,17 +461,6 @@ export function MembersPage() {
                   <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium", statusMeta(detailMember.status)?.color)}>
                     {statusMeta(detailMember.status)?.label}
                   </span>
-                  {detailMember.linkedinUrl && (
-                    <a
-                      href={detailMember.linkedinUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-[#0A66C2]/10 text-[#0A66C2] border border-[#0A66C2]/20 hover:bg-[#0A66C2]/20 transition-colors"
-                    >
-                      <Linkedin className="h-3 w-3" /> LinkedIn
-                      <ExternalLink className="h-2.5 w-2.5" />
-                    </a>
-                  )}
                 </div>
 
                 {detailMember.bio && (
@@ -594,29 +534,6 @@ export function MembersPage() {
                 <div className="space-y-2">
                   <Label>Phone</Label>
                   <Input value={editMember.phone} onChange={(e) => setEditMember({ ...editMember, phone: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5">
-                    <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
-                    LinkedIn Profile URL
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      value={editMember.linkedinUrl ?? ""}
-                      onChange={(e) => setEditMember({ ...editMember, linkedinUrl: e.target.value })}
-                      placeholder="https://linkedin.com/in/username"
-                    />
-                    {editMember.linkedinUrl && (
-                      <a
-                        href={editMember.linkedinUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0A66C2] hover:opacity-70 transition-opacity"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
-                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">

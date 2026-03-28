@@ -5,6 +5,7 @@ import { AuthPage } from '@/components/auth/auth-page'
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/topbar"
+import { ProfilePage } from "@/components/profile/profile-page"
 
 const DashboardPage = React.lazy(() => import('@/components/dashboard/dashboard-page').then(m => ({ default: m.DashboardPage })))
 const EventsPage = React.lazy(() => import('@/components/events/events-page').then(m => ({ default: m.EventsPage })))
@@ -16,6 +17,7 @@ const MarketingPage = React.lazy(() => import('@/components/marketing/marketing-
 const DocumentsPage = React.lazy(() => import('@/components/documents/documents-page').then(m => ({ default: m.DocumentsPage })))
 const ReportsPage = React.lazy(() => import('@/components/reports/reports-page').then(m => ({ default: m.ReportsPage })))
 const SettingsPage = React.lazy(() => import('@/components/settings/settings-page').then(m => ({ default: m.SettingsPage })))
+//const ProfilePage = React.lazy(() => import('@/components/profile/profile-page').then(m => ({ default: m.ProfilePage })))
 
 function PageLoader() {
   return (
@@ -72,6 +74,7 @@ function App() {
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
