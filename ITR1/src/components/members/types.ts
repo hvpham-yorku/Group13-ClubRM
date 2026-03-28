@@ -14,7 +14,7 @@ export interface Member {
   tasksCompleted: number
   eventsAttended: number
   bio?: string
-  linkedinURL?: string
+  linkedinUrl?: string
 }
 
 export const MEMBER_STATUSES = [

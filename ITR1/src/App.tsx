@@ -55,9 +55,9 @@ function App() {
     )
   }
 
-  if (!user) {
+  /*if (!user) {
     return <AuthPage />
-  }
+  }*/
 
   return (
     <Layout>

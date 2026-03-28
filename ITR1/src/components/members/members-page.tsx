@@ -55,8 +55,6 @@ import {
   Linkedin,
   ExternalLink,
 } from "lucide-react"
-import { LinkedInSearchDialog } from "@/components/members/linkedin-search-dialog"
-import type { LinkedInResult } from "@/lib/linkedin-search"
 
 const ALL_ROLES: Role[] = [
   "President",
@@ -107,7 +105,6 @@ export function MembersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [view, setView] = useState<"grid" | "table">("grid")
   const [addOpen, setAddOpen] = useState(false)
-  const [linkedinOpen, setLinkedinOpen] = useState(false)
   const [detailMember, setDetailMember] = useState<Member | null>(null)
   const [editMember, setEditMember] = useState<Member | null>(null)
 
@@ -141,13 +138,6 @@ export function MembersPage() {
     setFormDept(DEPARTMENTS[0])
     setFormYear(YEARS[0])
     setFormLinkedin("")
-  }
-
-  function handleLinkedInSelect(result: LinkedInResult) {
-    setFormName(result.name)
-    setFormLinkedin(result.url)
-    // Re-open the add dialog after LinkedIn search closes
-    setTimeout(() => setAddOpen(true), 100)
   }
 
   function handleAdd() {
@@ -301,8 +291,8 @@ export function MembersPage() {
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditMember(member) }}>
                       <Pencil className="h-4 w-4 mr-2" /> Edit
                     </DropdownMenuItem>
-                    {(member as any).linkedinUrl && (
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open((member as any).linkedinUrl, "_blank") }}>
+                    {member.linkedinUrl && (
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(member.linkedinUrl, "_blank") }}>
                         <Linkedin className="h-4 w-4 mr-2 text-[#0A66C2]" /> LinkedIn
                       </DropdownMenuItem>
                     )}
@@ -322,7 +312,7 @@ export function MembersPage() {
                 <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", statusMeta(member.status)?.color)}>
                   {statusMeta(member.status)?.label}
                 </span>
-                {(member as any).linkedinUrl && (
+                {member.linkedinUrl && (
                   <Linkedin className="h-3 w-3 text-[#0A66C2] ml-auto" />
                 )}
               </div>
@@ -366,9 +356,7 @@ export function MembersPage() {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <p className="font-medium text-sm">{member.name}</p>
-                          {(member as any).linkedinUrl && (
-                            <Linkedin className="h-3 w-3 text-[#0A66C2]" />
-                          )}
+                          {member.linkedinUrl && <Linkedin className="h-3 w-3 text-[#0A66C2]" />}
                         </div>
                         <p className="text-xs text-muted-foreground">{member.email}</p>
                       </div>
@@ -399,8 +387,8 @@ export function MembersPage() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditMember(member) }}>
                           <Pencil className="h-4 w-4 mr-2" /> Edit
                         </DropdownMenuItem>
-                        {(member as any).linkedinUrl && (
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open((member as any).linkedinUrl, "_blank") }}>
+                        {member.linkedinUrl && (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(member.linkedinUrl, "_blank") }}>
                             <Linkedin className="h-4 w-4 mr-2 text-[#0A66C2]" /> LinkedIn
                           </DropdownMenuItem>
                         )}
@@ -418,16 +406,6 @@ export function MembersPage() {
         </div>
       )}
 
-      {/* LinkedIn Search Dialog */}
-      <LinkedInSearchDialog
-        open={linkedinOpen}
-        onClose={() => {
-          setLinkedinOpen(false)
-          setTimeout(() => setAddOpen(true), 100)
-        }}
-        onSelect={handleLinkedInSelect}
-      />
-
       {/* Add Member Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
@@ -435,39 +413,6 @@ export function MembersPage() {
             <DialogTitle>Add New Member</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            {/* LinkedIn search button */}
-            <Button
-              variant="outline"
-              className="w-full gap-2 border-[#0A66C2]/30 text-[#0A66C2] hover:bg-[#0A66C2]/5 hover:border-[#0A66C2]/50"
-              onClick={() => {
-                setAddOpen(false)
-                setTimeout(() => setLinkedinOpen(true), 150)
-              }}
-            >
-              <Linkedin className="h-4 w-4" />
-              Find on LinkedIn
-            </Button>
-
-            {/* LinkedIn URL display if already selected */}
-            {formLinkedin && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-[#0A66C2]/5 border border-[#0A66C2]/20 rounded-lg">
-                <Linkedin className="h-4 w-4 text-[#0A66C2] shrink-0" />
-                <p className="text-xs text-[#0A66C2] truncate flex-1">{formLinkedin}</p>
-                <a href={formLinkedin} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                  <ExternalLink className="h-3.5 w-3.5 text-[#0A66C2]" />
-                </a>
-              </div>
-            )}
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border/50" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-background px-2 text-muted-foreground">or fill in manually</span>
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label>Full Name *</Label>
               <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="John Doe" />
@@ -479,6 +424,33 @@ export function MembersPage() {
             <div className="space-y-2">
               <Label>Phone</Label>
               <Input value={formPhone} onChange={(e) => setFormPhone(e.target.value)} placeholder="(416) 555-0000" />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
+                LinkedIn Profile URL
+              </Label>
+              <div className="relative">
+                <Input
+                  value={formLinkedin}
+                  onChange={(e) => setFormLinkedin(e.target.value)}
+                  placeholder="https://linkedin.com/in/username"
+                />
+                {formLinkedin && (
+                  <a
+                    href={formLinkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0A66C2] hover:opacity-70 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Find the profile on LinkedIn, copy the URL from your browser and paste it here
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -538,9 +510,9 @@ export function MembersPage() {
                   <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium", statusMeta(detailMember.status)?.color)}>
                     {statusMeta(detailMember.status)?.label}
                   </span>
-                  {(detailMember as any).linkedinUrl && (
+                  {detailMember.linkedinUrl && (
                     <a
-                      href={(detailMember as any).linkedinUrl}
+                      href={detailMember.linkedinUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-[#0A66C2]/10 text-[#0A66C2] border border-[#0A66C2]/20 hover:bg-[#0A66C2]/20 transition-colors"
@@ -624,12 +596,27 @@ export function MembersPage() {
                   <Input value={editMember.phone} onChange={(e) => setEditMember({ ...editMember, phone: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>LinkedIn URL</Label>
-                  <Input
-                    value={(editMember as any).linkedinUrl ?? ""}
-                    onChange={(e) => setEditMember({ ...editMember, linkedinUrl: e.target.value } as any)}
-                    placeholder="https://linkedin.com/in/username"
-                  />
+                  <Label className="flex items-center gap-1.5">
+                    <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
+                    LinkedIn Profile URL
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      value={editMember.linkedinUrl ?? ""}
+                      onChange={(e) => setEditMember({ ...editMember, linkedinUrl: e.target.value })}
+                      placeholder="https://linkedin.com/in/username"
+                    />
+                    {editMember.linkedinUrl && (
+                      <a
+                        href={editMember.linkedinUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0A66C2] hover:opacity-70 transition-opacity"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
