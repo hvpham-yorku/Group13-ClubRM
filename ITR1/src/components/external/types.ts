@@ -8,10 +8,10 @@ export interface SponsorContact {
   title: string
   email: string
   phone: string
-  organization: string
+  organization: string;
+  tags: string[];
+  createdAt: string;
   linkedIn?: string
-  tags: string[]
-  createdAt: string
 }
 
 export interface Interaction {
@@ -28,6 +28,7 @@ export interface Sponsor {
   logo?: string
   tier: SponsorTier
   status: SponsorStatus
+
   amount: number
   startDate: string
   endDate?: string

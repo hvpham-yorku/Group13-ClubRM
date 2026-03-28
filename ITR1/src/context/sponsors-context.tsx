@@ -1,32 +1,65 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
-import { type Sponsor, type SponsorContact, type Interaction, SEED_SPONSORS } from "@/components/external/types"
-import { supabase } from "@/lib/supabase"
 
-function toSponsor(row: Record<string, unknown>): Sponsor {
+// Using relative path to bypass the IDE mapping error
+import { type Sponsor, type SponsorContact, type Interaction, SEED_SPONSORS } from "../components/external/types"
+
+import { supabaseUntyped as supabase } from "../lib/supabase"
+
+// 1. Updated Helper Interface to include the new mandatory fields
+interface RawContact {
+  id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  title?: string;
+  organization?: string;
+  tags?: string[];
+  createdAt?: string;
+  linkedIn?: string;
+}
+
+/**
+ * Converts a database row into a typed Sponsor object
+ */
+function toSponsor(row: any): Sponsor {
   return {
-    id: row.id as string,
-    company: row.company as string,
+    id: String(row.id),
+    company: String(row.company),
     logo: (row.logo as string) || undefined,
     tier: row.tier as Sponsor["tier"],
     status: row.status as Sponsor["status"],
     amount: Number(row.amount),
-    startDate: row.start_date as string,
+    startDate: String(row.start_date),
     endDate: (row.end_date as string) || undefined,
     contacts: (() => {
-      const parsed = typeof row.contacts === "string" ? JSON.parse(row.contacts) : (row.contacts as any[])
-      return (parsed || []).map((c: any) => ({
-        ...c,
+      const rawData = typeof row.contacts === "string" ? JSON.parse(row.contacts) : row.contacts
+      const parsed = (rawData || []) as RawContact[]
+      
+      return parsed.map((c: RawContact): SponsorContact => ({
+        id: c.id || crypto.randomUUID(),
+        name: c.name || "Unknown",
+        email: c.email || "",
+        phone: c.phone || "",
+        title: c.title || "Contact",
+        // 2. Map the new mandatory fields with safe fallbacks
+        organization: c.organization || String(row.company),
         tags: c.tags || [],
-        organization: c.organization || (row.company as string),
-        createdAt: c.createdAt || (row.created_at as string) || new Date().toISOString()
+        createdAt: c.createdAt || new Date().toISOString(),
+        linkedIn: c.linkedIn // Optional in types.ts so no fallback needed
       }))
     })(),
-    interactions: (row.interactions as Sponsor["interactions"]) || [],
+    interactions: (() => {
+      const rawInt = typeof row.interactions === "string" ? JSON.parse(row.interactions) : row.interactions
+      return (rawInt || []) as Interaction[]
+    })(),
     notes: (row.notes as string) || undefined,
-    industry: row.industry as string,
+    industry: String(row.industry),
   }
 }
 
+/**
+ * Converts a Sponsor object into a database-friendly row
+ */
 function toRow(s: Sponsor) {
   return {
     company: s.company,
@@ -36,8 +69,8 @@ function toRow(s: Sponsor) {
     amount: s.amount,
     start_date: s.startDate,
     end_date: s.endDate || null,
-    contacts: JSON.parse(JSON.stringify(s.contacts || [])),
-    interactions: JSON.parse(JSON.stringify(s.interactions || [])),
+    contacts: JSON.stringify(s.contacts || []),
+    interactions: JSON.stringify(s.interactions || []),
     notes: s.notes || null,
     industry: s.industry,
   }
@@ -61,21 +94,24 @@ export function SponsorsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function load() {
       const { data, error } = await supabase.from("sponsors").select("*").order("created_at", { ascending: true })
+      
       if (error) {
         console.error("Failed to load sponsors:", error)
         setSponsors(SEED_SPONSORS)
         return
       }
+
       if (data && data.length > 0) {
-        setSponsors(data.map(toSponsor))
+        setSponsors(data.map((row: any) => toSponsor(row)))
       } else {
         const rows = SEED_SPONSORS.map(toRow)
-        const { data: seeded, error: seedErr } = await supabase.from("sponsors").insert(rows as any).select()
+        const { data: seeded, error: seedErr } = await supabase.from("sponsors").insert(rows).select()
+        
         if (seedErr) {
           console.error("Failed to seed sponsors:", seedErr)
           setSponsors(SEED_SPONSORS)
         } else if (seeded) {
-          setSponsors(seeded.map(toSponsor))
+          setSponsors(seeded.map((row: any) => toSponsor(row)))
         }
       }
     }
@@ -85,31 +121,21 @@ export function SponsorsProvider({ children }: { children: React.ReactNode }) {
   const addSponsor = useCallback(async (sponsor: Omit<Sponsor, "id"> & { id?: string }) => {
     const row = toRow(sponsor as Sponsor)
     const payload = sponsor.id ? { id: sponsor.id, ...row } : row
-    
-    const { data, error } = await supabase.from("sponsors").insert(payload as any).select().single()
-    if (error) {
-      console.error("Failed to add sponsor:", error)
-      throw error
-    }
+    const { data, error } = await supabase.from("sponsors").insert(payload).select().single()
+    if (error) throw error
     if (data) setSponsors((prev) => [...prev, toSponsor(data)])
   }, [])
 
   const updateSponsor = useCallback(async (sponsor: Sponsor) => {
     const row = toRow(sponsor)
-    const { error } = await supabase.from("sponsors").update(row as any).eq("id", sponsor.id)
-    if (error) {
-      console.error("Failed to update sponsor:", error)
-      throw error
-    }
+    const { error } = await supabase.from("sponsors").update(row).eq("id", sponsor.id)
+    if (error) throw error
     setSponsors((prev) => prev.map((s) => (s.id === sponsor.id ? sponsor : s)))
   }, [])
 
   const deleteSponsor = useCallback(async (id: string) => {
     const { error } = await supabase.from("sponsors").delete().eq("id", id)
-    if (error) {
-      console.error("Failed to delete sponsor:", error)
-      return
-    }
+    if (error) return
     setSponsors((prev) => prev.filter((s) => s.id !== id))
   }, [])
 
@@ -125,7 +151,7 @@ export function SponsorsProvider({ children }: { children: React.ReactNode }) {
     if (!sponsor) return
     const updatedSponsor = { 
       ...sponsor, 
-      contacts: sponsor.contacts.map(c => c.id === contact.id ? contact : c) 
+      contacts: sponsor.contacts.map((c: SponsorContact) => c.id === contact.id ? contact : c) 
     }
     await updateSponsor(updatedSponsor)
   }, [sponsors, updateSponsor])
@@ -156,8 +182,6 @@ export function SponsorsProvider({ children }: { children: React.ReactNode }) {
 
 export function useSponsors() {
   const context = useContext(SponsorsContext)
-  if (context === undefined) {
-    throw new Error("useSponsors must be used within a SponsorsProvider")
-  }
+  if (context === undefined) throw new Error("useSponsors must be used within a SponsorsProvider")
   return context
 }

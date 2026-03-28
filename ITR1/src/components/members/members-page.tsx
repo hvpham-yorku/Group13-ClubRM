@@ -118,6 +118,7 @@ function getInitials(name: string) {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
 
 function getAvatarColor(name: string) {
@@ -168,6 +169,14 @@ export function MembersPage() {
   const [formDept, setFormDept] = useState<string>(DEPARTMENTS[0]);
   const [formYear, setFormYear] = useState<string>(YEARS[0]);
 
+  const [formName, setFormName] = useState("")
+  const [formEmail, setFormEmail] = useState("")
+  const [formPhone, setFormPhone] = useState("")
+  const [formRole, setFormRole] = useState<Role>("Executive")
+  const [formDept, setFormDept] = useState<string>(DEPARTMENTS[0])
+  const [formYear, setFormYear] = useState<string>(YEARS[0])
+
+
   const filtered = useMemo(() => {
     return members.filter((m) => {
       const matchesSearch =
@@ -215,8 +224,12 @@ export function MembersPage() {
     setEditMember(null);
   }
 
+<<<<<<< HEAD
   const statusMeta = (status: string) =>
     MEMBER_STATUSES.find((s) => s.value === status);
+=======
+  const statusMeta = (status: string) => MEMBER_STATUSES.find((s) => s.value === status)
+>>>>>>> shivam
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -366,6 +379,7 @@ export function MembersPage() {
               </Select>
             </div>
           </div>
+<<<<<<< HEAD
 
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
@@ -400,6 +414,44 @@ export function MembersPage() {
           </div>
         </div>
       </section>
+=======
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              {MEMBER_STATUSES.map((s) => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              {ALL_ROLES.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+          <Button variant={view === "grid" ? "default" : "ghost"} size="sm" onClick={() => setView("grid")} className="h-8 w-8 p-0">
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button variant={view === "table" ? "default" : "ghost"} size="sm" onClick={() => setView("table")} className="h-8 w-8 p-0">
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Showing {filtered.length} of {members.length} members
+      </p>
+>>>>>>> shivam
 
       {/* Grid View */}
       {view === "grid" && (
@@ -658,11 +710,15 @@ export function MembersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+<<<<<<< HEAD
                     {ALL_ROLES.map((r) => (
                       <SelectItem key={r} value={r}>
                         {r}
                       </SelectItem>
                     ))}
+=======
+                    {ALL_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+>>>>>>> shivam
                   </SelectContent>
                 </Select>
               </div>
@@ -673,11 +729,15 @@ export function MembersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+<<<<<<< HEAD
                     {YEARS.map((y) => (
                       <SelectItem key={y} value={y}>
                         {y}
                       </SelectItem>
                     ))}
+=======
+                    {YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+>>>>>>> shivam
                   </SelectContent>
                 </Select>
               </div>
@@ -689,11 +749,15 @@ export function MembersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+<<<<<<< HEAD
                   {DEPARTMENTS.map((d) => (
                     <SelectItem key={d} value={d}>
                       {d}
                     </SelectItem>
                   ))}
+=======
+                  {DEPARTMENTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+>>>>>>> shivam
                 </SelectContent>
               </Select>
             </div>
@@ -734,6 +798,7 @@ export function MembersPage() {
               </DialogHeader>
 
               <div className="space-y-4 py-2">
+<<<<<<< HEAD
                 {/* Status Badges */}
                 <div className="flex items-center gap-2">
                   <span
@@ -742,6 +807,10 @@ export function MembersPage() {
                       ROLE_COLORS[detailMember.role],
                     )}
                   >
+=======
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium border", ROLE_COLORS[detailMember.role])}>
+>>>>>>> shivam
                     {detailMember.role}
                   </span>
                   <span
@@ -892,11 +961,15 @@ export function MembersPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+<<<<<<< HEAD
                         {ALL_ROLES.map((r) => (
                           <SelectItem key={r} value={r}>
                             {r}
                           </SelectItem>
                         ))}
+=======
+                        {ALL_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+>>>>>>> shivam
                       </SelectContent>
                     </Select>
                   </div>
@@ -915,11 +988,15 @@ export function MembersPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+<<<<<<< HEAD
                         {MEMBER_STATUSES.map((s) => (
                           <SelectItem key={s.value} value={s.value}>
                             {s.label}
                           </SelectItem>
                         ))}
+=======
+                        {MEMBER_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+>>>>>>> shivam
                       </SelectContent>
                     </Select>
                   </div>
@@ -937,11 +1014,15 @@ export function MembersPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+<<<<<<< HEAD
                         {DEPARTMENTS.map((d) => (
                           <SelectItem key={d} value={d}>
                             {d}
                           </SelectItem>
                         ))}
+=======
+                        {DEPARTMENTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+>>>>>>> shivam
                       </SelectContent>
                     </Select>
                   </div>
@@ -957,11 +1038,15 @@ export function MembersPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+<<<<<<< HEAD
                         {YEARS.map((y) => (
                           <SelectItem key={y} value={y}>
                             {y}
                           </SelectItem>
                         ))}
+=======
+                        {YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+>>>>>>> shivam
                       </SelectContent>
                     </Select>
                   </div>
@@ -978,5 +1063,10 @@ export function MembersPage() {
         </DialogContent>
       </Dialog>
     </div>
+<<<<<<< HEAD
   );
 }
+=======
+  )
+}
+>>>>>>> shivam

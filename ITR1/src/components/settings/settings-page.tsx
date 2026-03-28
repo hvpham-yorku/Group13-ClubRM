@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
+// Use supabaseUntyped to bypass strict type checking for org_settings
 import { supabaseUntyped as db } from "@/lib/supabase"
-import { type AccentColor, useTheme } from "@/context/theme-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -48,15 +48,6 @@ interface NotificationPrefs {
   memberJoined: boolean
 }
 
-const NOTIFICATION_PREFS_STORAGE_KEY = "clubrm-notification-prefs"
-const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
-  emailDigest: true,
-  taskAssigned: true,
-  eventReminder: true,
-  financeAlerts: true,
-  memberJoined: false,
-}
-
 const ROLES_CONFIG = [
   { role: "President", permissions: ["all"], color: "text-amber-400", description: "Full access to all modules and settings" },
   { role: "VP Internal", permissions: ["tasks.all", "members.read", "events.read", "reports.read"], color: "text-blue-400", description: "Task management and internal operations" },
@@ -68,17 +59,7 @@ const ROLES_CONFIG = [
   { role: "Administrator", permissions: ["all", "settings.all"], color: "text-red-400", description: "System configuration and role management" },
 ]
 
-const ACCENT_OPTIONS: { name: string; value: AccentColor; className: string }[] = [
-  { name: "Green", value: "green", className: "bg-emerald-500" },
-  { name: "Blue", value: "blue", className: "bg-blue-500" },
-  { name: "Purple", value: "purple", className: "bg-violet-500" },
-  { name: "Pink", value: "pink", className: "bg-pink-500" },
-  { name: "Orange", value: "orange", className: "bg-orange-500" },
-  { name: "Red", value: "red", className: "bg-red-500" },
-]
-
 export function SettingsPage() {
-  const { theme, setTheme, accentColor, setAccentColor } = useTheme()
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const [org, setOrg] = useState<OrgSettings>({
     name: "ClubRM",
@@ -92,36 +73,29 @@ export function SettingsPage() {
   })
 
   const [notifications, setNotifications] = useState<NotificationPrefs>({
-    ...DEFAULT_NOTIFICATION_PREFS,
+    emailDigest: true,
+    taskAssigned: true,
+    eventReminder: true,
+    financeAlerts: true,
+    memberJoined: false,
   })
 
+  const [theme, setTheme] = useState<"dark" | "light" | "system">("dark")
   const [saved, setSaved] = useState(false)
 
   // Load settings from Supabase
   useEffect(() => {
     async function load() {
-      try {
-        const localPrefs = window.localStorage.getItem(NOTIFICATION_PREFS_STORAGE_KEY)
-        if (localPrefs) {
-          const parsedPrefs = JSON.parse(localPrefs)
-          if (parsedPrefs && typeof parsedPrefs === "object") {
-            setNotifications((prev) => ({ ...prev, ...parsedPrefs }))
-          }
-        }
-      } catch (error) {
-        console.error("Failed to read local notification preferences:", error)
-      }
-
-      const { data, error } = await db
-        .from("org_settings")
-        .select("*")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      const { data, error } = await db.from("org_settings").select("*").limit(1).single()
+      
       if (error) {
-        console.error("Failed to load settings:", error)
+        // If the table is empty (PGRST116), we just stop here and use the defaults
+        if (error.code !== 'PGRST116') {
+          console.error("Failed to load settings:", error)
+        }
         return
       }
+
       if (data) {
         setSettingsId(data.id)
         setOrg({
@@ -136,18 +110,12 @@ export function SettingsPage() {
         })
         if (data.notification_prefs && typeof data.notification_prefs === "object") {
           setNotifications((prev) => ({ ...prev, ...data.notification_prefs }))
-          window.localStorage.setItem(NOTIFICATION_PREFS_STORAGE_KEY, JSON.stringify({
-            ...DEFAULT_NOTIFICATION_PREFS,
-            ...data.notification_prefs,
-          }))
         }
-        if (data.theme === "dark" || data.theme === "light" || data.theme === "system") {
-          setTheme(data.theme)
-        }
+        if (data.theme) setTheme(data.theme as "dark" | "light" | "system")
       }
     }
     load()
-  }, [setTheme])
+  }, [])
 
   const handleSave = useCallback(async () => {
     const payload = {
@@ -163,29 +131,8 @@ export function SettingsPage() {
       theme,
     }
 
-    window.localStorage.setItem(NOTIFICATION_PREFS_STORAGE_KEY, JSON.stringify(notifications))
-    window.dispatchEvent(new Event("clubrm-settings-updated"))
-
-    let activeSettingsId = settingsId
-
-    if (!activeSettingsId) {
-      const { data: existingSettings, error: lookupError } = await db
-        .from("org_settings")
-        .select("id")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (lookupError) {
-        console.error("Failed to look up settings before save:", lookupError)
-      } else if (existingSettings?.id) {
-        activeSettingsId = existingSettings.id
-        setSettingsId(existingSettings.id)
-      }
-    }
-
-    if (activeSettingsId) {
-      const { error } = await db.from("org_settings").update(payload).eq("id", activeSettingsId)
+    if (settingsId) {
+      const { error } = await db.from("org_settings").update(payload).eq("id", settingsId)
       if (error) console.error("Failed to save settings:", error)
     } else {
       const { data, error } = await db.from("org_settings").insert(payload).select().single()
@@ -361,37 +308,21 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <button
-                    type="button"
-                    role="switch"
-                    aria-checked={notifications[item.key]}
-                    aria-label={item.label}
                     className={cn(
-                      "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      notifications[item.key]
-                        ? "border-primary/60 bg-primary/90 shadow-[0_0_0_4px_color-mix(in_oklab,var(--color-primary)_14%,transparent)]"
-                        : "border-border bg-muted/70 hover:bg-muted"
+                      "relative h-6 w-11 rounded-full transition-colors",
+                      notifications[item.key] ? "bg-primary" : "bg-muted"
                     )}
                     onClick={() => setNotifications((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
                   >
                     <span
                       className={cn(
-                        "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-1 ring-black/5 transition-transform duration-200",
-                        notifications[item.key] ? "translate-x-6" : "translate-x-1"
+                        "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform shadow-sm",
+                        notifications[item.key] ? "translate-x-5.5" : "translate-x-0.5"
                       )}
                     />
                   </button>
                 </div>
               ))}
-            </div>
-
-            <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3 space-y-1">
-              <p className="text-xs font-medium text-foreground">Availability</p>
-              <p className="text-xs text-muted-foreground">
-                In-app now: Task Assignments, Event Reminders, Finance Alerts, and New Member Joined.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Backend required later: Daily Email Digest and scheduled reminders while the app is closed.
-              </p>
             </div>
 
             <div className="flex justify-end">
@@ -427,7 +358,7 @@ export function SettingsPage() {
                     "h-20 rounded-lg mb-3 flex items-center justify-center",
                     t === "dark" ? "bg-zinc-900 border border-zinc-800" :
                     t === "light" ? "bg-white border border-gray-200" :
-                    "bg-linear-to-r from-zinc-900 to-white border border-zinc-500"
+                    "bg-gradient-to-r from-zinc-900 to-white border border-zinc-500"
                   )}>
                     <Settings className={cn("h-6 w-6", t === "light" ? "text-gray-600" : "text-gray-400")} />
                   </div>
@@ -444,23 +375,22 @@ export function SettingsPage() {
             <div>
               <h3 className="text-sm font-semibold mb-3">Accent Color</h3>
               <div className="flex items-center gap-3">
-                {ACCENT_OPTIONS.map((color) => (
+                {[
+                  { name: "Green", class: "bg-emerald-500" },
+                  { name: "Blue", class: "bg-blue-500" },
+                  { name: "Purple", class: "bg-violet-500" },
+                  { name: "Pink", class: "bg-pink-500" },
+                  { name: "Orange", class: "bg-orange-500" },
+                  { name: "Red", class: "bg-red-500" },
+                ].map((color) => (
                   <button
                     key={color.name}
-                    type="button"
-                    aria-label={`Use ${color.name.toLowerCase()} accent color`}
-                    aria-pressed={accentColor === color.value}
-                    className={cn(
-                      "h-8 w-8 rounded-full transition-all hover:scale-110",
-                      color.className,
-                      accentColor === color.value && "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
-                    )}
+                    className={cn("h-8 w-8 rounded-full transition-transform hover:scale-110", color.class)}
                     title={color.name}
-                    onClick={() => setAccentColor(color.value)}
                   />
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Accent color is applied instantly and saved on this device.</p>
+              <p className="text-xs text-muted-foreground mt-2">Accent color customization will be available in a future update.</p>
             </div>
           </div>
         </TabsContent>

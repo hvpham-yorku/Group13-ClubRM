@@ -88,6 +88,8 @@ export interface WorkflowNode {
   connections: string[]
 }
 
+
+
 export function getColumn(status: TaskStatus): TaskColumn {
   return TASK_COLUMNS.find((c) => c.id === status) || TASK_COLUMNS[0]
 }

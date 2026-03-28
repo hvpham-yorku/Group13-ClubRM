@@ -12,8 +12,12 @@ import { EventsProvider } from './context/events-context.tsx'
 import { TasksProvider } from './context/tasks-context.tsx'
 import { FinanceProvider } from './context/finance-context.tsx'
 import { MembersProvider } from './context/members-context.tsx'
+import { SponsorsProvider } from './context/sponsors-context.tsx' // Added this
 
+// Variants & Testing
+import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard";
 import TestDatabase from './Testing/TestDatabase';
+import { ProfilePage } from "@/components/profile/profile-page";
 
 /**
  * Helper function to handle both named and default exports safely
@@ -102,25 +106,31 @@ function App() {
       <EventsProvider>
         <TasksProvider>
           <FinanceProvider>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/members" element={<MembersPage />} />
-                <Route path="/tasks" element={<TasksPage />} />
-                <Route path="/events" element={<EventsPage />} />
-                <Route path="/finance" element={<FinancePage />} />
-                <Route path="/external" element={<ExternalPage />} />
-                <Route path="/contacts" element={<ContactsPage />} />
-                <Route path="/marketing" element={<MarketingPage />} />
-                <Route path="/documents" element={<DocumentsPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/test-db" element={<TestDatabase />} />
-                
-                {/* Fallback for unknown routes */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Layout>
+            <SponsorsProvider>
+              <Layout>
+                <Routes>
+                  {/* Default Route uses PresidentDashboard from shivam branch */}
+                  <Route path="/" element={<PresidentDashboard />} />
+                  
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/members" element={<MembersPage />} />
+                  <Route path="/tasks" element={<TasksPage />} />
+                  <Route path="/events" element={<EventsPage />} />
+                  <Route path="/finance" element={<FinancePage />} />
+                  <Route path="/external" element={<ExternalPage />} />
+                  <Route path="/contacts" element={<ContactsPage />} />
+                  <Route path="/marketing" element={<MarketingPage />} />
+                  <Route path="/documents" element={<DocumentsPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/test-db" element={<TestDatabase />} />
+                  
+                  {/* Fallback for unknown routes */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Layout>
+            </SponsorsProvider>
           </FinanceProvider>
         </TasksProvider>
       </EventsProvider>

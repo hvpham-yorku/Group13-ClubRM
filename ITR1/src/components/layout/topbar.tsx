@@ -413,8 +413,19 @@ export function TopBar() {
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSeparator />
+<<<<<<< HEAD
             <DropdownMenuItem onClick={() => navigate("/members")}><User className="mr-2 h-4 w-4" />Profile</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/settings")}><Settings className="mr-2 h-4 w-4" />Settings</DropdownMenuItem>
+=======
+            <DropdownMenuItem onClick={() => navigate("/profile")}>
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+>>>>>>> shivam
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={() => signOut()}><LogOut className="mr-2 h-4 w-4" />Log out</DropdownMenuItem>
           </DropdownMenuContent>
