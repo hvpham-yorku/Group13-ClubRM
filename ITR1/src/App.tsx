@@ -5,9 +5,13 @@ import { AuthPage } from "@/components/auth/auth-page";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
+
+// Variants & Testing
 import { PresidentDashboard } from "@/components/dashboard/variants/president-dashboard";
 import TestDatabase from './Testing/TestDatabase';
+import { ProfilePage } from "@/components/profile/profile-page";
 
+// Lazy Loaded Pages
 const DashboardPage = React.lazy(() => import("@/components/dashboard/dashboard-page").then((m) => ({ default: m.DashboardPage })));
 const EventsPage = React.lazy(() => import("@/components/events/events-page").then((m) => ({ default: m.EventsPage })));
 const TasksPage = React.lazy(() => import("@/components/tasks/tasks-page").then((m) => ({ default: m.TasksPage })));
@@ -47,7 +51,11 @@ function App() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen bg-[#111] text-white">Checking authentication...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#111] text-white">
+        Checking authentication...
+      </div>
+    );
   }
 
   if (!user) {
@@ -57,7 +65,10 @@ function App() {
   return (
     <Layout>
       <Routes>
+        {/* Main Dashboard - Default Route */}
         <Route path="/" element={<PresidentDashboard />} />
+        
+        {/* Module Routes */}
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/members" element={<MembersPage />} />
         <Route path="/tasks" element={<TasksPage />} />
@@ -67,8 +78,13 @@ function App() {
         <Route path="/marketing" element={<MarketingPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        
+        {/* Utility Routes */}
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/test-db" element={<TestDatabase />} />
+        
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

@@ -78,12 +78,7 @@ const ROLE_COLORS: Record<string, string> = {
 }
 
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
 
 function getAvatarColor(name: string) {
@@ -122,7 +117,6 @@ export function MembersPage() {
   const [detailMember, setDetailMember] = useState<Member | null>(null)
   const [editMember, setEditMember] = useState<Member | null>(null)
 
-  // Add form state
   const [formName, setFormName] = useState("")
   const [formEmail, setFormEmail] = useState("")
   const [formPhone, setFormPhone] = useState("")
@@ -177,8 +171,7 @@ export function MembersPage() {
     setEditMember(null)
   }
 
-  const statusMeta = (status: string) =>
-    MEMBER_STATUSES.find((s) => s.value === status)
+  const statusMeta = (status: string) => MEMBER_STATUSES.find((s) => s.value === status)
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -247,9 +240,7 @@ export function MembersPage() {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               {MEMBER_STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -260,34 +251,21 @@ export function MembersPage() {
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
               {ALL_ROLES.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
+                <SelectItem key={r} value={r}>{r}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-          <Button
-            variant={view === "grid" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setView("grid")}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant={view === "grid" ? "default" : "ghost"} size="sm" onClick={() => setView("grid")} className="h-8 w-8 p-0">
             <LayoutGrid className="h-4 w-4" />
           </Button>
-          <Button
-            variant={view === "table" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setView("table")}
-            className="h-8 w-8 p-0"
-          >
+          <Button variant={view === "table" ? "default" : "ghost"} size="sm" onClick={() => setView("table")} className="h-8 w-8 p-0">
             <List className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Results count */}
       <p className="text-xs text-muted-foreground">
         Showing {filtered.length} of {members.length} members
       </p>
@@ -442,9 +420,7 @@ export function MembersPage() {
                 <Select value={formRole} onValueChange={(v) => setFormRole(v as Role)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {ALL_ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
-                    ))}
+                    {ALL_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -453,9 +429,7 @@ export function MembersPage() {
                 <Select value={formYear} onValueChange={setFormYear}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {YEARS.map((y) => (
-                      <SelectItem key={y} value={y}>{y}</SelectItem>
-                    ))}
+                    {YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -465,9 +439,7 @@ export function MembersPage() {
               <Select value={formDept} onValueChange={setFormDept}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {DEPARTMENTS.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
-                  ))}
+                  {DEPARTMENTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -493,7 +465,7 @@ export function MembersPage() {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium border", ROLE_COLORS[detailMember.role])}>
                     {detailMember.role}
                   </span>
@@ -580,9 +552,7 @@ export function MembersPage() {
                     <Select value={editMember.role} onValueChange={(v) => setEditMember({ ...editMember, role: v as Role })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {ALL_ROLES.map((r) => (
-                          <SelectItem key={r} value={r}>{r}</SelectItem>
-                        ))}
+                        {ALL_ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -591,9 +561,7 @@ export function MembersPage() {
                     <Select value={editMember.status} onValueChange={(v) => setEditMember({ ...editMember, status: v as Member["status"] })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {MEMBER_STATUSES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                        ))}
+                        {MEMBER_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -604,9 +572,7 @@ export function MembersPage() {
                     <Select value={editMember.department} onValueChange={(v) => setEditMember({ ...editMember, department: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {DEPARTMENTS.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
+                        {DEPARTMENTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -615,9 +581,7 @@ export function MembersPage() {
                     <Select value={editMember.year} onValueChange={(v) => setEditMember({ ...editMember, year: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {YEARS.map((y) => (
-                          <SelectItem key={y} value={y}>{y}</SelectItem>
-                        ))}
+                        {YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
