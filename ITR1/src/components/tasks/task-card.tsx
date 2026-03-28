@@ -1,7 +1,7 @@
 import { type Task, PRIORITY_CONFIG, getTag, getMember, getColumn } from "./types"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Calendar, CheckCircle2 } from "lucide-react"
+import { Calendar, CheckCircle2, ArrowRight } from "lucide-react"
 import { format, isPast, isToday } from "date-fns"
 
 interface TaskCardProps {
@@ -24,8 +24,8 @@ export function TaskCard({ task, onClick, compact = false, isDragging = false }:
       <button
         onClick={() => onClick?.(task)}
         className={cn(
-          "w-full text-left rounded-lg border border-border/50 bg-card p-2.5 transition-all duration-150",
-          "hover:border-border hover:shadow-md hover:-translate-y-0.5",
+          "w-full text-left rounded-xl border border-border/50 bg-card/95 p-2.5 transition-all duration-150",
+          "hover:border-primary/25 hover:bg-card hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
           "focus:outline-none focus:ring-2 focus:ring-primary/50",
           isDragging && "shadow-xl rotate-2 scale-105 opacity-90 z-50"
         )}
@@ -42,14 +42,24 @@ export function TaskCard({ task, onClick, compact = false, isDragging = false }:
     <button
       onClick={() => onClick?.(task)}
       className={cn(
-        "w-full text-left rounded-lg border border-border/50 bg-card p-3.5 transition-all duration-200 group",
-        "hover:border-border hover:shadow-lg hover:-translate-y-0.5",
+        "group w-full text-left rounded-2xl border border-border/50 bg-card/95 p-4 transition-all duration-200",
+        "hover:border-primary/25 hover:bg-card hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1",
         "focus:outline-none focus:ring-2 focus:ring-primary/50",
         isDragging && "shadow-2xl rotate-1 scale-105 opacity-90 z-50 border-primary/50"
       )}
     >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", column.dotColor)} />
+          <span className={cn("truncate text-[11px] font-semibold uppercase tracking-[0.16em]", column.id === "done" ? "text-emerald-400" : "text-muted-foreground")}>
+            {column.title}
+          </span>
+        </div>
+        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/60" />
+      </div>
+
       {/* Priority & Tags row */}
-      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+      <div className="mb-3 flex items-center gap-1.5 flex-wrap">
         <span
           className={cn(
             "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold border uppercase tracking-wide",
@@ -80,16 +90,31 @@ export function TaskCard({ task, onClick, compact = false, isDragging = false }:
 
       {/* Title */}
       <h4 className={cn(
-        "text-sm font-semibold leading-snug mb-2",
+        "mb-1 text-sm font-semibold leading-snug",
         task.status === "done" && "line-through text-muted-foreground"
       )}>
         {task.title}
       </h4>
 
+      {task.description && (
+        <p className="mb-3 line-clamp-2 text-[11px] leading-5 text-muted-foreground">
+          {task.description}
+        </p>
+      )}
+
       {/* Subtasks progress */}
       {totalSubtasks > 0 && (
-        <div className="flex items-center gap-2 mb-2.5">
-          <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+        <div className="mb-3 rounded-xl border border-border/40 bg-background/50 p-2.5">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Progress
+            </span>
+            <span className="text-[10px] text-muted-foreground tabular-nums flex items-center gap-0.5">
+              <CheckCircle2 className="h-3 w-3" />
+              {completedSubtasks}/{totalSubtasks}
+            </span>
+          </div>
+          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
             <div
               className={cn(
                 "h-full rounded-full transition-all",
@@ -98,21 +123,17 @@ export function TaskCard({ task, onClick, compact = false, isDragging = false }:
               style={{ width: `${(completedSubtasks / totalSubtasks) * 100}%` }}
             />
           </div>
-          <span className="text-[10px] text-muted-foreground tabular-nums flex items-center gap-0.5">
-            <CheckCircle2 className="h-3 w-3" />
-            {completedSubtasks}/{totalSubtasks}
-          </span>
         </div>
       )}
 
       {/* Footer row */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 pt-1">
         {/* Due date */}
         <div className="flex items-center gap-1.5">
           {task.dueDate && (
             <span
               className={cn(
-                "flex items-center gap-1 text-[11px] font-medium rounded px-1.5 py-0.5",
+                "flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium",
                 isOverdue
                   ? "bg-red-500/15 text-red-400"
                   : isDueToday

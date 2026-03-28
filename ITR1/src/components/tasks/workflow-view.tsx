@@ -90,29 +90,29 @@ export function WorkflowView({ onTaskClick, filterAssignee, filterPriority, sear
   return (
     <div className="flex flex-col gap-6 h-full overflow-auto">
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="rounded-xl border border-border/50 bg-card p-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+        <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
             <Zap className="h-4 w-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Total Tasks</span>
           </div>
           <div className="text-3xl font-bold">{totalTasks}</div>
         </div>
-        <div className="rounded-xl border border-border/50 bg-card p-4">
+        <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
             <Clock className="h-4 w-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">In Progress</span>
           </div>
           <div className="text-3xl font-bold text-amber-400">{inProgressTasks}</div>
         </div>
-        <div className="rounded-xl border border-border/50 bg-card p-4">
+        <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
             <CheckCircle2 className="h-4 w-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Completed</span>
           </div>
           <div className="text-3xl font-bold text-emerald-400">{completedTasks}</div>
         </div>
-        <div className="rounded-xl border border-border/50 bg-card p-4">
+        <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
             <AlertTriangle className="h-4 w-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Completion</span>
@@ -128,11 +128,11 @@ export function WorkflowView({ onTaskClick, filterAssignee, filterPriority, sear
       </div>
 
       {/* Workflow pipeline visualization */}
-      <div className="rounded-xl border border-border/50 bg-card p-6">
+      <div className="rounded-2xl border border-border/50 bg-card p-6 shadow-sm">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-6">
           Workflow Pipeline
         </h3>
-        <div className="flex items-stretch gap-0">
+        <div className="flex items-stretch gap-0 overflow-x-auto pb-2">
           {TASK_COLUMNS.map((column, idx) => {
             const count = statusCounts[column.id]
             const flowRate = getFlowRate(column.id)
@@ -188,8 +188,8 @@ export function WorkflowView({ onTaskClick, filterAssignee, filterPriority, sear
                           key={task.id}
                           onClick={() => onTaskClick(task)}
                           className={cn(
-                            "w-full text-left rounded-md border p-2 text-[11px] transition-all",
-                            "hover:shadow-md hover:-translate-y-0.5",
+                          "w-full text-left rounded-lg border p-2.5 text-[11px] transition-all",
+                            "hover:shadow-md hover:shadow-primary/10 hover:-translate-y-0.5",
                             column.color
                           )}
                         >
@@ -226,8 +226,8 @@ export function WorkflowView({ onTaskClick, filterAssignee, filterPriority, sear
       </div>
 
       {/* Bottlenecks & Insights */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-xl border border-border/50 bg-card p-5">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             Bottlenecks & Alerts
@@ -268,7 +268,7 @@ export function WorkflowView({ onTaskClick, filterAssignee, filterPriority, sear
         </div>
 
         {/* Distribution chart */}
-        <div className="rounded-xl border border-border/50 bg-card p-5">
+        <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
             <Zap className="h-4 w-4" />
             Priority Distribution

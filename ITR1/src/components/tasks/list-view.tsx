@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { format, isPast, isToday } from "date-fns"
-import { ChevronDown, ChevronRight, Calendar, ArrowUpDown } from "lucide-react"
+import { ChevronDown, ChevronRight, Calendar, ArrowUpDown, SearchX } from "lucide-react"
 
 interface ListViewProps {
   onTaskClick: (task: Task) => void
@@ -143,9 +143,9 @@ export function ListView({ onTaskClick, filterAssignee, filterPriority, groupBy,
   }
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card overflow-hidden flex flex-col h-full">
+    <div className="rounded-2xl border border-border/50 bg-card overflow-hidden flex flex-col h-full shadow-sm">
       {/* Table header */}
-      <div className="grid grid-cols-[40px_1fr_120px_120px_100px_100px] gap-2 px-4 py-2.5 border-b border-border/50 bg-muted/30 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="grid grid-cols-[40px_1fr_120px_120px_100px_100px] gap-2 px-4 py-3 border-b border-border/50 bg-muted/25 text-xs font-semibold text-muted-foreground uppercase tracking-[0.14em]">
         <div />
         <button onClick={() => handleSort("title")} className="flex items-center gap-1 hover:text-foreground transition-colors text-left">
           Task {sortKey === "title" && <ArrowUpDown className="h-3 w-3" />}
@@ -164,6 +164,15 @@ export function ListView({ onTaskClick, filterAssignee, filterPriority, groupBy,
 
       {/* Rows */}
       <div className="flex-1 overflow-auto">
+        {sortedTasks.length === 0 && (
+          <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-2 px-6 text-center">
+            <SearchX className="h-5 w-5 text-muted-foreground/60" />
+            <p className="text-sm font-semibold">No tasks match these filters</p>
+            <p className="max-w-sm text-xs text-muted-foreground">
+              Try changing the assignee, priority, or search input to widen the list view.
+            </p>
+          </div>
+        )}
         {Array.from(groups.entries()).map(([key, group]) => {
           const isCollapsed = collapsedGroups.has(key)
           return (
@@ -171,7 +180,7 @@ export function ListView({ onTaskClick, filterAssignee, filterPriority, groupBy,
               {/* Group header */}
               <button
                 onClick={() => toggleGroup(key)}
-                className="w-full flex items-center gap-2 px-4 py-2 bg-muted/20 border-b border-border/30 hover:bg-muted/40 transition-colors text-left"
+                className="w-full flex items-center gap-2 px-4 py-2.5 bg-muted/15 border-b border-border/30 hover:bg-muted/35 transition-colors text-left"
               >
                 {isCollapsed ? (
                   <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -194,7 +203,7 @@ export function ListView({ onTaskClick, filterAssignee, filterPriority, groupBy,
                   return (
                     <div
                       key={task.id}
-                      className="grid grid-cols-[40px_1fr_120px_120px_100px_100px] gap-2 px-4 py-2.5 border-b border-border/20 hover:bg-muted/20 transition-colors group cursor-pointer items-center"
+                      className="grid grid-cols-[40px_1fr_120px_120px_100px_100px] gap-2 px-4 py-3 border-b border-border/20 hover:bg-muted/20 transition-colors group cursor-pointer items-center"
                       onClick={() => onTaskClick(task)}
                     >
                       {/* Checkbox */}
@@ -216,7 +225,7 @@ export function ListView({ onTaskClick, filterAssignee, filterPriority, groupBy,
                           {task.title}
                         </div>
                         {task.tags.length > 0 && (
-                          <div className="flex gap-1 mt-0.5">
+                          <div className="flex gap-1 mt-1">
                             {task.tags.slice(0, 3).map((tagId) => {
                               const tag = getTag(tagId)
                               if (!tag) return null

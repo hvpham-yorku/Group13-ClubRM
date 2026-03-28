@@ -2,6 +2,7 @@ import React, { Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/context/auth-context";
 import { AuthPage } from "@/components/auth/auth-page";
+import { OnboardingPage } from "@/components/auth/onboarding-page";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
@@ -73,10 +74,11 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading, profileLoading } = useAuth();
+  const onboardingComplete = profile?.onboarding_completed ?? false
 
   // 1. Handle Initial Bootup Loading
-  if (loading) {
+  if (loading || (user && profileLoading)) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#09090b] text-white">
         <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
@@ -88,6 +90,10 @@ function App() {
   // 2. Handle Authentication
   if (!user) {
     return <AuthPage />;
+  }
+
+  if (!onboardingComplete) {
+    return <OnboardingPage />;
   }
 
   // 3. Authenticated Application

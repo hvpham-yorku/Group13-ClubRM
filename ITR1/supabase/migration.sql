@@ -29,6 +29,7 @@ create table public.profiles (
   email text not null,
   full_name text not null default '',
   role text not null default 'Executive',
+  onboarding_completed boolean not null default false,
   avatar_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

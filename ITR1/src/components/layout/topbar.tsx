@@ -40,6 +40,15 @@ interface NotificationPrefs {
   memberJoined: boolean
 }
 
+const NOTIFICATION_PREFS_STORAGE_KEY = "clubrm-notification-prefs";
+const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  emailDigest: true,
+  taskAssigned: true,
+  eventReminder: true,
+  financeAlerts: true,
+  memberJoined: false,
+};
+
 const ROLES: Role[] = [
   "President",
   "VP Internal",
@@ -50,15 +59,6 @@ const ROLES: Role[] = [
   "Executive",
   "Administrator",
 ];
-
-const NOTIFICATION_PREFS_STORAGE_KEY = "clubrm-notification-prefs";
-const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
-  emailDigest: true,
-  taskAssigned: true,
-  eventReminder: true,
-  financeAlerts: true,
-  memberJoined: false,
-};
 
 function readNotificationPrefs(): NotificationPrefs {
   try {
@@ -83,7 +83,7 @@ const SEARCH_TYPE_CONFIG: Record<string, { color: string; icon: React.ReactNode 
 
 export function TopBar() {
   const { role, setRole } = useRole();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { events } = useEvents();
   const { tasks } = useTasks();
@@ -177,7 +177,7 @@ export function TopBar() {
 
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = notifications.filter((n) => !readNotifs.has(n.id)).length;
-  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
   const displayEmail = user?.email || "";
   const initials = displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
@@ -402,7 +402,7 @@ export function TopBar() {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <ShieldCheck className="mr-2 h-4 w-4 text-primary" />
-                <span>Switch Role (Demo)</span>
+                <span>Switch Role</span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <DropdownMenuRadioGroup value={role} onValueChange={(v) => setRole(v as Role)}>

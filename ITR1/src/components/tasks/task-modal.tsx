@@ -38,7 +38,10 @@ import {
   Flag,
   Columns3,
   ListChecks,
-
+  Sparkles,
+  ArrowRight,
+  CheckCircle2,
+  FolderKanban,
 } from "lucide-react"
 import { format } from "date-fns"
 
@@ -169,6 +172,8 @@ export function TaskModal({
   )
 
   const completedSubtasks = subtasks.filter((s) => s.done).length
+  const statusMeta = TASK_COLUMNS.find((column) => column.id === status) || TASK_COLUMNS[1]
+  const priorityMeta = PRIORITY_CONFIG[priority]
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -182,12 +187,34 @@ export function TaskModal({
         />
 
         <DialogHeader className="px-6 pt-4 pb-0">
-          <DialogTitle className="text-lg">
-            {isEditing ? "Edit Task" : "Create New Task"}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
-            {isEditing ? "Update the task details below." : "Fill in the details to create a new task."}
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                {isEditing ? "Task Detail" : "New Task Draft"}
+              </div>
+              <DialogTitle className="text-xl">
+                {isEditing ? "Edit Task" : "Create New Task"}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                {isEditing ? "Update the task details below." : "Fill in the details to create a new task."}
+              </DialogDescription>
+            </div>
+
+            <div className="grid min-w-[220px] grid-cols-2 gap-2">
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className={cn("h-2.5 w-2.5 rounded-full", statusMeta.dotColor)} />
+                  <span className="text-sm font-medium">{statusMeta.title}</span>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Priority</p>
+                <p className="mt-2 text-sm font-medium">{priorityMeta.icon} {priorityMeta.label}</p>
+              </div>
+            </div>
+          </div>
         </DialogHeader>
 
         <ScrollArea className="flex-1 px-6 overflow-auto" style={{ maxHeight: "calc(90vh - 180px)" }}>
@@ -214,8 +241,34 @@ export function TaskModal({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add a description..."
                 rows={3}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring resize-none"
+                className="flex w-full rounded-xl border border-input bg-transparent px-3 py-3 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring resize-none"
               />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  <FolderKanban className="h-3.5 w-3.5" />
+                  Section
+                </p>
+                <p className="mt-2 text-sm font-medium">{section || "No section yet"}</p>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  Assignees
+                </p>
+                <p className="mt-2 text-sm font-medium">{assignees.length || 0}</p>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Subtasks
+                </p>
+                <p className="mt-2 text-sm font-medium">
+                  {subtasks.length > 0 ? `${completedSubtasks}/${subtasks.length} done` : "No subtasks"}
+                </p>
+              </div>
             </div>
 
             {/* Status & Priority row */}
@@ -225,19 +278,20 @@ export function TaskModal({
                   <Columns3 className="h-4 w-4 text-muted-foreground" />
                   <Label className="text-sm font-medium">Status</Label>
                 </div>
-                <div className="flex gap-1 flex-wrap">
+                <div className="flex gap-1.5 flex-wrap">
                   {TASK_COLUMNS.map((col) => (
                     <button
                       key={col.id}
                       type="button"
                       onClick={() => setStatus(col.id)}
                       className={cn(
-                        "px-2 py-1 rounded-md text-[11px] font-medium border transition-all",
+                        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all",
                         status === col.id
                           ? cn(col.color, "ring-1 ring-primary/30")
                           : "border-border text-muted-foreground hover:text-foreground"
                       )}
                     >
+                      <div className={cn("h-2 w-2 rounded-full", col.dotColor)} />
                       {col.title}
                     </button>
                   ))}
@@ -249,7 +303,7 @@ export function TaskModal({
                   <Flag className="h-4 w-4 text-muted-foreground" />
                   <Label className="text-sm font-medium">Priority</Label>
                 </div>
-                <div className="flex gap-1 flex-wrap">
+                <div className="flex gap-1.5 flex-wrap">
                   {(Object.entries(PRIORITY_CONFIG) as [TaskPriority, typeof PRIORITY_CONFIG[TaskPriority]][]).map(
                     ([key, config]) => (
                       <button
@@ -257,7 +311,7 @@ export function TaskModal({
                         type="button"
                         onClick={() => setPriority(key)}
                         className={cn(
-                          "px-2 py-1 rounded-md text-[11px] font-medium border transition-all",
+                          "px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all",
                           priority === key
                             ? cn(config.color, "ring-1 ring-primary/30")
                             : "border-border text-muted-foreground hover:text-foreground"
@@ -317,7 +371,7 @@ export function TaskModal({
               <button
                 type="button"
                 onClick={() => setShowTags(!showTags)}
-                className="flex items-center gap-2 w-full"
+                className="flex items-center gap-2 w-full rounded-xl border border-border/50 bg-muted/15 px-3 py-2"
               >
                 <Tag className="h-4 w-4 text-muted-foreground" />
                 <Label className="text-sm font-medium cursor-pointer">Tags</Label>
@@ -326,10 +380,11 @@ export function TaskModal({
                     {tags.length} selected
                   </span>
                 )}
+                <ArrowRight className={cn("ml-1 h-3.5 w-3.5 text-muted-foreground transition-transform", showTags && "rotate-90")} />
               </button>
 
               {tags.length > 0 && (
-                <div className="flex gap-1.5 flex-wrap pl-6">
+                <div className="flex gap-1.5 flex-wrap pl-4">
                   {tags.map((tagId) => {
                     const tag = getTag(tagId)
                     if (!tag) return null
@@ -349,7 +404,7 @@ export function TaskModal({
               )}
 
               {showTags && (
-                <div className="flex gap-2 flex-wrap pl-6 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex gap-2 flex-wrap pl-4 animate-in fade-in slide-in-from-top-2 duration-200">
                   {TASK_TAGS.map((tag) => (
                     <button
                       key={tag.id}
@@ -374,7 +429,7 @@ export function TaskModal({
               <button
                 type="button"
                 onClick={() => setShowAssignees(!showAssignees)}
-                className="flex items-center gap-2 w-full"
+                className="flex items-center gap-2 w-full rounded-xl border border-border/50 bg-muted/15 px-3 py-2"
               >
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <Label className="text-sm font-medium cursor-pointer">Assignees</Label>
@@ -383,10 +438,11 @@ export function TaskModal({
                     {assignees.length} people
                   </span>
                 )}
+                <ArrowRight className={cn("ml-1 h-3.5 w-3.5 text-muted-foreground transition-transform", showAssignees && "rotate-90")} />
               </button>
 
               {assignees.length > 0 && (
-                <div className="flex -space-x-2 pl-6">
+                <div className="flex -space-x-2 pl-4">
                   {assignees.slice(0, 8).map((id) => {
                     const member = getMember(id)
                     if (!member) return null
@@ -407,7 +463,7 @@ export function TaskModal({
               )}
 
               {showAssignees && (
-                <div className="pl-6 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="pl-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
                   <Input
                     placeholder="Search members..."
                     value={assigneeSearch}
@@ -462,11 +518,11 @@ export function TaskModal({
               </div>
 
               {subtasks.length > 0 && (
-                <div className="space-y-1 pl-6">
+                <div className="space-y-1 pl-4">
                   {subtasks.map((sub) => (
                     <div
                       key={sub.id}
-                      className="flex items-center gap-2 group rounded-md px-2 py-1 hover:bg-muted/30"
+                      className="group flex items-center gap-2 rounded-xl border border-border/40 bg-muted/15 px-3 py-2 hover:bg-muted/30"
                     >
                       <Checkbox
                         checked={sub.done}
@@ -492,7 +548,7 @@ export function TaskModal({
                 </div>
               )}
 
-              <div className="flex items-center gap-2 pl-6">
+              <div className="flex items-center gap-2 pl-4">
                 <Input
                   value={newSubtask}
                   onChange={(e) => setNewSubtask(e.target.value)}

@@ -54,9 +54,12 @@ export function AuthPage() {
             <div className="mx-auto w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
               <Users className="h-6 w-6 text-emerald-400" />
             </div>
-            <h1 className="text-2xl font-bold">Check your email</h1>
+            <h1 className="text-2xl font-bold text-foreground">Check your email</h1>
             <p className="text-sm text-muted-foreground">
               We've sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account, then come back and sign in.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              After sign-in, we'll walk you through a short welcome setup for your name and role.
             </p>
           </div>
           <Button variant="outline" className="w-full" onClick={() => { setSignupSuccess(false); setMode("login") }}>
@@ -75,14 +78,14 @@ export function AuthPage() {
           <div className="mx-auto w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
             <Users className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">ClubRM</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">ClubRM</h1>
           <p className="text-sm text-muted-foreground">
-            {mode === "login" ? "Sign in to manage your club" : "Create your account"}
+            {mode === "login" ? "Sign in to manage your club" : "Create your account and finish setup in one welcome flow"}
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-card border border-border/50 rounded-xl p-6 space-y-6 shadow-lg shadow-black/5">
+        <div className="bg-card text-card-foreground border border-border/50 rounded-xl p-6 space-y-6 shadow-lg shadow-black/5">
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "signup" && (
               <div className="space-y-2">
@@ -92,6 +95,7 @@ export function AuthPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="John Doe"
+                  className="bg-background/80"
                   required
                   autoComplete="name"
                 />
@@ -106,6 +110,7 @@ export function AuthPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@yorku.ca"
+                className="bg-background/80"
                 required
                 autoComplete="email"
               />
@@ -120,6 +125,7 @@ export function AuthPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
+                  className="bg-background/80 pr-11"
                   required
                   autoComplete={mode === "login" ? "current-password" : "new-password"}
                   minLength={6}
