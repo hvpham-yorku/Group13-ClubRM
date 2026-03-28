@@ -235,16 +235,19 @@ export function FinanceProvider({
   }, [])
 
   const updateExpenseStatus = useCallback(async (id: string, status: ExpenseStatus, approvedBy?: string) => {
-    const update: { status: string; approved_by?: string } = { status }
-    if (approvedBy) update.approved_by = approvedBy
-    const { error } = await supabase.from("expenses").update(update as any).eq("id", id)
-    if (error) { 
-      console.error("Failed to update expense:", error)
-      throw error
-    }
-    setExpenses((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, status, approvedBy: approvedBy || e.approvedBy } : e))
-    )
+  const update: { status: string; approved_by?: string } = { status }
+  if (approvedBy) update.approved_by = approvedBy
+  
+  const { error } = await supabase.from("expenses").update(update as any).eq("id", id)
+  
+  if (error) { 
+    console.error("Failed to update expense:", error)
+    throw error // This is vital for the .rejects test to work
+  }
+
+  setExpenses((prev) =>
+    prev.map((e) => (e.id === id ? { ...e, status, approvedBy: approvedBy || e.approvedBy } : e))
+  )
   }, [])
 
   const deleteExpense = useCallback(async (id: string) => {

@@ -5,83 +5,78 @@ import { SponsorsProvider, useSponsors } from "../../src/context/sponsors-contex
 import React from 'react'
 import { supabase } from "../../src/lib/supabase"
 
-// 1. Comprehensively mock Supabase at the module level
-const mockEq = vi.fn().mockResolvedValue({ data: {}, error: null })
-const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq })
+const mockChain = vi.hoisted(() => ({
+  from: vi.fn().mockReturnThis(),
+  select: vi.fn().mockReturnThis(),
+  update: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  order: vi.fn().mockReturnThis(),
+  limit: vi.fn().mockReturnThis(),
+  insert: vi.fn().mockReturnThis(),
+  single: vi.fn().mockReturnThis(),
+  then: vi.fn((onFulfilled?: any, _onRejected?: any) => {
+    return Promise.resolve(
+      onFulfilled ? onFulfilled({ data: [], error: null }) : { data: [], error: null }
+    );
+  }),
+}));
 
 vi.mock("../../src/lib/supabase", () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      update: mockUpdate,
-      select: vi.fn().mockReturnThis(),
-      eq: mockEq,
-    }))
-  }
+  supabase: mockChain
 }))
 
-const FinanceWrapper = ({ children }: { children: React.ReactNode }) => (
-  <FinanceProvider>{children}</FinanceProvider>
+const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  <FinanceProvider>
+    <SponsorsProvider>
+      {children}
+    </SponsorsProvider>
+  </FinanceProvider>
 )
 
-const SponsorsWrapper = ({ children }: { children: React.ReactNode }) => (
-  <SponsorsProvider>{children}</SponsorsProvider>
-)
-
-describe("Persistence and State Sync", () => {
+describe("Contacts Page Persistence and State Sync", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockChain.then.mockImplementation((onFulfilled?: any) =>
+      Promise.resolve(
+        onFulfilled ? onFulfilled({ data: [], error: null }) : { data: [], error: null }
+      )
+    )
   })
 
-  describe("Finance Context Persistence", () => {
-    it("calls supabase.update when updating expense status", async () => {
-      const { result } = renderHook(() => useFinance(), { wrapper: FinanceWrapper })
-      
-      await waitFor(() => expect(result.current.expenses).toBeDefined())
+  it("handles error if supabase fails on update", async () => {
+    // Target .update() specifically — neither FinanceProvider's load nor
+    // SponsorsProvider's load ever calls .update(), only select/insert.
+    // So this once-mock is safely preserved until updateExpenseStatus fires it.
+    // Returning a Supabase-shaped error lets the app's `if (error) throw error`
+    // reject the promise, which is what the test asserts against.
+    mockChain.update.mockImplementationOnce(() => ({
+      eq: vi.fn().mockResolvedValue({ data: null, error: { message: 'rejected promise' } })
+    }))
 
-      await act(async () => {
-        await result.current.updateExpenseStatus("test-id", "approved", "President")
-      })
+    const { result } = renderHook(() => useFinance(), { wrapper: Wrapper })
 
-      await waitFor(() => {
-        expect(mockUpdate).toHaveBeenCalled()
-      })
-    })
-
-    it("handles error if supabase fails on update", async () => {
-      mockEq.mockResolvedValueOnce({ data: null, error: { message: "rejected promise" } })
-
-      const { result } = renderHook(() => useFinance(), { wrapper: FinanceWrapper })
-      await waitFor(() => expect(result.current.expenses).toBeDefined())
-
+    await act(async () => {
       const call = result.current.updateExpenseStatus("err-id", "approved")
-      await expect(call).resolves.toBeUndefined()
-      
-      expect(mockUpdate).toHaveBeenCalled()
+      await expect(call).rejects.toMatchObject({ message: 'rejected promise' })
     })
   })
 
-  describe("Sponsors Context Persistence", () => {
-    it("calls supabase.update on addContact", async () => {
-      const { result } = renderHook(() => useSponsors(), { wrapper: SponsorsWrapper })
-      
-      await waitFor(() => expect(result.current.sponsors).toBeDefined())
+  it("calls supabase.insert on addContact", async () => {
+    const { result } = renderHook(() => useSponsors(), { wrapper: Wrapper })
 
-      await act(async () => {
-        await result.current.addContact("s1", {
-          id: "c1",
-          name: "Test Contact",
-          email: "test@example.com",
-          role: "Manager",
-          linkedin: "li",
-          tags: ["fintech"],
-          organization: "Test Org",
-          createdAt: new Date().toISOString()
-        })
+    await act(async () => {
+      await result.current.addContact("sponsor-123", {
+        id: "new-contact",
+        name: "Test User",
+        email: "test@example.com",
+        role: "Lead",
+        organization: "Tech Corp"
       })
+    })
 
-      await waitFor(() => {
-        expect(mockUpdate).toHaveBeenCalled()
-      })
+    await waitFor(() => {
+      expect(supabase.from).toHaveBeenCalledWith('sponsors')
+      expect(mockChain.insert).toHaveBeenCalled()
     })
   })
 })
