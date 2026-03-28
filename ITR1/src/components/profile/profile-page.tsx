@@ -19,7 +19,6 @@ import {
   ExternalLink,
 } from "lucide-react"
 
-// TikTok icon (not in lucide)
 function TikTokIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -44,12 +43,7 @@ interface ProfileData {
 }
 
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
 
 function getAvatarColor(name: string) {
@@ -73,46 +67,11 @@ const SOCIAL_FIELDS: {
   color: string
   prefix: string
 }[] = [
-  {
-    key: "instagram",
-    label: "Instagram",
-    placeholder: "username",
-    icon: <Instagram className="h-4 w-4" />,
-    color: "text-pink-500",
-    prefix: "instagram.com/",
-  },
-  {
-    key: "facebook",
-    label: "Facebook",
-    placeholder: "username or profile URL",
-    icon: <Facebook className="h-4 w-4" />,
-    color: "text-blue-500",
-    prefix: "facebook.com/",
-  },
-  {
-    key: "linkedin",
-    label: "LinkedIn",
-    placeholder: "username",
-    icon: <Linkedin className="h-4 w-4" />,
-    color: "text-[#0A66C2]",
-    prefix: "linkedin.com/in/",
-  },
-  {
-    key: "twitter",
-    label: "X / Twitter",
-    placeholder: "username",
-    icon: <Twitter className="h-4 w-4" />,
-    color: "text-sky-400",
-    prefix: "x.com/",
-  },
-  {
-    key: "tiktok",
-    label: "TikTok",
-    placeholder: "username",
-    icon: <TikTokIcon className="h-4 w-4" />,
-    color: "text-foreground",
-    prefix: "tiktok.com/@",
-  },
+  { key: "instagram", label: "Instagram", placeholder: "username", icon: <Instagram className="h-4 w-4" />, color: "text-pink-500", prefix: "instagram.com/" },
+  { key: "facebook", label: "Facebook", placeholder: "username or profile URL", icon: <Facebook className="h-4 w-4" />, color: "text-blue-500", prefix: "facebook.com/" },
+  { key: "linkedin", label: "LinkedIn", placeholder: "username", icon: <Linkedin className="h-4 w-4" />, color: "text-[#0A66C2]", prefix: "linkedin.com/in/" },
+  { key: "twitter", label: "X / Twitter", placeholder: "username", icon: <Twitter className="h-4 w-4" />, color: "text-sky-400", prefix: "x.com/" },
+  { key: "tiktok", label: "TikTok", placeholder: "username", icon: <TikTokIcon className="h-4 w-4" />, color: "text-foreground", prefix: "tiktok.com/@" },
 ]
 
 function buildSocialUrl(key: keyof SocialLinks, value: string): string {
@@ -132,28 +91,21 @@ export function ProfilePage() {
   const { user } = useAuth()
   const [profileId, setProfileId] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   const [profile, setProfile] = useState<ProfileData>({
     fullName: user?.user_metadata?.full_name ?? "",
     bio: "",
     phone: "",
-    socials: {
-      instagram: "",
-      facebook: "",
-      linkedin: "",
-      twitter: "",
-      tiktok: "",
-    },
+    socials: { instagram: "", facebook: "", linkedin: "", twitter: "", tiktok: "" },
   })
 
-  // Load profile from Supabase
   useEffect(() => {
     if (!user) return
     async function load() {
       setLoading(true)
       const { data, error } = await db
-        .from("profiles")
+        .from("socials")
         .select("*")
         .eq("user_id", user!.id)
         .single()
@@ -173,7 +125,6 @@ export function ProfilePage() {
           },
         })
       } else {
-        // No profile yet — pre-fill from auth metadata
         setProfile((prev) => ({
           ...prev,
           fullName: user!.user_metadata?.full_name ?? "",
@@ -200,9 +151,9 @@ export function ProfilePage() {
     }
 
     if (profileId) {
-      await db.from("profiles").update(payload).eq("id", profileId)
+      await db.from("socials").update(payload).eq("id", profileId)
     } else {
-      const { data } = await db.from("profiles").insert(payload).select().single()
+      const { data } = await db.from("socials").insert(payload).select().single()
       if (data) setProfileId(data.id)
     }
 
@@ -212,10 +163,9 @@ export function ProfilePage() {
 
   const displayName = profile.fullName || user?.email || "User"
   const email = user?.email ?? ""
-      
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-3xl">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -225,12 +175,7 @@ export function ProfilePage() {
 
       {/* Avatar + name card */}
       <div className="bg-card border border-border/50 rounded-xl p-6 flex items-center gap-6">
-        <div
-          className={cn(
-            "h-20 w-20 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shrink-0 bg-gradient-to-br",
-            getAvatarColor(displayName)
-          )}
-        >
+        <div className={cn("h-20 w-20 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shrink-0 bg-gradient-to-br", getAvatarColor(displayName))}>
           {getInitials(displayName)}
         </div>
         <div className="min-w-0">
@@ -242,14 +187,7 @@ export function ProfilePage() {
               const field = SOCIAL_FIELDS.find((f) => f.key === key)
               if (!field) return null
               return (
-                <a
-                  key={key}
-                  href={buildSocialUrl(key as keyof SocialLinks, value)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn("hover:opacity-70 transition-opacity", field.color)}
-                  title={field.label}
-                >
+                <a key={key} href={buildSocialUrl(key as keyof SocialLinks, value)} target="_blank" rel="noopener noreferrer" className={cn("hover:opacity-70 transition-opacity", field.color)} title={field.label}>
                   {field.icon}
                 </a>
               )
@@ -272,11 +210,7 @@ export function ProfilePage() {
             <Label className="flex items-center gap-1.5">
               <User className="h-3.5 w-3.5 text-muted-foreground" /> Full Name
             </Label>
-            <Input
-              value={profile.fullName}
-              onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-              placeholder="Your full name"
-            />
+            <Input value={profile.fullName} onChange={(e) => setProfile({ ...profile, fullName: e.target.value })} placeholder="Your full name" />
           </div>
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5">
@@ -288,21 +222,13 @@ export function ProfilePage() {
             <Label className="flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5 text-muted-foreground" /> Phone
             </Label>
-            <Input
-              value={profile.phone}
-              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-              placeholder="(416) 555-0000"
-            />
+            <Input value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} placeholder="(416) 555-0000" />
           </div>
         </div>
 
         <div className="space-y-2">
           <Label>Bio</Label>
-          <Input
-            value={profile.bio}
-            onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-            placeholder="Tell a little about yourself..."
-/>
+          <Input value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} placeholder="Tell a little about yourself..." />
         </div>
       </div>
 
@@ -326,36 +252,22 @@ export function ProfilePage() {
               </Label>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  {/* Prefix */}
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none select-none">
                     {field.prefix}
                   </span>
                   <Input
                     value={profile.socials[field.key]}
-                    onChange={(e) =>
-                      setProfile({
-                        ...profile,
-                        socials: { ...profile.socials, [field.key]: e.target.value },
-                      })
-                    }
+                    onChange={(e) => setProfile({ ...profile, socials: { ...profile.socials, [field.key]: e.target.value } })}
                     placeholder={field.placeholder}
-                    className="pl-[calc(0.75rem+var(--prefix-width,0px))]"
-                    style={{
-                      paddingLeft: `calc(0.75rem + ${field.prefix.length * 7}px)`,
-                    }}
+                    style={{ paddingLeft: `calc(0.75rem + ${field.prefix.length * 7}px)` }}
                   />
                 </div>
-                {/* Preview link */}
                 {profile.socials[field.key] && (
                   <a
                     href={buildSocialUrl(field.key, profile.socials[field.key])}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={cn(
-                      "h-9 w-9 shrink-0 flex items-center justify-center rounded-lg border border-border/50",
-                      "hover:bg-muted/50 transition-colors",
-                      field.color
-                    )}
+                    className={cn("h-9 w-9 shrink-0 flex items-center justify-center rounded-lg border border-border/50 hover:bg-muted/50 transition-colors", field.color)}
                     title={`Open ${field.label}`}
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
