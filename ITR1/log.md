@@ -15,6 +15,62 @@
 
 | User Story | Developer | Task | Est. Time | Actual Time Status |
 
+User Story: Automated Document Categorization
+Developer: Yusuf Garba
+Task: Update the DocumentsPage to include a category dropdown and map it to a category column in the Supabase documents table
+Est. Time: 3 days
+Actual Time: 3 days
+Status: Completed
+
+User Story: Document Version Tracking
+Developer: Yusuf Garba
+Task: Implement a History side-panel GUI to display a modification log for specific files ordered by update metadata
+Est. Time: 2 days
+Actual Time: 2 days
+Status: Completed
+
+User Story: Member Directory Export
+Developer: Shivam Patel
+Task: Create a utility function and GUI button to convert the JSON result from the members query into a downloadable CSV blob
+Est. Time: 2 days
+Actual Time: 2 days
+Status: Completed
+
+User Story: Live Profile Preview Cards
+Developer: Shivam Patel
+Task: Build a reusable ProfileCard component that triggers on hover to fetch and display social media data from the database
+Est. Time: 3 days
+Actual Time: 4 days
+Status: Completed
+
+User Story: Role-Based Access Control (RBAC) UI
+Developer: Daniel Kyere
+Task: Create an "Access Management" GUI in Settings to update user roles and permissions within the profile table
+Est. Time: 4 days
+Actual Time: 4 days
+Status: Completed
+
+User Story: Security Audit Log Viewer
+Developer: Daniel Kyere
+Task: Implement a "logs" table and GUI fetcher to display the most recent sensitive system actions in a paginated list
+Est. Time: 3 days
+Actual Time: 3 days
+Status: Completed
+
+User Story: First-Time User Guided Tour
+Developer: Ashdeep Ashdeep Singh
+Task: Implement an interactive tooltip-based tour for the Sidebar and Finance pages triggered by a database status flag
+Est. Time: 3 days
+Actual Time: 3 days
+Status: Completed
+
+User Story: Organization Setup Portal
+Developer: Ashdeep Ashdeep Singh
+Task: Build a GUI screen for users to create or join organizations via invite codes linked to the Supabase backend
+Est. Time: 4 days
+Actual Time: 5 days
+Status: Completed
+
 Developer Story: UI Decomposition
 Developer: Yusuf Garba
 Task: Split DashboardPage into StatsCard and Activity components to resolve "Large Class" smell
