@@ -132,7 +132,7 @@ export function ProfilePage() {
   const { user } = useAuth()
   const [profileId, setProfileId] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const [profile, setProfile] = useState<ProfileData>({
     fullName: user?.user_metadata?.full_name ?? "",
@@ -212,15 +212,7 @@ export function ProfilePage() {
 
   const displayName = profile.fullName || user?.email || "User"
   const email = user?.email ?? ""
-
- /* if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    )
-  }
-*/      
+      
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-3xl">
       {/* Header */}
