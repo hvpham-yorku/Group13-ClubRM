@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { useMembers } from "@/context/members-context"
 import { type Member, MEMBER_STATUSES, DEPARTMENTS, YEARS } from "./types"
 import type { Role } from "@/context/role-context"
-import { cn } from "@/lib/utils"
+import { cn, getEntityColor } from "@/lib/utils"
 import { supabaseUntyped as db } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -100,20 +100,6 @@ function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
 
-function getAvatarColor(name: string) {
-  const colors = [
-    "bg-rose-500/20 text-rose-400",
-    "bg-orange-500/20 text-orange-400",
-    "bg-amber-500/20 text-amber-400",
-    "bg-emerald-500/20 text-emerald-400",
-    "bg-cyan-500/20 text-cyan-400",
-    "bg-blue-500/20 text-blue-400",
-    "bg-violet-500/20 text-violet-400",
-    "bg-pink-500/20 text-pink-400",
-  ]
-  const idx = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return colors[idx % colors.length]
-}
 
 function SocialBadge({ value, icon, color }: { value: string | null; icon: React.ReactNode; color: string }) {
   if (!value) return null
@@ -368,7 +354,7 @@ export function MembersPage() {
               onClick={() => setDetailMember(member)}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={cn("h-12 w-12 rounded-full flex items-center justify-center text-sm font-semibold", getAvatarColor(member.name))}>
+                <div className={cn("h-12 w-12 rounded-full flex items-center justify-center text-sm font-semibold", getEntityColor(member.name))}>
                   {getInitials(member.name)}
                 </div>
                 <DropdownMenu>
@@ -431,7 +417,7 @@ export function MembersPage() {
                 <TableRow key={member.id} className="cursor-pointer" onClick={() => setDetailMember(member)}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0", getAvatarColor(member.name))}>
+                      <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0", getEntityColor(member.name))}>
                         {getInitials(member.name)}
                       </div>
                       <div>
@@ -528,7 +514,7 @@ export function MembersPage() {
                           : "border-border/50 hover:border-primary/30 hover:bg-muted/30"
                       )}
                     >
-                      <div className={cn("h-9 w-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0", getAvatarColor(profile.full_name ?? "?"))}>
+                      <div className={cn("h-9 w-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0", getEntityColor(profile.full_name ?? "?"))}>
                         {getInitials(profile.full_name ?? "?")}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -621,7 +607,7 @@ export function MembersPage() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold", getAvatarColor(detailMember.name))}>
+                  <div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold", getEntityColor(detailMember.name))}>
                     {getInitials(detailMember.name)}
                   </div>
                   {detailMember.name}
