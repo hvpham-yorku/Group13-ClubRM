@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/context/auth-context";
 import { AuthPage } from "@/components/auth/auth-page";
 import { OnboardingPage } from "@/components/auth/onboarding-page";
+import { isOnboardingComplete } from "@/lib/onboarding-logic";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
@@ -79,7 +80,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 function App() {
   const { user, profile, loading, profileLoading } = useAuth();
-  const onboardingComplete = profile?.onboarding_completed ?? false
+  const onboardingComplete = isOnboardingComplete(profile)
 
   // 1. Handle Initial Bootup Loading
   if (loading || (user && profileLoading)) {

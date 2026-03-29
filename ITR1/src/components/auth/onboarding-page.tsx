@@ -6,17 +6,20 @@ import { useAuth } from "@/context/auth-context"
 import type { Role } from "@/context/role-context"
 import { ArrowRight, BadgeCheck, Loader2, Lock, ShieldCheck, Sparkles, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  RESERVED_ONBOARDING_ROLES,
+  SELF_SELECTABLE_ONBOARDING_ROLES,
+  validateOnboardingSubmission,
+} from "@/lib/onboarding-logic"
 
-const ROLE_OPTIONS: { value: Role; description: string }[] = [
+const ROLE_OPTIONS = [
   { value: "VP Internal", description: "Operations, admin flow, and internal coordination." },
   { value: "VP Finance", description: "Budgets, approvals, and expense tracking." },
   { value: "VP Events", description: "Event planning, scheduling, and delivery." },
   { value: "VP External", description: "Partnerships, outreach, and external relations." },
   { value: "Marketing", description: "Campaigns, promotion, and brand communication." },
   { value: "Executive", description: "General team execution across the club." },
-]
-
-const RESERVED_ROLES: Role[] = ["President", "Administrator"]
+] satisfies { value: Role; description: string }[]
 
 export function OnboardingPage() {
   const { user, profile, completeOnboarding } = useAuth()
@@ -34,20 +37,23 @@ export function OnboardingPage() {
   )
 
   async function handleContinue() {
-    if (!fullName.trim()) {
-      setError("Please enter your name.")
+    const validationError = validateOnboardingSubmission({
+      fullName,
+      role: selectedRole,
+    })
+
+    if (validationError) {
+      setError(validationError)
       return
     }
-    if (!selectedRole) {
-      setError("Please choose your role.")
-      return
-    }
+
+    const role = selectedRole as Role
 
     setError(null)
     setSaving(true)
     const result = await completeOnboarding({
       fullName: fullName.trim(),
-      role: selectedRole,
+      role,
     })
     setSaving(false)
 
@@ -177,7 +183,7 @@ export function OnboardingPage() {
                         Reserved roles
                       </div>
                       <p className="mt-2 text-xs leading-5 text-amber-700/90 dark:text-amber-100/80">
-                        {RESERVED_ROLES.join(" and ")} are assigned by the organization and cannot be self-selected during onboarding.
+                        {RESERVED_ONBOARDING_ROLES.join(" and ")} are assigned by the organization and cannot be self-selected during onboarding.
                       </p>
                     </div>
                   </div>
