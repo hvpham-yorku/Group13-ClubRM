@@ -180,6 +180,8 @@ export function ExternalPage() {
     load()
   }, [])
 
+  // FIX: Inline the reset logic directly inside handleAdd instead of calling resetForm(),
+  // which was a stale closure reference not included in the dependency array.
   const handleAdd = useCallback(async () => {
     if (!formCompany.trim()) return
     const newSponsor: Sponsor = {
@@ -204,7 +206,14 @@ export function ExternalPage() {
       return
     }
     if (data) setSponsors((prev) => [...prev, toSponsor(data)])
-    resetForm()
+    setFormCompany("")
+    setFormTier("prospect")
+    setFormAmount("")
+    setFormIndustry(INDUSTRIES[0])
+    setFormContactName("")
+    setFormContactEmail("")
+    setFormContactTitle("")
+    setFormNotes("")
     setAddOpen(false)
   }, [formCompany, formTier, formAmount, formIndustry, formNotes, formContactName, formContactTitle, formContactEmail])
 
