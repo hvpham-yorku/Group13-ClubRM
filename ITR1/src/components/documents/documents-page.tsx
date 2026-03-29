@@ -11,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription
 } from "@/components/ui/dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -30,15 +29,16 @@ import {
   AlertCircle
 } from "lucide-react"
 
+// Updated Interface to match Database snake_case naming
 interface Document {
   id: string
   name: string
   category: "governance" | "finance" | "events" | "other"
-  fileType: string
+  file_type: string 
   size: string
-  uploadedAt: string
-  uploadedBy: string
-  storagePath: string
+  uploaded_at: string
+  uploaded_by: string
+  storage_path: string
 }
 
 export function DocumentsPage() {
@@ -63,7 +63,7 @@ export function DocumentsPage() {
       const { data, error } = await db
         .from("documents")
         .select("*")
-        .order("uploadedAt", { ascending: false })
+        .order("uploaded_at", { ascending: false })
 
       if (error) throw error
       setDocuments(data || [])
@@ -92,7 +92,7 @@ export function DocumentsPage() {
       const fileName = `${crypto.randomUUID()}.${fileExt}`
       const filePath = `${user.id}/${fileName}`
 
-      // FIX: Changed bucket name to "documents"
+      // Uploading to "documents" bucket
       const { error: uploadError } = await db.storage
         .from("documents") 
         .upload(filePath, selectedFile, {
@@ -102,14 +102,15 @@ export function DocumentsPage() {
 
       if (uploadError) throw new Error(`Storage Error: ${uploadError.message}`)
 
+      // FINAL FIX: All keys converted to snake_case to match DB schema
       const newDoc = {
         name: formName || selectedFile.name,
         category: formCategory,
-        fileType: selectedFile.type,
+        file_type: selectedFile.type, 
         size: `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`,
-        uploadedBy: user.email,
-        storagePath: filePath,
-        uploadedAt: new Date().toISOString()
+        uploaded_by: user.email, // Fixed from uploadedBy
+        storage_path: filePath,  // Fixed from storagePath
+        uploaded_at: new Date().toISOString() // Fixed from uploadedAt
       }
 
       const { error: dbError } = await db
@@ -133,7 +134,6 @@ export function DocumentsPage() {
   const handleDelete = async (id: string, path: string) => {
     if (!confirm("Are you sure you want to remove this document?")) return
     try {
-      // FIX: Changed bucket name to "documents"
       await db.storage.from("documents").remove([path])
       await db.from("documents").delete().eq("id", id)
       setDocuments(prev => prev.filter(d => d.id !== id))
@@ -144,7 +144,6 @@ export function DocumentsPage() {
 
   const handleDownload = async (path: string, filename: string) => {
     try {
-      // FIX: Changed bucket name to "documents"
       const { data, error } = await db.storage.from("documents").download(path)
       if (error) throw error
       const url = URL.createObjectURL(data)
@@ -230,21 +229,21 @@ export function DocumentsPage() {
                   {getIcon(doc.category)}
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
-                  {doc.fileType?.split('/')?.[1] || 'FILE'}
+                  {doc.file_type?.split('/')?.[1] || 'FILE'}
                 </span>
               </div>
               <h3 className="font-bold truncate mb-1 text-foreground" title={doc.name}>{doc.name}</h3>
               <div className="flex items-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground gap-2">
                 <span>{doc.size}</span>
                 <span className="opacity-30">•</span>
-                <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                <span>{new Date(doc.uploaded_at).toLocaleDateString()}</span>
               </div>
               
               <div className="flex gap-2 mt-5">
-                <Button variant="secondary" size="sm" className="flex-1 rounded-xl font-bold text-xs" onClick={() => handleDownload(doc.storagePath, doc.name)}>
+                <Button variant="secondary" size="sm" className="flex-1 rounded-xl font-bold text-xs" onClick={() => handleDownload(doc.storage_path, doc.name)}>
                   <Download className="h-3.5 w-3.5 mr-2" /> Download
                 </Button>
-                <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(doc.id, doc.storagePath)}>
+                <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(doc.id, doc.storage_path)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -260,7 +259,7 @@ export function DocumentsPage() {
               <div className="p-2 bg-primary/10 rounded-lg">
                 <FileBox className="h-6 w-6 text-primary" />
               </div>
-              Vault Upload
+              Upload
             </DialogTitle>
           </DialogHeader>
           
@@ -322,14 +321,13 @@ export function DocumentsPage() {
           </div>
 
           <DialogFooter>
-            {/* FIX: Changed button text to "Upload to documents" */}
             <Button onClick={handleAdd} disabled={isUploading || !selectedFile} className="w-full rounded-2xl h-14 text-md font-black shadow-xl shadow-primary/20">
               {isUploading ? (
                 <>
                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                   Encrypting...
                 </>
-              ) : "Upload to documents"} 
+              ) : "Upload to documents"}
             </Button>
           </DialogFooter>
         </DialogContent>
