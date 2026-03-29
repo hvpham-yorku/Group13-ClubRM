@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 // Use supabaseUntyped to bypass strict type checking for org_settings
 import { supabaseUntyped as db } from "@/lib/supabase"
+import { useTheme, type AccentColor } from "@/context/theme-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -59,7 +60,18 @@ const ROLES_CONFIG = [
   { role: "Administrator", permissions: ["all", "settings.all"], color: "text-red-400", description: "System configuration and role management" },
 ]
 
+const ACCENT_COLORS: { name: AccentColor; class: string; label: string }[] = [
+  { name: "green",  class: "bg-emerald-500", label: "Green"  },
+  { name: "blue",   class: "bg-blue-500",    label: "Blue"   },
+  { name: "purple", class: "bg-violet-500",  label: "Purple" },
+  { name: "pink",   class: "bg-pink-500",    label: "Pink"   },
+  { name: "orange", class: "bg-orange-500",  label: "Orange" },
+  { name: "red",    class: "bg-red-500",     label: "Red"    },
+]
+
 export function SettingsPage() {
+  const { accentColor, setAccentColor } = useTheme()
+
   const [settingsId, setSettingsId] = useState<string | null>(null)
   const [org, setOrg] = useState<OrgSettings>({
     name: "ClubRM",
@@ -87,10 +99,10 @@ export function SettingsPage() {
   useEffect(() => {
     async function load() {
       const { data, error } = await db.from("org_settings").select("*").limit(1).single()
-      
+
       if (error) {
         // If the table is empty (PGRST116), we just stop here and use the defaults
-        if (error.code !== 'PGRST116') {
+        if (error.code !== "PGRST116") {
           console.error("Failed to load settings:", error)
         }
         return
@@ -159,7 +171,7 @@ export function SettingsPage() {
           <TabsTrigger value="appearance" className="gap-1.5"><Palette className="h-3.5 w-3.5" /> Appearance</TabsTrigger>
         </TabsList>
 
-        {/* General Settings */}
+        {/* ── General Settings ── */}
         <TabsContent value="general">
           <div className="bg-card border border-border/50 rounded-xl p-6 space-y-6">
             <div>
@@ -238,7 +250,7 @@ export function SettingsPage() {
           </div>
         </TabsContent>
 
-        {/* Roles & Permissions */}
+        {/* ── Roles & Permissions ── */}
         <TabsContent value="roles">
           <div className="bg-card border border-border/50 rounded-xl p-6 space-y-6">
             <div>
@@ -281,7 +293,7 @@ export function SettingsPage() {
           </div>
         </TabsContent>
 
-        {/* Notifications */}
+        {/* ── Notifications ── */}
         <TabsContent value="notifications">
           <div className="bg-card border border-border/50 rounded-xl p-6 space-y-6">
             <div>
@@ -291,11 +303,11 @@ export function SettingsPage() {
 
             <div className="space-y-4">
               {[
-                { key: "emailDigest" as const, icon: <Mail className="h-4 w-4" />, label: "Daily Email Digest", description: "Receive a daily summary of club activity" },
-                { key: "taskAssigned" as const, icon: <CheckCircle className="h-4 w-4" />, label: "Task Assignments", description: "Get notified when a task is assigned to you" },
-                { key: "eventReminder" as const, icon: <Clock className="h-4 w-4" />, label: "Event Reminders", description: "Reminders 24h and 1h before events" },
-                { key: "financeAlerts" as const, icon: <Shield className="h-4 w-4" />, label: "Finance Alerts", description: "Alerts for budget thresholds and pending approvals" },
-                { key: "memberJoined" as const, icon: <Users className="h-4 w-4" />, label: "New Member Joined", description: "Notification when someone joins the club" },
+                { key: "emailDigest"   as const, icon: <Mail className="h-4 w-4" />,        label: "Daily Email Digest",  description: "Receive a daily summary of club activity"          },
+                { key: "taskAssigned"  as const, icon: <CheckCircle className="h-4 w-4" />, label: "Task Assignments",    description: "Get notified when a task is assigned to you"       },
+                { key: "eventReminder" as const, icon: <Clock className="h-4 w-4" />,       label: "Event Reminders",     description: "Reminders 24h and 1h before events"                },
+                { key: "financeAlerts" as const, icon: <Shield className="h-4 w-4" />,      label: "Finance Alerts",      description: "Alerts for budget thresholds and pending approvals" },
+                { key: "memberJoined"  as const, icon: <Users className="h-4 w-4" />,       label: "New Member Joined",   description: "Notification when someone joins the club"           },
               ].map((item) => (
                 <div key={item.key} className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-3">
@@ -334,7 +346,7 @@ export function SettingsPage() {
           </div>
         </TabsContent>
 
-        {/* Appearance */}
+        {/* ── Appearance ── */}
         <TabsContent value="appearance">
           <div className="bg-card border border-border/50 rounded-xl p-6 space-y-6">
             <div>
@@ -342,6 +354,7 @@ export function SettingsPage() {
               <p className="text-xs text-muted-foreground mt-0.5">Customize how ClubRM looks for you</p>
             </div>
 
+            {/* Theme selector */}
             <div className="grid grid-cols-3 gap-4">
               {(["dark", "light", "system"] as const).map((t) => (
                 <button
@@ -356,9 +369,9 @@ export function SettingsPage() {
                 >
                   <div className={cn(
                     "h-20 rounded-lg mb-3 flex items-center justify-center",
-                    t === "dark" ? "bg-zinc-900 border border-zinc-800" :
-                    t === "light" ? "bg-white border border-gray-200" :
-                    "bg-gradient-to-r from-zinc-900 to-white border border-zinc-500"
+                    t === "dark"   ? "bg-zinc-900 border border-zinc-800" :
+                    t === "light"  ? "bg-white border border-gray-200"    :
+                                     "bg-gradient-to-r from-zinc-900 to-white border border-zinc-500"
                   )}>
                     <Settings className={cn("h-6 w-6", t === "light" ? "text-gray-600" : "text-gray-400")} />
                   </div>
@@ -372,25 +385,31 @@ export function SettingsPage() {
 
             <Separator />
 
+            {/* Accent color picker — now fully wired to ThemeProvider */}
             <div>
-              <h3 className="text-sm font-semibold mb-3">Accent Color</h3>
+              <h3 className="text-sm font-semibold mb-1">Accent Color</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Changes the primary color across the entire app — buttons, active tabs, and highlights.
+              </p>
               <div className="flex items-center gap-3">
-                {[
-                  { name: "Green", class: "bg-emerald-500" },
-                  { name: "Blue", class: "bg-blue-500" },
-                  { name: "Purple", class: "bg-violet-500" },
-                  { name: "Pink", class: "bg-pink-500" },
-                  { name: "Orange", class: "bg-orange-500" },
-                  { name: "Red", class: "bg-red-500" },
-                ].map((color) => (
+                {ACCENT_COLORS.map((color) => (
                   <button
                     key={color.name}
-                    className={cn("h-8 w-8 rounded-full transition-transform hover:scale-110", color.class)}
-                    title={color.name}
+                    onClick={() => setAccentColor(color.name)}
+                    title={color.label}
+                    className={cn(
+                      "h-8 w-8 rounded-full transition-all duration-150 hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      color.class,
+                      accentColor === color.name
+                        ? "ring-2 ring-offset-2 ring-offset-background ring-white scale-110"
+                        : "opacity-70 hover:opacity-100"
+                    )}
                   />
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Accent color customization will be available in a future update.</p>
+              <p className="text-[10px] text-muted-foreground mt-2 italic">
+                Currently active: <span className="capitalize font-medium text-foreground">{accentColor}</span>
+              </p>
             </div>
           </div>
         </TabsContent>

@@ -2,8 +2,7 @@ import React, { useState, useMemo, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 import { 
   type Campaign, 
-  type CampaignStatus, 
-  type PostPlatform, 
+  type PostPlatform,
   SEED_CAMPAIGNS, 
   CAMPAIGN_STATUS_CONFIG, 
   PLATFORM_CONFIG, 
@@ -12,6 +11,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -27,15 +27,23 @@ import {
 } from "@/components/ui/select"
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, PieChart, Pie, Cell 
+  ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from "recharts"
 import {
-  Search, Plus, Megaphone, Eye, Heart, MessageCircle, 
-  Share2, TrendingUp, Target, BarChart3, ChevronRight, 
-  Calendar, DollarSign, Activity
+  Search, Plus, Megaphone, BarChart3, ChevronRight, 
+  Calendar, DollarSign, Activity, Target, ArrowUpRight,
+  Clock, CheckCircle2
 } from "lucide-react"
 
-const PIE_COLORS = ["#f472b6", "#38bdf8", "#3b82f6", "#a78bfa", "#818cf8"]
+// Diverse palette for visual separation
+const CHART_COLORS = [
+  "hsl(var(--primary))", 
+  "#38bdf8", // Sky
+  "#fb7185", // Rose
+  "#fbbf24", // Amber
+  "#a78bfa", // Violet
+  "#2dd4bf"  // Teal
+]
 
 export function MarketingPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -47,10 +55,9 @@ export function MarketingPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [addOpen, setAddOpen] = useState(false)
 
-  // 1. Data Fetching
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase.from("campaigns").select("*").order("created_at", { ascending: true })
+      const { data } = await supabase.from("campaigns").select("*").order("created_at", { ascending: true })
       if (data && data.length > 0) {
         setCampaigns(data.map(toCampaign))
       } else {
@@ -60,7 +67,6 @@ export function MarketingPage() {
     load()
   }, [])
 
-  // 2. Computed Analytics Data
   const filtered = useMemo(() => {
     return campaigns.filter((c) => {
       const matchesSearch = !search || c.name.toLowerCase().includes(search.toLowerCase())
@@ -73,8 +79,8 @@ export function MarketingPage() {
 
   const chartData = useMemo(() => campaigns.map(c => ({
     name: c.name.length > 12 ? c.name.slice(0, 10) + '...' : c.name,
-    reach: c.reach,
-    engagement: c.engagement
+    Reach: c.reach,
+    Engagement: c.engagement
   })), [campaigns])
 
   const platformData = useMemo(() => {
@@ -85,28 +91,66 @@ export function MarketingPage() {
     })).filter(d => d.value > 0)
   }, [publishedPosts])
 
-  return (
-    <div className="flex flex-col gap-6 p-4 text-foreground animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      {/* Header */}
-      <div className="flex justify-between items-center border-b pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Marketing</h1>
-          <p className="text-sm text-muted-foreground">Campaign performance and social reach</p>
+  // Custom Tooltip for better readability
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-card border border-border/80 p-3 rounded-xl shadow-2xl backdrop-blur-md">
+          <p className="text-xs font-bold mb-2 text-foreground">{label}</p>
+          <div className="space-y-1">
+            {payload.map((entry: any, index: number) => (
+              <div key={index} className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                  <span className="text-[10px] font-medium text-muted-foreground">{entry.name}:</span>
+                </div>
+                <span className="text-[10px] font-bold text-foreground">{formatNumber(entry.value)}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <button 
-          onClick={() => setAddOpen(true)}
-          className="bg-[#FF8A8A] text-white px-4 py-2 rounded-md font-bold hover:opacity-90 flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Campaign
-        </button>
-      </div>
+      )
+    }
+    return null
+  }
 
-      {/* Toolbar / Navigation */}
-      <div className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/10">
+  return (
+    <div className="flex flex-col gap-6 p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* Header Card */}
+      <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card">
+        <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(circle at right, hsl(var(--primary)) 0%, transparent 40%)` }} />
+        
+        <div className="relative flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Marketing</h1>
+            <p className="text-sm text-muted-foreground font-medium">Campaign performance and social reach</p>
+          </div>
+
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row">
+            <div className="flex min-w-[160px] flex-col justify-between rounded-2xl border border-border/60 bg-background/50 p-3 backdrop-blur-sm">
+               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Campaigns</p>
+               <div className="mt-1 flex items-end justify-between">
+                 <p className="text-2xl font-bold">{filtered.length}</p>
+                 <ArrowUpRight className="h-4 w-4 text-primary" />
+               </div>
+            </div>
+
+            <Button 
+              onClick={() => setAddOpen(true)}
+              className="h-auto min-h-[80px] min-w-[180px] gap-2 rounded-2xl px-6 text-sm font-bold transition-all duration-300 bg-primary text-primary-foreground hover:brightness-110 shadow-lg shadow-primary/20"
+            >
+              <Plus className="h-5 w-5" />
+              New Campaign
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Navigation */}
+      <div className="flex flex-col gap-4 p-2 border rounded-2xl bg-muted/5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-1 bg-background/50 p-1 rounded-md border border-border/50">
+          <div className="flex items-center gap-1 bg-background/50 p-1 rounded-xl border border-border/50">
             {[
               { id: "campaigns", label: "Campaigns", icon: <Megaphone className="h-4 w-4" /> },
               { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-4 w-4" /> },
@@ -117,7 +161,7 @@ export function MarketingPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                  "flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all",
                   activeTab === tab.id 
                     ? "bg-primary text-primary-foreground shadow-sm" 
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -129,18 +173,18 @@ export function MarketingPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search..." 
+              <input 
+                placeholder="Search campaigns..." 
                 value={search} 
                 onChange={(e) => setSearchParams({ search: e.target.value })} 
-                className="pl-9 w-[200px] bg-background" 
+                className="pl-9 h-10 w-[220px] bg-background rounded-xl border border-input text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px] bg-background">
+              <SelectTrigger className="w-[140px] bg-background rounded-xl">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -154,87 +198,154 @@ export function MarketingPage() {
         </div>
       </div>
 
-      {/* Content Area */}
       <div className="flex-1">
         {activeTab === "campaigns" && (
-          <div className="grid gap-3">
+          <div className="grid gap-3 animate-in fade-in duration-300">
             {filtered.map((campaign) => (
               <div 
                 key={campaign.id}
                 onClick={() => setSelectedCampaign(campaign)}
-                className="group p-5 border rounded-xl bg-card hover:border-[#FF8A8A]/50 transition-all cursor-pointer flex justify-between items-center"
+                className="group p-5 border rounded-2xl bg-card transition-all cursor-pointer flex justify-between items-center hover:shadow-lg hover:border-primary/50"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-lg group-hover:text-[#FF8A8A]">{campaign.name}</h3>
-                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold", CAMPAIGN_STATUS_CONFIG[campaign.status].color)}>
+                    <h3 className="font-bold text-lg transition-colors group-hover:text-primary">{campaign.name}</h3>
+                    <span className={cn("text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider", CAMPAIGN_STATUS_CONFIG[campaign.status].color)}>
                       {CAMPAIGN_STATUS_CONFIG[campaign.status].label}
                     </span>
                   </div>
-                  <div className="flex gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {campaign.startDate}</span>
-                    <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> ${campaign.spent} spent</span>
+                  <div className="flex gap-4 text-xs text-muted-foreground font-medium">
+                    <span className="flex items-center gap-1 font-semibold"><Calendar className="h-3 w-3" /> {campaign.startDate}</span>
+                    <span className="flex items-center gap-1 font-semibold"><DollarSign className="h-3 w-3" /> ${campaign.spent} spent</span>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                <div className="p-2 rounded-full bg-muted/50 transition-colors group-hover:text-primary">
+                  <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
             ))}
           </div>
         )}
 
         {activeTab === "analytics" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card border border-border/50 rounded-xl p-6">
-              <h3 className="text-sm font-semibold mb-6 flex items-center gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-300">
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight">
                 <BarChart3 className="h-4 w-4 text-primary" /> Reach vs Engagement
               </h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="reach" fill="#f472b6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="engagement" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `${value > 999 ? (value/1000).toFixed(1) + 'k' : value}`} />
+                  <Tooltip content={<CustomTooltip />} cursor={{fill: 'hsl(var(--muted))', opacity: 0.2}} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '20px' }} />
+                  <Bar dataKey="Reach" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar dataKey="Engagement" fill="#38bdf8" radius={[4, 4, 0, 0]} barSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            <div className="bg-card border border-border/50 rounded-xl p-6">
-              <h3 className="text-sm font-semibold mb-6 flex items-center gap-2">
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight">
                 <Target className="h-4 w-4 text-primary" /> Platform Impressions
               </h3>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={platformData} innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
+                  <Pie data={platformData} innerRadius={60} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
                     {platformData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
         )}
+
+        {activeTab === "calendar" && (
+          <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm animate-in fade-in duration-300">
+            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" /> Upcoming Campaign Schedule
+            </h3>
+            <div className="space-y-4">
+              {filtered.length > 0 ? (
+                filtered.map((campaign, index) => (
+                  <div key={campaign.id} className="group flex items-center gap-5 p-4 rounded-xl border border-border/50 bg-muted/10 hover:bg-muted/40 transition-all hover:border-primary/30">
+                    <div className="flex flex-col items-center justify-center py-2 px-4 bg-background rounded-lg border shadow-sm min-w-[70px]">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        {new Date(campaign.startDate).toLocaleString('default', { month: 'short' })}
+                      </span>
+                      <span className="text-xl font-black text-primary">{new Date(campaign.startDate).getDate()}</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-md group-hover:text-primary transition-colors">{campaign.name}</h4>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold uppercase", CAMPAIGN_STATUS_CONFIG[campaign.status].color)}>
+                          {CAMPAIGN_STATUS_CONFIG[campaign.status].label}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> Ends {campaign.endDate}
+                        </span>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" className="rounded-full group-hover:bg-primary/10 group-hover:text-primary">
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Calendar className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                  <p className="font-medium">No campaigns found.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "live-feed" && (
+          <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm animate-in fade-in duration-300">
+            <h3 className="text-lg font-bold mb-8 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" /> Live Updates
+            </h3>
+            <div className="relative border-l border-border/60 ml-3 space-y-8 pb-4">
+              <div className="relative pl-8">
+                <span className="absolute -left-2 top-1 h-4 w-4 rounded-full bg-primary ring-4 ring-background flex items-center justify-center">
+                  <div className="h-1.5 w-1.5 rounded-full bg-background" />
+                </span>
+                <div className="bg-muted/20 border border-border/50 rounded-xl p-4 transition-colors hover:bg-muted/40">
+                  <p className="text-sm font-bold text-foreground">Campaign Update</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <span className="font-semibold text-foreground">Yusuf Garba</span> modified the budget for "Winter Recruitment".
+                  </p>
+                  <span className="text-[10px] font-medium text-muted-foreground mt-3 flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Just now
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Campaign Detail Dialog */}
       <Dialog open={!!selectedCampaign} onOpenChange={() => setSelectedCampaign(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle>{selectedCampaign?.name}</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{selectedCampaign?.name}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-sm text-muted-foreground">{selectedCampaign?.description}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{selectedCampaign?.description}</p>
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 bg-muted/20 rounded-lg">
-                <p className="text-xs text-muted-foreground uppercase">Reach</p>
-                <p className="text-xl font-bold">{formatNumber(selectedCampaign?.reach || 0)}</p>
+              <div className="p-4 bg-muted/30 rounded-2xl border border-border/40">
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Total Reach</p>
+                <p className="text-2xl font-black mt-1 text-primary">{formatNumber(selectedCampaign?.reach || 0)}</p>
               </div>
-              <div className="p-3 bg-muted/20 rounded-lg">
-                <p className="text-xs text-muted-foreground uppercase">Engagement</p>
-                <p className="text-xl font-bold">{formatNumber(selectedCampaign?.engagement || 0)}</p>
+              <div className="p-4 bg-muted/30 rounded-2xl border border-border/40">
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Engagement</p>
+                <p className="text-2xl font-black mt-1 text-primary">{formatNumber(selectedCampaign?.engagement || 0)}</p>
               </div>
             </div>
           </div>

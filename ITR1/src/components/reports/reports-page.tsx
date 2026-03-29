@@ -31,6 +31,7 @@ import {
   RadialBar,
   ComposedChart,
   Line,
+  Legend,
 } from "recharts"
 import {
   Users,
@@ -63,7 +64,9 @@ import {
   Star,
 } from "lucide-react"
 
-const PIE_COLORS = ["#f472b6", "#38bdf8", "#34d399", "#fbbf24", "#a78bfa", "#fb923c", "#f87171", "#06b6d4"]
+// ─── Chart Palette ───────────────────────────────────────────────────────────
+const PIE_COLORS = ["#38bdf8", "#34d399", "#fbbf24", "#a78bfa", "#fb923c", "#f87171", "#06b6d4", "#e879f9"]
+
 const STATUS_COLORS: Record<string, string> = {
   backlog: "#64748b", todo: "#3b82f6", in_progress: "#f59e0b", in_review: "#8b5cf6", done: "#10b981",
 }
@@ -71,31 +74,92 @@ const PRIORITY_COLORS: Record<string, string> = {
   urgent: "#ef4444", high: "#f97316", medium: "#eab308", low: "#22c55e",
 }
 
-const TOOLTIP_STYLE = { backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px", color: "hsl(var(--foreground))" }
-const AXIS_TICK = { fontSize: 11, fill: "#94a3b8" }
+// ─── Shared axis / grid props ─────────────────────────────────────────────────
+const AXIS_TICK  = { fontSize: 11, fill: "#94a3b8" }
 const AXIS_TICK_SM = { fontSize: 10, fill: "#94a3b8" }
-const AXIS_STROKE = "#475569"
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const pieLabel = (props: any) => {
-  const { name, percent, x, y, textAnchor } = props
-  return <text x={x} y={y} textAnchor={textAnchor} fill="#94a3b8" fontSize={10}>{`${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`}</text>
+const GRID_PROPS = {
+  strokeDasharray: "3 3",
+  vertical: false,
+  stroke: "hsl(var(--border))",
+  opacity: 0.4,
+} as const
+const XAXIS_PROPS = { tick: AXIS_TICK, tickLine: false, axisLine: false } as const
+const YAXIS_PROPS = {
+  tick: AXIS_TICK,
+  tickLine: false,
+  axisLine: false,
+  tickFormatter: (v: number) => v > 999 ? `${(v / 1000).toFixed(1)}k` : String(v),
+} as const
+const CURSOR_PROPS = { fill: "hsl(var(--muted))", opacity: 0.2 }
+
+// ─── Shared custom tooltip — matches Marketing page exactly ──────────────────
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-card border border-border/80 p-3 rounded-xl shadow-2xl backdrop-blur-md">
+      {label && <p className="text-xs font-bold mb-2 text-foreground">{label}</p>}
+      <div className="space-y-1">
+        {payload.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+              <span className="text-[10px] font-medium text-muted-foreground">{entry.name}:</span>
+            </div>
+            <span className="text-[10px] font-bold text-foreground">
+              {typeof entry.value === "number" && entry.name?.includes("$")
+                ? fmt(entry.value)
+                : entry.value?.toLocaleString?.() ?? entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
+function CurrencyTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-card border border-border/80 p-3 rounded-xl shadow-2xl backdrop-blur-md">
+      {label && <p className="text-xs font-bold mb-2 text-foreground">{label}</p>}
+      <div className="space-y-1">
+        {payload.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color ?? entry.fill }} />
+              <span className="text-[10px] font-medium text-muted-foreground">{entry.name}:</span>
+            </div>
+            <span className="text-[10px] font-bold text-foreground">{fmt(entry.value)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number) {
   return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", minimumFractionDigits: 0 }).format(n)
 }
-
 function pct(a: number, b: number) {
   return b > 0 ? ((a / b) * 100).toFixed(1) : "0"
 }
-
-/** Safely parse a value that may be a Date, string, or null from the DB */
 function safeDate(v: Date | string | null | undefined): Date | null {
   if (!v) return null
   const d = v instanceof Date ? v : new Date(v)
   return isNaN(d.getTime()) ? null : d
 }
 
+const pieLabel = (props: any) => {
+  const { name, percent, x, y, textAnchor } = props
+  return (
+    <text x={x} y={y} textAnchor={textAnchor} fill="#94a3b8" fontSize={10}>
+      {`${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`}
+    </text>
+  )
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export function ReportsPage() {
   const { members, stats: memberStats } = useMembers()
   const { events } = useEvents()
@@ -104,7 +168,6 @@ export function ReportsPage() {
   const [period, setPeriod] = useState("this-term")
   const [selectedDept, setSelectedDept] = useState<string>("all")
 
-  // ─── Filtered Data Wrappers (Cross-Filtering) ───
   const departments = useMemo(() => {
     const depts = new Set<string>()
     members.forEach(m => depts.add(m.department))
@@ -112,95 +175,66 @@ export function ReportsPage() {
     return Array.from(depts).sort()
   }, [members, tasks])
 
-  const fMembers = useMemo(() => 
-    selectedDept === "all" ? members : members.filter(m => m.department === selectedDept)
-  , [members, selectedDept])
+  const fMembers      = useMemo(() => selectedDept === "all" ? members  : members.filter(m => m.department === selectedDept), [members, selectedDept])
+  const fTasks        = useMemo(() => selectedDept === "all" ? tasks    : tasks.filter(t => t.section === selectedDept), [tasks, selectedDept])
+  const fEvents       = useMemo(() => selectedDept === "all" ? events   : events.filter(e => e.tags.some(t => t.toLowerCase() === selectedDept.toLowerCase())), [events, selectedDept])
+  const fExpenses     = useMemo(() => selectedDept === "all" ? expenses : expenses.filter(e => e.category.toLowerCase() === selectedDept.toLowerCase()), [expenses, selectedDept])
+  const fIncome       = useMemo(() => selectedDept === "all" ? income   : income.filter(i => i.type.toLowerCase() === selectedDept.toLowerCase()), [income, selectedDept])
+  const fReimbursements = useMemo(() => selectedDept === "all" ? reimbursements : reimbursements.filter(r => r.category.toLowerCase() === selectedDept.toLowerCase()), [reimbursements, selectedDept])
 
-  const fTasks = useMemo(() => 
-    selectedDept === "all" ? tasks : tasks.filter(t => t.section === selectedDept)
-  , [tasks, selectedDept])
-
-  const fEvents = useMemo(() => {
-    // Events don't have direct depts, but we can filter by tags if they match dept name
-    if (selectedDept === "all") return events
-    return events.filter(e => e.tags.some(t => t.toLowerCase() === selectedDept.toLowerCase()))
-  }, [events, selectedDept])
-
-  const fExpenses = useMemo(() => {
-    if (selectedDept === "all") return expenses
-    // Map finance categories to depts roughly
-    return expenses.filter(e => e.category.toLowerCase() === selectedDept.toLowerCase())
-  }, [expenses, selectedDept])
-
-  const fIncome = useMemo(() => {
-    if (selectedDept === "all") return income
-    return income.filter(i => i.type.toLowerCase() === selectedDept.toLowerCase())
-  }, [income, selectedDept])
-
-  const fReimbursements = useMemo(() => {
-    if (selectedDept === "all") return reimbursements
-    return reimbursements.filter(r => r.category.toLowerCase() === selectedDept.toLowerCase())
-  }, [reimbursements, selectedDept])
-
-  // Re-derive stats from filtered data
   const fMemberStats = useMemo(() => ({
-    total: fMembers.length,
-    active: fMembers.filter(m => m.status === "active").length,
+    total:    fMembers.length,
+    active:   fMembers.filter(m => m.status === "active").length,
     inactive: fMembers.filter(m => m.status === "inactive").length,
-    alumni: fMembers.filter(m => m.status === "alumni").length,
+    alumni:   fMembers.filter(m => m.status === "alumni").length,
   }), [fMembers])
 
-  const fTotalSpent = fExpenses.reduce((s, e) => s + e.amount, 0)
-  const fTotalIncome = fIncome.reduce((s, i) => s + i.amount, 0)
-  const fTotalPending = fExpenses.filter(e => e.status === "pending").reduce((s, e) => s + e.amount, 0) + 
-                       fReimbursements.filter(r => r.status === "pending").reduce((s, r) => s + r.amount, 0)
+  const fTotalSpent   = fExpenses.reduce((s, e) => s + e.amount, 0)
+  const fTotalIncome  = fIncome.reduce((s, i) => s + i.amount, 0)
+  const fTotalPending = fExpenses.filter(e => e.status === "pending").reduce((s, e) => s + e.amount, 0)
+                      + fReimbursements.filter(r => r.status === "pending").reduce((s, r) => s + r.amount, 0)
 
-
-  // ─── Derived: Tasks (DB-safe: guards on nullable arrays/dates) ───
-  const completedTasks = fTasks.filter((t) => t.status === "done").length
-  const completionRate = fTasks.length > 0 ? (completedTasks / fTasks.length) * 100 : 0
-  const now = new Date()
-  const overdueTasks = fTasks.filter((t) => {
-    const due = safeDate(t.dueDate)
-    return due && due < now && t.status !== "done"
-  })
-  const inProgressTasks = fTasks.filter((t) => t.status === "in_progress").length
-  const totalSubtasks = fTasks.reduce((s, t) => s + (t.subtasks ?? []).length, 0)
-  const doneSubtasks = fTasks.reduce((s, t) => s + (t.subtasks ?? []).filter((st) => st.done).length, 0)
-  const subtaskRate = totalSubtasks > 0 ? (doneSubtasks / totalSubtasks) * 100 : 0
+  // Tasks
+  const completedTasks    = fTasks.filter(t => t.status === "done").length
+  const completionRate    = fTasks.length > 0 ? (completedTasks / fTasks.length) * 100 : 0
+  const now               = new Date()
+  const overdueTasks      = fTasks.filter(t => { const due = safeDate(t.dueDate); return due && due < now && t.status !== "done" })
+  const inProgressTasks   = fTasks.filter(t => t.status === "in_progress").length
+  const totalSubtasks     = fTasks.reduce((s, t) => s + (t.subtasks ?? []).length, 0)
+  const doneSubtasks      = fTasks.reduce((s, t) => s + (t.subtasks ?? []).filter(st => st.done).length, 0)
+  const subtaskRate        = totalSubtasks > 0 ? (doneSubtasks / totalSubtasks) * 100 : 0
   const avgSubtasksPerTask = fTasks.length > 0 ? (totalSubtasks / fTasks.length).toFixed(1) : "0"
 
   const tasksByStatus = useMemo(() =>
-    (["backlog", "todo", "in_progress", "in_review", "done"] as const).map((s) => ({
-      name: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      value: fTasks.filter((t) => t.status === s).length,
+    (["backlog", "todo", "in_progress", "in_review", "done"] as const).map(s => ({
+      name: s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+      value: fTasks.filter(t => t.status === s).length,
       fill: STATUS_COLORS[s],
     })), [fTasks])
 
   const tasksByPriority = useMemo(() =>
-    (["urgent", "high", "medium", "low"] as const).map((p) => ({
+    (["urgent", "high", "medium", "low"] as const).map(p => ({
       name: p.charAt(0).toUpperCase() + p.slice(1),
-      value: fTasks.filter((t) => t.priority === p).length,
+      value: fTasks.filter(t => t.priority === p).length,
       fill: PRIORITY_COLORS[p],
     })), [fTasks])
 
   const tasksBySection = useMemo(() => {
     const map: Record<string, number> = {}
-    fTasks.forEach((t) => { const s = t.section || "Unsorted"; map[s] = (map[s] || 0) + 1 })
+    fTasks.forEach(t => { const s = t.section || "Unsorted"; map[s] = (map[s] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
   }, [fTasks])
 
   const tasksByTag = useMemo(() => {
     const map: Record<string, number> = {}
-    fTasks.forEach((t) => (t.tags ?? []).forEach((tag) => { map[tag] = (map[tag] || 0) + 1 }))
+    fTasks.forEach(t => (t.tags ?? []).forEach(tag => { map[tag] = (map[tag] || 0) + 1 }))
     return Object.entries(map).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value })).sort((a, b) => b.value - a.value)
   }, [fTasks])
 
-  // Assignee productivity (DB-safe: guard assignees array)
   const assigneeStats = useMemo(() => {
     const map: Record<string, { assigned: number; completed: number }> = {}
-    fTasks.forEach((t) => {
-      ;(t.assignees ?? []).forEach((a) => {
+    fTasks.forEach(t => {
+      ;(t.assignees ?? []).forEach(a => {
         if (!map[a]) map[a] = { assigned: 0, completed: 0 }
         map[a].assigned++
         if (t.status === "done") map[a].completed++
@@ -208,181 +242,151 @@ export function ReportsPage() {
     })
     return Object.entries(map)
       .map(([id, stats]) => {
-        const member = fMembers.find((m) => m.id === id)
+        const member = fMembers.find(m => m.id === id)
         return { id, name: member?.name || id, ...stats, rate: stats.assigned > 0 ? Math.round((stats.completed / stats.assigned) * 100) : 0 }
       })
       .sort((a, b) => b.completed - a.completed)
       .slice(0, 8)
   }, [fTasks, fMembers])
 
-  // ─── Derived: Events (DB-safe: guard date parsing) ───
-  const upcomingEvents = fEvents.filter((e) => { const d = safeDate(e.startDate); return d && d > now }).length
-  const pastEvents = fEvents.filter((e) => { const d = safeDate(e.endDate); return d && d < now }).length
-  const eventsWithCapacity = fEvents.filter((e) => e.capacity && e.capacity > 0)
-  const totalCapacity = eventsWithCapacity.reduce((s, e) => s + (e.capacity || 0), 0)
-  const totalRegistered = eventsWithCapacity.reduce((s, e) => s + (e.registered || 0), 0)
-  const avgFillRate = totalCapacity > 0 ? (totalRegistered / totalCapacity) * 100 : 0
+  // Events
+  const upcomingEvents     = fEvents.filter(e => { const d = safeDate(e.startDate); return d && d > now }).length
+  const pastEvents         = fEvents.filter(e => { const d = safeDate(e.endDate);   return d && d < now }).length
+  const eventsWithCapacity = fEvents.filter(e => e.capacity && e.capacity > 0)
+  const totalCapacity      = eventsWithCapacity.reduce((s, e) => s + (e.capacity || 0), 0)
+  const totalRegistered    = eventsWithCapacity.reduce((s, e) => s + (e.registered || 0), 0)
+  const avgFillRate        = totalCapacity > 0 ? (totalRegistered / totalCapacity) * 100 : 0
 
   const eventsByTag = useMemo(() => {
     const map: Record<string, number> = {}
-    fEvents.forEach((e) => (e.tags ?? []).forEach((t) => { map[t] = (map[t] || 0) + 1 }))
+    fEvents.forEach(e => (e.tags ?? []).forEach(t => { map[t] = (map[t] || 0) + 1 }))
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
   }, [fEvents])
 
   const eventFillData = useMemo(() =>
-    eventsWithCapacity.map((e) => ({
+    eventsWithCapacity.map(e => ({
       name: e.title.length > 18 ? e.title.slice(0, 18) + "..." : e.title,
       registered: e.registered || 0,
-      capacity: e.capacity || 0,
-      fill: ((e.registered || 0) / (e.capacity || 1)) * 100,
+      capacity:   e.capacity   || 0,
+      fillPct: ((e.registered || 0) / (e.capacity || 1)) * 100,
     })), [eventsWithCapacity])
 
   const eventsByStatus = useMemo(() => {
     const map: Record<string, number> = {}
-    fEvents.forEach((e) => { const s = e.status || "confirmed"; map[s] = (map[s] || 0) + 1 })
+    fEvents.forEach(e => { const s = e.status || "confirmed"; map[s] = (map[s] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
   }, [fEvents])
 
-  // ─── Derived: Finance ───
-  const budgetUtil = budget.totalBudget > 0 ? (fTotalSpent / budget.totalBudget) * 100 : 0
-  const budgetRemaining = budget.totalBudget - fTotalSpent
-  const netCashFlow = fTotalIncome - fTotalSpent
-  const approvedExpenses = fExpenses.filter((e) => e.status === "approved").length
-  const pendingExpenses = fExpenses.filter((e) => e.status === "pending").length
-  const deniedExpenses = fExpenses.filter((e) => e.status === "denied").length
+  // Finance
+  const budgetUtil         = budget.totalBudget > 0 ? (fTotalSpent / budget.totalBudget) * 100 : 0
+  const budgetRemaining    = budget.totalBudget - fTotalSpent
+  const netCashFlow        = fTotalIncome - fTotalSpent
+  const approvedExpenses   = fExpenses.filter(e => e.status === "approved").length
+  const pendingExpenses    = fExpenses.filter(e => e.status === "pending").length
+  const deniedExpenses     = fExpenses.filter(e => e.status === "denied").length
   const expenseApprovalRate = fExpenses.length > 0 ? (approvedExpenses / fExpenses.length) * 100 : 0
-  const pendingReimb = fReimbursements.filter((r) => r.status === "pending").length
+  const pendingReimb       = fReimbursements.filter(r => r.status === "pending").length
 
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {}
-    fExpenses.forEach((e) => { map[e.category] = (map[e.category] || 0) + e.amount })
+    fExpenses.forEach(e => { map[e.category] = (map[e.category] || 0) + e.amount })
     return Object.entries(map).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value })).sort((a, b) => b.value - a.value)
   }, [fExpenses])
 
   const incomeByType = useMemo(() => {
     const map: Record<string, number> = {}
-    fIncome.forEach((i) => { map[i.type] = (map[i.type] || 0) + i.amount })
+    fIncome.forEach(i => { map[i.type] = (map[i.type] || 0) + i.amount })
     return Object.entries(map).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value })).sort((a, b) => b.value - a.value)
   }, [fIncome])
 
-  const topExpenses = useMemo(() =>
-    [...fExpenses].sort((a, b) => b.amount - a.amount).slice(0, 8), [fExpenses])
+  const topExpenses = useMemo(() => [...fExpenses].sort((a, b) => b.amount - a.amount).slice(0, 8), [fExpenses])
+  const topIncomes  = useMemo(() => [...fIncome].sort((a, b) => b.amount - a.amount).slice(0, 6),   [fIncome])
 
-  const topIncomes = useMemo(() =>
-    [...fIncome].sort((a, b) => b.amount - a.amount).slice(0, 6), [fIncome])
-
-  // ─── Monthly Trend (computed from actual data — production-ready) ───
+  // Monthly Trend
   const monthlyTrend = useMemo(() => {
     const months: { month: string; members: number; events: number; tasks: number; income: number; spending: number }[] = []
     for (let i = 5; i >= 0; i--) {
-      const date = subMonths(now, i)
+      const date  = subMonths(now, i)
       const start = startOfMonth(date)
-      const end = endOfMonth(date)
+      const end   = endOfMonth(date)
       const label = format(date, "MMM")
-
-      const monthIncome = income
-        .filter((inc) => { const d = safeDate(inc.date); return d && isWithinInterval(d, { start, end }) })
-        .reduce((s, inc) => s + inc.amount, 0)
-
-      const monthSpending = expenses
-        .filter((exp) => { const d = safeDate(exp.date); return d && isWithinInterval(d, { start, end }) })
-        .reduce((s, exp) => s + exp.amount, 0)
-
-      const monthEvents = events
-        .filter((ev) => { const d = safeDate(ev.startDate); return d && isWithinInterval(d, { start, end }) }).length
-
-      const monthTasks = tasks
-        .filter((t) => { const d = safeDate(t.createdAt); return d && isWithinInterval(d, { start, end }) }).length
-
-      // Member count: those who joined on or before end of this month and are still active
-      const monthMembers = members
-        .filter((m) => { const d = safeDate(m.joinDate); return d && d <= end && m.status === "active" }).length
-
+      const monthIncome   = income.filter(inc => { const d = safeDate(inc.date);    return d && isWithinInterval(d, { start, end }) }).reduce((s, inc) => s + inc.amount, 0)
+      const monthSpending = expenses.filter(exp => { const d = safeDate(exp.date);  return d && isWithinInterval(d, { start, end }) }).reduce((s, exp) => s + exp.amount, 0)
+      const monthEvents   = events.filter(ev => { const d = safeDate(ev.startDate); return d && isWithinInterval(d, { start, end }) }).length
+      const monthTasks    = tasks.filter(t => { const d = safeDate(t.createdAt);    return d && isWithinInterval(d, { start, end }) }).length
+      const monthMembers  = members.filter(m => { const d = safeDate(m.joinDate);   return d && d <= end && m.status === "active" }).length
       months.push({ month: label, members: monthMembers, events: monthEvents, tasks: monthTasks, income: Math.round(monthIncome), spending: Math.round(monthSpending) })
     }
     return months
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `now` excluded: stable within session, data arrays drive recomputation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fExpenses, fIncome, fEvents, fTasks, fMembers])
 
-  // ─── Derived: Members ───
+  // Members derived
   const membersByRole = useMemo(() => {
     const map: Record<string, number> = {}
-    fMembers.forEach((m) => { map[m.role] = (map[m.role] || 0) + 1 })
+    fMembers.forEach(m => { map[m.role] = (map[m.role] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name, value }))
   }, [fMembers])
 
   const membersByDept = useMemo(() => {
     const map: Record<string, number> = {}
-    fMembers.forEach((m) => { map[m.department] = (map[m.department] || 0) + 1 })
+    fMembers.forEach(m => { map[m.department] = (map[m.department] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name: name.length > 14 ? name.slice(0, 14) + "..." : name, value })).sort((a, b) => b.value - a.value)
   }, [fMembers])
 
   const membersByYear = useMemo(() => {
     const map: Record<string, number> = {}
-    fMembers.forEach((m) => { map[m.year] = (map[m.year] || 0) + 1 })
+    fMembers.forEach(m => { map[m.year] = (map[m.year] || 0) + 1 })
     return Object.entries(map).map(([name, value]) => ({ name, value }))
   }, [fMembers])
 
   const engagementScores = useMemo(() =>
-    fMembers
-      .filter((m) => m.status === "active")
-      .map((m) => {
-        const score = Math.min(100, Math.round((m.tasksCompleted * 2 + m.eventsAttended * 3) / 1.5))
-        return { ...m, score }
-      })
+    fMembers.filter(m => m.status === "active")
+      .map(m => ({ ...m, score: Math.min(100, Math.round((m.tasksCompleted * 2 + m.eventsAttended * 3) / 1.5)) }))
       .sort((a, b) => b.score - a.score), [fMembers])
 
-  const avgEngagement = engagementScores.length > 0 ? Math.round(engagementScores.reduce((s, m) => s + m.score, 0) / engagementScores.length) : 0
-  const atRiskMembers = engagementScores.filter((m) => m.score < 20)
-  const retentionRate = fMemberStats.total > 0 ? ((fMemberStats.active / fMemberStats.total) * 100).toFixed(0) : "0"
+  const avgEngagement  = engagementScores.length > 0 ? Math.round(engagementScores.reduce((s, m) => s + m.score, 0) / engagementScores.length) : 0
+  const atRiskMembers  = engagementScores.filter(m => m.score < 20)
+  const retentionRate  = fMemberStats.total > 0 ? ((fMemberStats.active / fMemberStats.total) * 100).toFixed(0) : "0"
 
-  // ─── Org Health Score (composite) ───
+  // Org Health
   const orgHealth = useMemo(() => {
-    const retention = fMemberStats.total > 0 ? (fMemberStats.active / fMemberStats.total) * 100 : 0
-    const taskHealth = completionRate
+    const retention    = fMemberStats.total > 0 ? (fMemberStats.active / fMemberStats.total) * 100 : 0
+    const taskHealth   = completionRate
     const budgetHealth = Math.max(0, 100 - Math.abs(budgetUtil - 50))
-    const eventHealth = avgFillRate
-    const score = Math.round(retention * 0.3 + taskHealth * 0.25 + budgetHealth * 0.2 + eventHealth * 0.25)
-    return Math.min(100, Math.max(0, score))
+    const eventHealth  = avgFillRate
+    return Math.min(100, Math.max(0, Math.round(retention * 0.3 + taskHealth * 0.25 + budgetHealth * 0.2 + eventHealth * 0.25)))
   }, [fMemberStats, completionRate, budgetUtil, avgFillRate])
 
-  const healthColor = orgHealth >= 75 ? "text-emerald-400" : orgHealth >= 50 ? "text-amber-400" : "text-red-400"
-  const healthBg = orgHealth >= 75 ? "bg-emerald-500" : orgHealth >= 50 ? "bg-amber-500" : "bg-red-500"
-  const healthLabel = orgHealth >= 75 ? "Excellent" : orgHealth >= 50 ? "Good" : "Needs Attention"
-
-  // Radial bar data for org health
+  const healthColor  = orgHealth >= 75 ? "text-emerald-400" : orgHealth >= 50 ? "text-amber-400" : "text-red-400"
+  const healthBg     = orgHealth >= 75 ? "bg-emerald-500"   : orgHealth >= 50 ? "bg-amber-500"   : "bg-red-500"
+  const healthLabel  = orgHealth >= 75 ? "Excellent"        : orgHealth >= 50 ? "Good"           : "Needs Attention"
   const healthRadial = [{ name: "Health", value: orgHealth, fill: orgHealth >= 75 ? "#10b981" : orgHealth >= 50 ? "#f59e0b" : "#ef4444" }]
 
-  // ─── Smart Insights Engine ───
+  // Smart Insights
   const insights = useMemo(() => {
     const list: { type: "success" | "warning" | "danger" | "info"; title: string; detail: string }[] = []
-
     if (Number(retentionRate) >= 80) list.push({ type: "success", title: "Strong member retention", detail: `${retentionRate}% of members are active — above the 80% benchmark` })
     else list.push({ type: "warning", title: "Member retention below target", detail: `${retentionRate}% active — ${fMemberStats.inactive} inactive member(s) need re-engagement` })
-
-    if (overdueTasks.length > 0) list.push({ type: "danger", title: `${overdueTasks.length} overdue task${overdueTasks.length > 1 ? "s" : ""}`, detail: overdueTasks.map((t) => t.title).slice(0, 3).join(", ") })
+    if (overdueTasks.length > 0) list.push({ type: "danger", title: `${overdueTasks.length} overdue task${overdueTasks.length > 1 ? "s" : ""}`, detail: overdueTasks.map(t => t.title).slice(0, 3).join(", ") })
     if (completionRate >= 60) list.push({ type: "success", title: `Task completion at ${completionRate.toFixed(0)}%`, detail: `${completedTasks} of ${fTasks.length} tasks done — solid progress` })
     else list.push({ type: "warning", title: `Task completion at ${completionRate.toFixed(0)}%`, detail: `Only ${completedTasks} of ${fTasks.length} tasks done — may need resource reallocation` })
-
     if (budgetUtil > 85) list.push({ type: "danger", title: `Budget ${budgetUtil.toFixed(0)}% utilized`, detail: `Only ${fmt(budgetRemaining)} remaining — review upcoming expenses` })
     else if (budgetUtil > 60) list.push({ type: "info", title: `Budget ${budgetUtil.toFixed(0)}% utilized`, detail: `${fmt(budgetRemaining)} remaining — on track for the term` })
     else list.push({ type: "success", title: `Budget ${budgetUtil.toFixed(0)}% utilized`, detail: `${fmt(budgetRemaining)} remaining — healthy budget position` })
-
     if (pendingExpenses > 3) list.push({ type: "warning", title: `${pendingExpenses} pending expense approvals`, detail: `${fmt(fTotalPending)} waiting for VP Finance review` })
     if (avgFillRate > 70) list.push({ type: "success", title: `Events averaging ${avgFillRate.toFixed(0)}% fill rate`, detail: `${totalRegistered} total registrations across ${eventsWithCapacity.length} events` })
-    if (atRiskMembers.length > 0) list.push({ type: "warning", title: `${atRiskMembers.length} at-risk member${atRiskMembers.length > 1 ? "s" : ""}`, detail: atRiskMembers.map((m) => m.name).join(", ") + " — low engagement scores" })
+    if (atRiskMembers.length > 0) list.push({ type: "warning", title: `${atRiskMembers.length} at-risk member${atRiskMembers.length > 1 ? "s" : ""}`, detail: atRiskMembers.map(m => m.name).join(", ") + " — low engagement scores" })
     if (netCashFlow > 0) list.push({ type: "success", title: `Positive cash flow: ${fmt(netCashFlow)}`, detail: `Income (${fmt(fTotalIncome)}) exceeds spending (${fmt(fTotalSpent)})` })
     else list.push({ type: "danger", title: `Negative cash flow: ${fmt(netCashFlow)}`, detail: `Spending exceeds income — review budget allocation` })
-
     return list
   }, [retentionRate, fMemberStats, overdueTasks, completionRate, completedTasks, fTasks, budgetUtil, budgetRemaining, pendingExpenses, fTotalPending, avgFillRate, totalRegistered, eventsWithCapacity, atRiskMembers, netCashFlow, fTotalIncome, fTotalSpent])
 
   const insightColors = { success: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400", warning: "bg-amber-500/10 border-amber-500/20 text-amber-400", danger: "bg-red-500/10 border-red-500/20 text-red-400", info: "bg-blue-500/10 border-blue-500/20 text-blue-400" }
-  const insightIcons = { success: <ArrowUpRight className="h-4 w-4" />, warning: <AlertTriangle className="h-4 w-4" />, danger: <Flame className="h-4 w-4" />, info: <Activity className="h-4 w-4" /> }
+  const insightIcons  = { success: <ArrowUpRight className="h-4 w-4" />, warning: <AlertTriangle className="h-4 w-4" />, danger: <Flame className="h-4 w-4" />, info: <Activity className="h-4 w-4" /> }
 
   function handleExport(exportFormat: string) {
     if (exportFormat === "csv") {
-      // Build CSV from all modules
       const lines: string[] = []
       lines.push("Module,Metric,Value")
       lines.push(`Members,Total,${memberStats.total}`)
@@ -409,33 +413,27 @@ export function ReportsPage() {
       lines.push("")
       lines.push("--- Expenses ---")
       lines.push("Description,Amount,Category,Status,Submitted By,Date")
-      fExpenses.forEach((e) => {
-        const d = safeDate(e.date)
-        lines.push(`"${e.description}",${e.amount},${e.category},${e.status},"${e.submittedBy}",${d ? format(d, "yyyy-MM-dd") : ""}`)
-      })
+      fExpenses.forEach(e => { const d = safeDate(e.date); lines.push(`"${e.description}",${e.amount},${e.category},${e.status},"${e.submittedBy}",${d ? format(d, "yyyy-MM-dd") : ""}`) })
       lines.push("")
       lines.push("--- Income ---")
       lines.push("Source,Amount,Type,Date")
-      fIncome.forEach((i) => {
-        const d = safeDate(i.date)
-        lines.push(`"${i.source}",${i.amount},${i.type},${d ? format(d, "yyyy-MM-dd") : ""}`)
-      })
-
+      fIncome.forEach(i => { const d = safeDate(i.date); lines.push(`"${i.source}",${i.amount},${i.type},${d ? format(d, "yyyy-MM-dd") : ""}`) })
       const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement("a")
+      a.href     = url
       a.download = `clubrm-report-${format(new Date(), "yyyy-MM-dd")}.csv`
       a.click()
       URL.revokeObjectURL(url)
     } else {
-      // For PDF, just trigger print as a simple solution
       window.print()
     }
   }
 
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -452,9 +450,7 @@ export function ReportsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
-              {departments.map(d => (
-                <SelectItem key={d} value={d}>{d}</SelectItem>
-              ))}
+              {departments.map(d => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
             </SelectContent>
           </Select>
           <Select value={period} onValueChange={setPeriod}>
@@ -466,19 +462,14 @@ export function ReportsPage() {
               <SelectItem value="all-time">All Time</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" className="gap-1.5 h-9 text-xs" onClick={() => handleExport("csv")}>
-            <Download className="h-3.5 w-3.5" /> CSV
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 h-9 text-xs" onClick={() => handleExport("pdf")}>
-            <Download className="h-3.5 w-3.5" /> PDF
-          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 h-9 text-xs" onClick={() => handleExport("csv")}><Download className="h-3.5 w-3.5" /> CSV</Button>
+          <Button variant="outline" size="sm" className="gap-1.5 h-9 text-xs" onClick={() => handleExport("pdf")}><Download className="h-3.5 w-3.5" /> PDF</Button>
         </div>
       </div>
 
-      {/* Org Health Hero + KPI Strip */}
+      {/* Org Health + KPI Strip */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Org Health Score */}
-        <div className="lg:col-span-3 bg-card border border-border/50 rounded-xl p-5 flex flex-col items-center justify-center">
+        <div className="lg:col-span-3 bg-card border border-border/50 rounded-2xl p-5 flex flex-col items-center justify-center">
           <p className="text-[10px] font-medium uppercase text-muted-foreground tracking-wider mb-1">Org Health Score</p>
           <div className="relative">
             <ResponsiveContainer width={140} height={140}>
@@ -498,19 +489,18 @@ export function ReportsPage() {
           <p className="text-[10px] text-muted-foreground mt-2 text-center">Based on retention, tasks, budget & events</p>
         </div>
 
-        {/* KPI Cards */}
         <div className="lg:col-span-9 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {[
-            { label: "Active Members", value: fMemberStats.active, sub: `of ${fMemberStats.total} total`, icon: <UserCheck className="h-4 w-4" />, color: "text-emerald-400", trend: `${retentionRate}% retention` },
-            { label: "Task Completion", value: `${completionRate.toFixed(0)}%`, sub: `${completedTasks}/${fTasks.length} done`, icon: <Target className="h-4 w-4" />, color: "text-violet-400", trend: `${overdueTasks.length} overdue` },
-            { label: "Budget Used", value: `${budgetUtil.toFixed(0)}%`, sub: `${fmt(budgetRemaining)} left`, icon: <Wallet className="h-4 w-4" />, color: "text-cyan-400", trend: fmt(budget.totalBudget) + " total" },
-            { label: "Net Cash Flow", value: fmt(netCashFlow), sub: `${fmt(fTotalIncome)} in / ${fmt(fTotalSpent)} out`, icon: netCashFlow >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />, color: netCashFlow >= 0 ? "text-emerald-400" : "text-red-400", trend: netCashFlow >= 0 ? "Positive" : "Negative" },
-            { label: "Events", value: fEvents.length, sub: `${upcomingEvents} upcoming`, icon: <Calendar className="h-4 w-4" />, color: "text-pink-400", trend: `${pastEvents} completed` },
-            { label: "Avg Fill Rate", value: `${avgFillRate.toFixed(0)}%`, sub: `${totalRegistered} registrations`, icon: <CalendarCheck className="h-4 w-4" />, color: "text-amber-400", trend: `${eventsWithCapacity.length} events` },
-            { label: "Pending Approvals", value: pendingExpenses + pendingReimb, sub: `${fmt(fTotalPending)} expenses`, icon: <Clock className="h-4 w-4" />, color: "text-orange-400", trend: `${pendingReimb} reimbursements` },
-            { label: "Engagement Avg", value: `${avgEngagement}`, sub: `${atRiskMembers.length} at risk`, icon: <Activity className="h-4 w-4" />, color: "text-blue-400", trend: `${engagementScores.length} active` },
-          ].map((kpi) => (
-            <div key={kpi.label} className="bg-card border border-border/50 rounded-xl p-3 space-y-1 hover:border-primary/30 transition-colors">
+            { label: "Active Members",    value: fMemberStats.active,             sub: `of ${fMemberStats.total} total`,         icon: <UserCheck className="h-4 w-4" />,                                         color: "text-emerald-400", trend: `${retentionRate}% retention`      },
+            { label: "Task Completion",   value: `${completionRate.toFixed(0)}%`, sub: `${completedTasks}/${fTasks.length} done`, icon: <Target className="h-4 w-4" />,                                           color: "text-violet-400",  trend: `${overdueTasks.length} overdue`   },
+            { label: "Budget Used",       value: `${budgetUtil.toFixed(0)}%`,     sub: `${fmt(budgetRemaining)} left`,            icon: <Wallet className="h-4 w-4" />,                                           color: "text-cyan-400",    trend: fmt(budget.totalBudget) + " total" },
+            { label: "Net Cash Flow",     value: fmt(netCashFlow),                sub: `${fmt(fTotalIncome)} in / ${fmt(fTotalSpent)} out`, icon: netCashFlow >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />, color: netCashFlow >= 0 ? "text-emerald-400" : "text-red-400", trend: netCashFlow >= 0 ? "Positive" : "Negative" },
+            { label: "Events",            value: fEvents.length,                  sub: `${upcomingEvents} upcoming`,              icon: <Calendar className="h-4 w-4" />,                                         color: "text-pink-400",    trend: `${pastEvents} completed`          },
+            { label: "Avg Fill Rate",     value: `${avgFillRate.toFixed(0)}%`,    sub: `${totalRegistered} registrations`,        icon: <CalendarCheck className="h-4 w-4" />,                                    color: "text-amber-400",   trend: `${eventsWithCapacity.length} events` },
+            { label: "Pending Approvals", value: pendingExpenses + pendingReimb,  sub: `${fmt(fTotalPending)} expenses`,          icon: <Clock className="h-4 w-4" />,                                            color: "text-orange-400",  trend: `${pendingReimb} reimbursements`   },
+            { label: "Engagement Avg",    value: `${avgEngagement}`,             sub: `${atRiskMembers.length} at risk`,         icon: <Activity className="h-4 w-4" />,                                         color: "text-blue-400",    trend: `${engagementScores.length} active` },
+          ].map(kpi => (
+            <div key={kpi.label} className="bg-card border border-border/50 rounded-2xl p-3 space-y-1 hover:border-primary/30 transition-colors">
               <div className={cn("flex items-center gap-1.5", kpi.color)}>
                 {kpi.icon}
                 <span className="text-[10px] font-medium uppercase tracking-wide">{kpi.label}</span>
@@ -523,43 +513,50 @@ export function ReportsPage() {
         </div>
       </div>
 
+      {/* Tabs */}
       <Tabs defaultValue="executive" className="space-y-4">
         <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="executive" className="gap-1.5 text-xs"><Gauge className="h-3 w-3" /> Executive Summary</TabsTrigger>
-          <TabsTrigger value="members" className="gap-1.5 text-xs"><Users className="h-3 w-3" /> Members</TabsTrigger>
+          <TabsTrigger value="executive"  className="gap-1.5 text-xs"><Gauge className="h-3 w-3" /> Executive Summary</TabsTrigger>
+          <TabsTrigger value="members"    className="gap-1.5 text-xs"><Users className="h-3 w-3" /> Members</TabsTrigger>
           <TabsTrigger value="operations" className="gap-1.5 text-xs"><CheckSquare className="h-3 w-3" /> Operations</TabsTrigger>
-          <TabsTrigger value="financial" className="gap-1.5 text-xs"><DollarSign className="h-3 w-3" /> Financial</TabsTrigger>
-          <TabsTrigger value="events" className="gap-1.5 text-xs"><Calendar className="h-3 w-3" /> Events</TabsTrigger>
+          <TabsTrigger value="financial"  className="gap-1.5 text-xs"><DollarSign className="h-3 w-3" /> Financial</TabsTrigger>
+          <TabsTrigger value="events"     className="gap-1.5 text-xs"><Calendar className="h-3 w-3" /> Events</TabsTrigger>
         </TabsList>
 
-        {/* ─── EXECUTIVE SUMMARY ─── */}
+        {/* ── EXECUTIVE SUMMARY ── */}
         <TabsContent value="executive">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Activity Trend */}
-            <div className="bg-card border border-border/50 rounded-xl p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><FileBarChart className="h-4 w-4 text-primary" /> Monthly Activity & Spending Trend</h3>
+
+            {/* Monthly Trend */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight">
+                <FileBarChart className="h-4 w-4 text-primary" /> Monthly Activity & Spending Trend
+              </h3>
               <ResponsiveContainer width="100%" height={300}>
                 <ComposedChart data={monthlyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="month" tick={AXIS_TICK} stroke={AXIS_STROKE} />
-                  <YAxis yAxisId="left" tick={AXIS_TICK} stroke={AXIS_STROKE} />
-                  <YAxis yAxisId="right" orientation="right" tick={AXIS_TICK} stroke={AXIS_STROKE} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Area yAxisId="left" type="monotone" dataKey="tasks" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.08} name="Tasks" />
-                  <Bar yAxisId="left" dataKey="members" fill="#3b82f6" radius={[3, 3, 0, 0]} name="Members" barSize={20} />
-                  <Bar yAxisId="left" dataKey="events" fill="#f472b6" radius={[3, 3, 0, 0]} name="Events" barSize={20} />
-                  <Line yAxisId="right" type="monotone" dataKey="spending" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} name="Spending ($)" />
-                  <Line yAxisId="right" type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} name="Income ($)" />
+                  <CartesianGrid {...GRID_PROPS} />
+                  <XAxis dataKey="month" {...XAXIS_PROPS} />
+                  <YAxis yAxisId="left"  {...YAXIS_PROPS} />
+                  <YAxis yAxisId="right" orientation="right" {...YAXIS_PROPS} />
+                  <Tooltip content={<ChartTooltip />} cursor={CURSOR_PROPS} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: "10px", paddingTop: "16px" }} />
+                  <Area  yAxisId="left"  type="monotone" dataKey="tasks"    stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.08} name="Tasks" />
+                  <Bar   yAxisId="left"  dataKey="members"  fill="#3b82f6"  radius={[4, 4, 0, 0]} name="Members"  barSize={18} />
+                  <Bar   yAxisId="left"  dataKey="events"   fill="#f472b6"  radius={[4, 4, 0, 0]} name="Events"   barSize={18} />
+                  <Line  yAxisId="right" type="monotone" dataKey="spending" stroke="#ef4444" strokeWidth={2} dot={{ r: 4, fill: "#ef4444" }} name="Spending ($)" />
+                  <Line  yAxisId="right" type="monotone" dataKey="income"   stroke="#10b981" strokeWidth={2} dot={{ r: 4, fill: "#10b981" }} name="Income ($)" />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
 
             {/* Smart Insights */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Smart Insights ({insights.length})</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-tight">
+                <Zap className="h-4 w-4 text-primary" /> Smart Insights ({insights.length})
+              </h3>
               <div className="space-y-2.5 max-h-[400px] overflow-y-auto pr-1">
                 {insights.map((insight, i) => (
-                  <div key={i} className={cn("border rounded-lg p-3", insightColors[insight.type])}>
+                  <div key={i} className={cn("border rounded-xl p-3", insightColors[insight.type])}>
                     <div className="flex items-center gap-2">
                       {insightIcons[insight.type]}
                       <p className="text-sm font-medium">{insight.title}</p>
@@ -570,17 +567,19 @@ export function ReportsPage() {
               </div>
             </div>
 
-            {/* Quick Breakdown */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /> Module Breakdown</h3>
+            {/* Module Breakdown */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-tight">
+                <BarChart3 className="h-4 w-4 text-primary" /> Module Breakdown
+              </h3>
               <div className="space-y-4">
                 {[
-                  { label: "Members", val: fMemberStats.active, max: fMemberStats.total, color: "#3b82f6", detail: `${fMemberStats.inactive} inactive, ${fMemberStats.alumni} alumni` },
-                  { label: "Tasks Done", val: completedTasks, max: fTasks.length, color: "#10b981", detail: `${inProgressTasks} in progress, ${overdueTasks.length} overdue` },
-                  { label: "Budget", val: Math.round(fTotalSpent), max: budget.totalBudget, color: budgetUtil > 85 ? "#ef4444" : "#f59e0b", detail: `${fmt(budgetRemaining)} remaining` },
-                  { label: "Events", val: pastEvents, max: fEvents.length, color: "#f472b6", detail: `${upcomingEvents} upcoming, ${avgFillRate.toFixed(0)}% avg fill` },
-                  { label: "Subtasks", val: doneSubtasks, max: totalSubtasks, color: "#8b5cf6", detail: `${subtaskRate.toFixed(0)}% done, ${avgSubtasksPerTask} avg per task` },
-                ].map((item) => (
+                  { label: "Members",    val: fMemberStats.active,    max: fMemberStats.total,  color: "#3b82f6", detail: `${fMemberStats.inactive} inactive, ${fMemberStats.alumni} alumni` },
+                  { label: "Tasks Done", val: completedTasks,          max: fTasks.length,       color: "#10b981", detail: `${inProgressTasks} in progress, ${overdueTasks.length} overdue` },
+                  { label: "Budget",     val: Math.round(fTotalSpent), max: budget.totalBudget,  color: budgetUtil > 85 ? "#ef4444" : "#f59e0b", detail: `${fmt(budgetRemaining)} remaining` },
+                  { label: "Events",     val: pastEvents,              max: fEvents.length,      color: "#f472b6", detail: `${upcomingEvents} upcoming, ${avgFillRate.toFixed(0)}% avg fill` },
+                  { label: "Subtasks",   val: doneSubtasks,            max: totalSubtasks,       color: "#8b5cf6", detail: `${subtaskRate.toFixed(0)}% done, ${avgSubtasksPerTask} avg per task` },
+                ].map(item => (
                   <div key={item.label} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{item.label}</span>
@@ -597,15 +596,16 @@ export function ReportsPage() {
           </div>
         </TabsContent>
 
-        {/* ─── MEMBERS TAB ─── */}
+        {/* ── MEMBERS ── */}
         <TabsContent value="members">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
             {/* Engagement Leaderboard */}
-            <div className="bg-card border border-border/50 rounded-xl p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Award className="h-4 w-4 text-primary" /> Engagement Leaderboard</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-tight"><Award className="h-4 w-4 text-primary" /> Engagement Leaderboard</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {engagementScores.slice(0, 9).map((m, idx) => (
-                  <div key={m.id} className={cn("flex items-center gap-3 rounded-lg p-3 border transition-colors", idx < 3 ? "bg-primary/5 border-primary/20" : "bg-muted/20 border-border/30")}>
+                  <div key={m.id} className={cn("flex items-center gap-3 rounded-xl p-3 border transition-colors", idx < 3 ? "bg-primary/5 border-primary/20" : "bg-muted/20 border-border/30")}>
                     <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0", idx === 0 ? "bg-amber-500/20 text-amber-400" : idx === 1 ? "bg-slate-300/20 text-slate-300" : idx === 2 ? "bg-orange-700/20 text-orange-400" : "bg-muted/50 text-muted-foreground")}>
                       {idx < 3 ? <Star className="h-4 w-4" /> : `#${idx + 1}`}
                     </div>
@@ -625,30 +625,30 @@ export function ReportsPage() {
               </div>
             </div>
 
-            {/* Members by Role */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> Distribution by Role</h3>
+            {/* By Role */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight"><Shield className="h-4 w-4 text-primary" /> Distribution by Role</h3>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={membersByRole} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis type="number" tick={AXIS_TICK} stroke={AXIS_STROKE} />
-                  <YAxis type="category" dataKey="name" tick={AXIS_TICK_SM} stroke={AXIS_STROKE} width={90} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 6, 6, 0]} name="Members" />
+                  <CartesianGrid {...GRID_PROPS} horizontal={false} vertical={false} />
+                  <XAxis type="number" {...XAXIS_PROPS} tick={AXIS_TICK_SM} />
+                  <YAxis type="category" dataKey="name" tick={AXIS_TICK_SM} tickLine={false} axisLine={false} width={90} />
+                  <Tooltip content={<ChartTooltip />} cursor={CURSOR_PROPS} />
+                  <Bar dataKey="value" fill="#38bdf8" radius={[0, 6, 6, 0]} name="Members" barSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Members by Department */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><PieChartIcon className="h-4 w-4 text-primary" /> Distribution by Department</h3>
+            {/* By Department */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight"><PieChartIcon className="h-4 w-4 text-primary" /> Distribution by Department</h3>
               <div className="flex items-center gap-4">
                 <ResponsiveContainer width="55%" height={260}>
                   <PieChart>
-                    <Pie data={membersByDept} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={3} dataKey="value" label={pieLabel} labelLine={false}>
+                    <Pie data={membersByDept} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={4} dataKey="value" label={pieLabel} labelLine={false} stroke="none">
                       {membersByDept.map((_, idx) => (<Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />))}
                     </Pie>
-                    <Tooltip contentStyle={TOOLTIP_STYLE} />
+                    <Tooltip content={<ChartTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-1.5 flex-1">
@@ -663,23 +663,23 @@ export function ReportsPage() {
               </div>
             </div>
 
-            {/* Year Distribution + At-Risk */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4">Members by Year</h3>
+            {/* By Year */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 uppercase tracking-tight">Members by Year</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={membersByYear}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="name" tick={AXIS_TICK_SM} stroke={AXIS_STROKE} />
-                  <YAxis tick={AXIS_TICK} stroke={AXIS_STROKE} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="value" fill="#a78bfa" radius={[4, 4, 0, 0]} name="Members" />
+                  <CartesianGrid {...GRID_PROPS} />
+                  <XAxis dataKey="name" {...XAXIS_PROPS} tick={AXIS_TICK_SM} />
+                  <YAxis {...YAXIS_PROPS} />
+                  <Tooltip content={<ChartTooltip />} cursor={CURSOR_PROPS} />
+                  <Bar dataKey="value" fill="#a78bfa" radius={[4, 4, 0, 0]} name="Members" barSize={28} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            {/* At-Risk Members */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><UserX className="h-4 w-4 text-red-400" /> At-Risk Members ({atRiskMembers.length})</h3>
+            {/* At-Risk */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-tight"><UserX className="h-4 w-4 text-red-400" /> At-Risk Members ({atRiskMembers.length})</h3>
               {atRiskMembers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
                   <UserCheck className="h-8 w-8 mb-2 text-emerald-400" />
@@ -688,8 +688,8 @@ export function ReportsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {atRiskMembers.map((m) => (
-                    <div key={m.id} className="flex items-center gap-3 bg-red-500/5 border border-red-500/10 rounded-lg p-3">
+                  {atRiskMembers.map(m => (
+                    <div key={m.id} className="flex items-center gap-3 bg-red-500/5 border border-red-500/10 rounded-xl p-3">
                       <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{m.name}</p>
@@ -705,14 +705,15 @@ export function ReportsPage() {
           </div>
         </TabsContent>
 
-        {/* ─── OPERATIONS TAB ─── */}
+        {/* ── OPERATIONS ── */}
         <TabsContent value="operations">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Task Status Pipeline */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><CheckSquare className="h-4 w-4 text-primary" /> Task Pipeline</h3>
+
+            {/* Task Pipeline */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight"><CheckSquare className="h-4 w-4 text-primary" /> Task Pipeline</h3>
               <div className="space-y-3">
-                {tasksByStatus.map((s) => {
+                {tasksByStatus.map(s => {
                   const width = fTasks.length > 0 ? (s.value / fTasks.length) * 100 : 0
                   return (
                     <div key={s.name} className="space-y-1">
@@ -733,49 +734,49 @@ export function ReportsPage() {
             </div>
 
             {/* Priority Breakdown */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4">Priority Breakdown</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 uppercase tracking-tight">Priority Breakdown</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={tasksByPriority} cx="50%" cy="50%" innerRadius={45} outerRadius={85} paddingAngle={3} dataKey="value" label={pieLabel}>
-                    {tasksByPriority.map((entry) => (<Cell key={entry.name} fill={entry.fill} />))}
+                  <Pie data={tasksByPriority} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={4} dataKey="value" label={pieLabel} stroke="none">
+                    {tasksByPriority.map(entry => (<Cell key={entry.name} fill={entry.fill} />))}
                   </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
 
             {/* Workload by Section */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4">Workload by Section</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 uppercase tracking-tight">Workload by Section</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={tasksBySection}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="name" tick={AXIS_TICK_SM} stroke={AXIS_STROKE} />
-                  <YAxis tick={AXIS_TICK} stroke={AXIS_STROKE} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Tasks" />
+                  <CartesianGrid {...GRID_PROPS} />
+                  <XAxis dataKey="name" {...XAXIS_PROPS} tick={AXIS_TICK_SM} />
+                  <YAxis {...YAXIS_PROPS} />
+                  <Tooltip content={<ChartTooltip />} cursor={CURSOR_PROPS} />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Tasks" barSize={22} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Tags Distribution */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4">Tasks by Tag</h3>
+            {/* Tasks by Tag */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 uppercase tracking-tight">Tasks by Tag</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={tasksByTag} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis type="number" tick={AXIS_TICK} stroke={AXIS_STROKE} />
-                  <YAxis type="category" dataKey="name" tick={AXIS_TICK_SM} stroke={AXIS_STROKE} width={80} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="value" fill="#06b6d4" radius={[0, 4, 4, 0]} name="Count" />
+                  <CartesianGrid {...GRID_PROPS} horizontal={false} vertical={false} />
+                  <XAxis type="number" {...XAXIS_PROPS} tick={AXIS_TICK_SM} />
+                  <YAxis type="category" dataKey="name" tick={AXIS_TICK_SM} tickLine={false} axisLine={false} width={80} />
+                  <Tooltip content={<ChartTooltip />} cursor={CURSOR_PROPS} />
+                  <Bar dataKey="value" fill="#06b6d4" radius={[0, 4, 4, 0]} name="Count" barSize={16} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             {/* Assignee Productivity */}
-            <div className="bg-card border border-border/50 rounded-xl p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Assignee Productivity</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-tight"><Users className="h-4 w-4 text-primary" /> Assignee Productivity</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -788,7 +789,7 @@ export function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {assigneeStats.map((a) => (
+                    {assigneeStats.map(a => (
                       <tr key={a.id} className="border-b border-border/10 hover:bg-muted/20 transition-colors">
                         <td className="py-2.5 pr-4 font-medium">{a.name}</td>
                         <td className="py-2.5 px-3 text-center text-muted-foreground">{a.assigned}</td>
@@ -809,8 +810,8 @@ export function ReportsPage() {
             </div>
 
             {/* Overdue Tasks */}
-            <div className="bg-card border border-border/50 rounded-xl p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-red-400" /> Overdue Tasks ({overdueTasks.length})</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-tight"><AlertTriangle className="h-4 w-4 text-red-400" /> Overdue Tasks ({overdueTasks.length})</h3>
               {overdueTasks.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <CheckSquare className="h-8 w-8 mx-auto mb-2 text-emerald-400" />
@@ -818,10 +819,10 @@ export function ReportsPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {overdueTasks.map((t) => {
+                  {overdueTasks.map(t => {
                     const daysOver = Math.ceil((new Date().getTime() - new Date(t.dueDate!).getTime()) / 86400000)
                     return (
-                      <div key={t.id} className="flex items-center gap-3 bg-red-500/5 border border-red-500/10 rounded-lg p-3">
+                      <div key={t.id} className="flex items-center gap-3 bg-red-500/5 border border-red-500/10 rounded-xl p-3">
                         <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0", daysOver > 5 ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400")}>
                           {daysOver}d
                         </div>
@@ -838,34 +839,36 @@ export function ReportsPage() {
           </div>
         </TabsContent>
 
-        {/* ─── FINANCIAL TAB ─── */}
+        {/* ── FINANCIAL ── */}
         <TabsContent value="financial">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
             {/* Income vs Expenses Trend */}
-            <div className="bg-card border border-border/50 rounded-xl p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><CircleDollarSign className="h-4 w-4 text-primary" /> Income vs Expenses Trend</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight"><CircleDollarSign className="h-4 w-4 text-primary" /> Income vs Expenses Trend</h3>
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={monthlyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="month" tick={AXIS_TICK} stroke={AXIS_STROKE} />
-                  <YAxis tick={AXIS_TICK} stroke={AXIS_STROKE} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => fmt(value as number)} />
-                  <Area type="monotone" dataKey="income" stroke="#10b981" fill="#10b981" fillOpacity={0.1} name="Income" />
-                  <Area type="monotone" dataKey="spending" stroke="#ef4444" fill="#ef4444" fillOpacity={0.1} name="Spending" />
+                  <CartesianGrid {...GRID_PROPS} />
+                  <XAxis dataKey="month" {...XAXIS_PROPS} />
+                  <YAxis {...YAXIS_PROPS} />
+                  <Tooltip content={<CurrencyTooltip />} cursor={CURSOR_PROPS} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: "10px", paddingTop: "16px" }} />
+                  <Area type="monotone" dataKey="income"   stroke="#10b981" fill="#10b981" fillOpacity={0.1} name="Income"   strokeWidth={2} />
+                  <Area type="monotone" dataKey="spending" stroke="#ef4444" fill="#ef4444" fillOpacity={0.1} name="Spending" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
             {/* Spending by Category */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><PieChartIcon className="h-4 w-4 text-primary" /> Spending by Category</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight"><PieChartIcon className="h-4 w-4 text-primary" /> Spending by Category</h3>
               <div className="flex items-center gap-4">
                 <ResponsiveContainer width="50%" height={240}>
                   <PieChart>
-                    <Pie data={expenseByCategory} cx="50%" cy="50%" innerRadius={45} outerRadius={85} paddingAngle={3} dataKey="value">
+                    <Pie data={expenseByCategory} cx="50%" cy="50%" innerRadius={45} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
                       {expenseByCategory.map((_, idx) => (<Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />))}
                     </Pie>
-                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => fmt(value as number)} />
+                    <Tooltip content={<CurrencyTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-2 flex-1">
@@ -887,16 +890,16 @@ export function ReportsPage() {
               </div>
             </div>
 
-            {/* Income by Type */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Receipt className="h-4 w-4 text-primary" /> Income by Source</h3>
+            {/* Income by Source */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight"><Receipt className="h-4 w-4 text-primary" /> Income by Source</h3>
               <div className="flex items-center gap-4">
                 <ResponsiveContainer width="50%" height={240}>
                   <PieChart>
-                    <Pie data={incomeByType} cx="50%" cy="50%" innerRadius={45} outerRadius={85} paddingAngle={3} dataKey="value">
+                    <Pie data={incomeByType} cx="50%" cy="50%" innerRadius={45} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
                       {incomeByType.map((_, idx) => (<Cell key={idx} fill={PIE_COLORS[(idx + 3) % PIE_COLORS.length]} />))}
                     </Pie>
-                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => fmt(value as number)} />
+                    <Tooltip content={<CurrencyTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-2 flex-1">
@@ -918,46 +921,30 @@ export function ReportsPage() {
               </div>
             </div>
 
-            {/* Financial Health Cards */}
-            <div className="bg-card border border-border/50 rounded-xl p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Gauge className="h-4 w-4 text-primary" /> Financial Health Dashboard</h3>
+            {/* Financial Health Dashboard */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-tight"><Gauge className="h-4 w-4 text-primary" /> Financial Health Dashboard</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
-                  <Wallet className="h-4 w-4 text-cyan-400 mx-auto" />
-                  <p className="text-lg font-bold">{fmt(budget.totalBudget)}</p>
-                  <p className="text-[10px] text-muted-foreground">Total Budget</p>
-                </div>
-                <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
-                  <TrendingDown className="h-4 w-4 text-red-400 mx-auto" />
-                  <p className="text-lg font-bold">{fmt(fTotalSpent)}</p>
-                  <p className="text-[10px] text-muted-foreground">Total Spent</p>
-                </div>
-                <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
-                  <TrendingUp className="h-4 w-4 text-emerald-400 mx-auto" />
-                  <p className="text-lg font-bold">{fmt(fTotalIncome)}</p>
-                  <p className="text-[10px] text-muted-foreground">Total Income</p>
-                </div>
-                <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
-                  <div className={cn("h-4 w-4 mx-auto", netCashFlow >= 0 ? "text-emerald-400" : "text-red-400")}>{netCashFlow >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}</div>
-                  <p className="text-lg font-bold" style={{ color: netCashFlow >= 0 ? "#10b981" : "#ef4444" }}>{fmt(netCashFlow)}</p>
-                  <p className="text-[10px] text-muted-foreground">Net Cash Flow</p>
-                </div>
-                <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
-                  <Clock className="h-4 w-4 text-amber-400 mx-auto" />
-                  <p className="text-lg font-bold">{fmt(fTotalPending)}</p>
-                  <p className="text-[10px] text-muted-foreground">Pending</p>
-                </div>
-                <div className="bg-muted/20 rounded-lg p-3 text-center space-y-1">
-                  <Shield className="h-4 w-4 text-violet-400 mx-auto" />
-                  <p className="text-lg font-bold">{expenseApprovalRate.toFixed(0)}%</p>
-                  <p className="text-[10px] text-muted-foreground">Approval Rate</p>
-                </div>
+                {[
+                  { icon: <Wallet className="h-4 w-4 text-cyan-400 mx-auto" />,                                                                                               val: fmt(budget.totalBudget), label: "Total Budget"   },
+                  { icon: <TrendingDown className="h-4 w-4 text-red-400 mx-auto" />,                                                                                          val: fmt(fTotalSpent),        label: "Total Spent"    },
+                  { icon: <TrendingUp className="h-4 w-4 text-emerald-400 mx-auto" />,                                                                                        val: fmt(fTotalIncome),       label: "Total Income"   },
+                  { icon: netCashFlow >= 0 ? <ArrowUpRight className="h-4 w-4 text-emerald-400 mx-auto" /> : <ArrowDownRight className="h-4 w-4 text-red-400 mx-auto" />,    val: fmt(netCashFlow),        label: "Net Cash Flow", valColor: netCashFlow >= 0 ? "text-emerald-400" : "text-red-400" },
+                  { icon: <Clock className="h-4 w-4 text-amber-400 mx-auto" />,                                                                                               val: fmt(fTotalPending),      label: "Pending"        },
+                  { icon: <Shield className="h-4 w-4 text-violet-400 mx-auto" />,                                                                                             val: `${expenseApprovalRate.toFixed(0)}%`, label: "Approval Rate" },
+                ].map(card => (
+                  <div key={card.label} className="bg-muted/20 rounded-xl p-3 text-center space-y-1">
+                    {card.icon}
+                    <p className={cn("text-lg font-bold", card.valColor)}>{card.val}</p>
+                    <p className="text-[10px] text-muted-foreground">{card.label}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Top Expenses Table */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4">Top Expenses</h3>
+            {/* Top Expenses */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-4 uppercase tracking-tight">Top Expenses</h3>
               <div className="space-y-2">
                 {topExpenses.map((e, i) => (
                   <div key={e.id} className="flex items-center gap-3 text-sm">
@@ -973,8 +960,8 @@ export function ReportsPage() {
             </div>
 
             {/* Top Income + Approval Funnel */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4">Top Income Sources</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-4 uppercase tracking-tight">Top Income Sources</h3>
               <div className="space-y-2 mb-6">
                 {topIncomes.map((i, idx) => (
                   <div key={i.id} className="flex items-center gap-3 text-sm">
@@ -991,11 +978,11 @@ export function ReportsPage() {
                 <h4 className="text-xs font-semibold text-muted-foreground mb-3 uppercase">Expense Approval Funnel</h4>
                 <div className="space-y-2">
                   {[
-                    { label: "Total Submitted", value: fExpenses.length, color: "#3b82f6" },
-                    { label: "Approved", value: approvedExpenses, color: "#10b981" },
-                    { label: "Pending", value: pendingExpenses, color: "#f59e0b" },
-                    { label: "Denied", value: deniedExpenses, color: "#ef4444" },
-                  ].map((step) => (
+                    { label: "Total Submitted", value: fExpenses.length,  color: "#3b82f6" },
+                    { label: "Approved",         value: approvedExpenses,  color: "#10b981" },
+                    { label: "Pending",          value: pendingExpenses,   color: "#f59e0b" },
+                    { label: "Denied",           value: deniedExpenses,    color: "#ef4444" },
+                  ].map(step => (
                     <div key={step.label} className="flex items-center gap-3 text-xs">
                       <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: step.color }} />
                       <span className="flex-1">{step.label}</span>
@@ -1011,80 +998,74 @@ export function ReportsPage() {
           </div>
         </TabsContent>
 
-        {/* ─── EVENTS TAB ─── */}
+        {/* ── EVENTS ── */}
         <TabsContent value="events">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Event KPI Strip */}
-            <div className="bg-card border border-border/50 rounded-xl p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> Event Overview</h3>
+
+            {/* Event Overview */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <h3 className="text-sm font-bold mb-4 flex items-center gap-2 uppercase tracking-tight"><Calendar className="h-4 w-4 text-primary" /> Event Overview</h3>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <div className="bg-muted/20 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold">{fEvents.length}</p>
-                  <p className="text-[10px] text-muted-foreground">Total Events</p>
-                </div>
-                <div className="bg-muted/20 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-emerald-400">{pastEvents}</p>
-                  <p className="text-[10px] text-muted-foreground">Completed</p>
-                </div>
-                <div className="bg-muted/20 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-blue-400">{upcomingEvents}</p>
-                  <p className="text-[10px] text-muted-foreground">Upcoming</p>
-                </div>
-                <div className="bg-muted/20 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-amber-400">{avgFillRate.toFixed(0)}%</p>
-                  <p className="text-[10px] text-muted-foreground">Avg Fill Rate</p>
-                </div>
-                <div className="bg-muted/20 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-pink-400">{totalRegistered}</p>
-                  <p className="text-[10px] text-muted-foreground">Total Registrations</p>
-                </div>
+                {[
+                  { val: fEvents.length,            label: "Total Events",       color: ""                },
+                  { val: pastEvents,                 label: "Completed",          color: "text-emerald-400"},
+                  { val: upcomingEvents,             label: "Upcoming",           color: "text-blue-400"   },
+                  { val: `${avgFillRate.toFixed(0)}%`, label: "Avg Fill Rate",   color: "text-amber-400"  },
+                  { val: totalRegistered,            label: "Total Registrations",color: "text-pink-400"   },
+                ].map(item => (
+                  <div key={item.label} className="bg-muted/20 rounded-xl p-3 text-center">
+                    <p className={cn("text-2xl font-bold", item.color)}>{item.val}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{item.label}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Registration Fill Rates */}
-            <div className="bg-card border border-border/50 rounded-xl p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /> Registration Fill Rates</h3>
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm lg:col-span-2">
+              <h3 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-tight"><BarChart3 className="h-4 w-4 text-primary" /> Registration Fill Rates</h3>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={eventFillData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis type="number" tick={AXIS_TICK} stroke={AXIS_STROKE} domain={[0, 'dataMax']} />
-                  <YAxis type="category" dataKey="name" tick={AXIS_TICK_SM} stroke={AXIS_STROKE} width={120} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="registered" fill="#f472b6" radius={[0, 4, 4, 0]} name="Registered" />
-                  <Bar dataKey="capacity" fill="hsl(var(--muted))" radius={[0, 4, 4, 0]} name="Capacity" />
+                  <CartesianGrid {...GRID_PROPS} horizontal={false} vertical={false} />
+                  <XAxis type="number" {...XAXIS_PROPS} tick={AXIS_TICK_SM} />
+                  <YAxis type="category" dataKey="name" tick={AXIS_TICK_SM} tickLine={false} axisLine={false} width={120} />
+                  <Tooltip content={<ChartTooltip />} cursor={CURSOR_PROPS} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: "10px", paddingTop: "16px" }} />
+                  <Bar dataKey="registered" fill="#38bdf8" radius={[0, 4, 4, 0]} name="Registered" barSize={16} />
+                  <Bar dataKey="capacity"   fill="#94a3b8" radius={[0, 4, 4, 0]} name="Capacity"   barSize={16} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Event Types (Tags) */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4">Event Categories</h3>
+            {/* Event Categories */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-6 uppercase tracking-tight">Event Categories</h3>
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
-                  <Pie data={eventsByTag} cx="50%" cy="50%" innerRadius={45} outerRadius={85} paddingAngle={3} dataKey="value" label={pieLabel}>
+                  <Pie data={eventsByTag} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={4} dataKey="value" label={pieLabel} stroke="none">
                     {eventsByTag.map((_, idx) => (<Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />))}
                   </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Event Status + Individual Breakdown */}
-            <div className="bg-card border border-border/50 rounded-xl p-5">
-              <h3 className="text-sm font-semibold mb-4">Event Status & Details</h3>
+            {/* Event Status & Details */}
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold mb-4 uppercase tracking-tight">Event Status & Details</h3>
               <div className="flex items-center gap-4 mb-4">
-                {eventsByStatus.map((s) => (
-                  <div key={s.name} className="bg-muted/20 rounded-lg px-3 py-2 text-center flex-1">
+                {eventsByStatus.map(s => (
+                  <div key={s.name} className="bg-muted/20 rounded-xl px-3 py-2 text-center flex-1">
                     <p className="text-lg font-bold">{s.value}</p>
                     <p className="text-[10px] text-muted-foreground capitalize">{s.name}</p>
                   </div>
                 ))}
               </div>
               <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {fEvents.map((e) => {
+                {fEvents.map(e => {
                   const fill = e.capacity ? ((e.registered || 0) / e.capacity) * 100 : null
                   return (
-                    <div key={e.id} className="flex items-center gap-3 text-xs bg-muted/10 rounded-lg p-2">
+                    <div key={e.id} className="flex items-center gap-3 text-xs bg-muted/10 rounded-xl p-2">
                       <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="truncate font-medium">{e.title}</p>

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useSponsors } from "@/context/sponsors-context"
 import { type InteractionType, TIER_CONFIG, INTERACTION_ICONS, type SponsorTier } from "@/components/external/types"
 import { cn } from "@/lib/utils"
@@ -82,15 +83,30 @@ function getColorBlock(name: string) {
 
 export function ContactsPage() {
   const { sponsors, addInteraction, addSponsor, addContact, updateContact } = useSponsors()
-  const [search, setSearch] = useState("")
+
+  // ── Global search: reads/writes ?search= in the URL, same as MembersPage ──
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get("search") || ""
+
+  const handleSearchChange = (val: string) => {
+    setSearchParams(
+      (prev) => {
+        if (val) prev.set("search", val)
+        else prev.delete("search")
+        return prev
+      },
+      { replace: true },
+    )
+  }
+
   const [companyFilter, setCompanyFilter] = useState("all")
-  
+
   // Dialog state for logging interactions
   const [logOpen, setLogOpen] = useState(false)
   const [selectedContact, setSelectedContact] = useState<{id: string; name: string; sponsorId: string; company: string} | null>(null)
   const [formType, setFormType] = useState<InteractionType>("email")
   const [formSummary, setFormSummary] = useState("")
-  
+
   // New Contact Dialog State
   const [addOpen, setAddOpen] = useState(false)
   const [newContact, setNewContact] = useState({
@@ -114,7 +130,7 @@ export function ContactsPage() {
   const [editSuccess, setEditSuccess] = useState(false)
 
   const allContacts = useMemo(() => {
-    return sponsors.flatMap(s => 
+    return sponsors.flatMap(s =>
       s.contacts.map(c => ({
         ...c,
         sponsorId: s.id,
@@ -128,9 +144,14 @@ export function ContactsPage() {
     })
   }, [sponsors])
 
+  // ── Filtering: search now comes from URL param, matching MembersPage ──
   const filtered = useMemo(() => {
     return allContacts.filter((c) => {
-      const matchesSearch = !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.title.toLowerCase().includes(search.toLowerCase()) || c.company.toLowerCase().includes(search.toLowerCase())
+      const matchesSearch =
+        !search ||
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.title.toLowerCase().includes(search.toLowerCase()) ||
+        c.company.toLowerCase().includes(search.toLowerCase())
       const matchesCompany = companyFilter === "all" || c.sponsorId === companyFilter
       return matchesSearch && matchesCompany
     })
@@ -156,13 +177,12 @@ export function ContactsPage() {
 
   const handleAddContact = async () => {
     setError(null)
-    
-    // Validation
+
     if (!newContact.name || !newContact.email || !newContact.organization) {
       setError("Please fill in Name, Email, and Organization.")
       return
     }
-    
+
     if (!newContact.email.includes("@")) {
       setError("Please enter a valid email address.")
       return
@@ -182,7 +202,7 @@ export function ContactsPage() {
 
     try {
       const existingSponsor = sponsors.find(s => s.company.toLowerCase() === newContact.organization.toLowerCase())
-      
+
       if (existingSponsor) {
         await addContact(existingSponsor.id, contactPayload)
       } else {
@@ -199,7 +219,7 @@ export function ContactsPage() {
           interactions: [],
           notes: "Automatically created from new professional contact entry."
         }
-        await addSponsor(newSponsor) 
+        await addSponsor(newSponsor)
       }
 
       setSuccess(true)
@@ -216,8 +236,6 @@ export function ContactsPage() {
   }
 
   const handleViewProfile = (contact: any) => {
-    // Only open if not already opening another dialog? 
-    // Actually, stopPropagation handles the main conflict.
     setViewContact(contact)
     setViewOpen(true)
   }
@@ -225,8 +243,8 @@ export function ContactsPage() {
   const handleOpenLog = (e: React.MouseEvent, contact: any) => {
     e.stopPropagation()
     setSelectedContact(contact)
-    setFormType("email") // Reset to default
-    setFormSummary("")   // Clear previous notes
+    setFormType("email")
+    setFormSummary("")
     setLogOpen(true)
   }
 
@@ -244,7 +262,7 @@ export function ContactsPage() {
       setError("Please fill in Name, Email, and Organization.")
       return
     }
-    
+
     if (!editData.email.includes("@")) {
       setError("Please enter a valid email address.")
       return
@@ -257,7 +275,7 @@ export function ContactsPage() {
 
     try {
       await updateContact(editData.sponsorId, updatedContact)
-      
+
       setEditSuccess(true)
       setTimeout(() => {
         setEditOpen(false)
@@ -287,13 +305,14 @@ export function ContactsPage() {
 
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2">
+          {/* Local search bar — stays in sync with the URL param so global search works too */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search contacts..." 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
-              className="pl-9 w-[250px]" 
+            <Input
+              placeholder="Search contacts..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-9 w-[250px]"
             />
           </div>
           <Select value={companyFilter} onValueChange={setCompanyFilter}>
@@ -326,8 +345,8 @@ export function ContactsPage() {
           </TableHeader>
           <TableBody>
             {filtered.map((contact) => (
-              <TableRow 
-                key={contact.id} 
+              <TableRow
+                key={contact.id}
                 className="group transition-colors hover:bg-muted/30 cursor-pointer"
                 onClick={() => handleViewProfile(contact)}
               >
@@ -378,9 +397,9 @@ export function ContactsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-8 gap-2 hover:bg-primary/20 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => handleOpenLog(e, contact)}
                   >
@@ -392,8 +411,10 @@ export function ContactsPage() {
             ))}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                  No contacts found.
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  {search
+                    ? `No contacts matching "${search}"`
+                    : "No contacts found."}
                 </TableCell>
               </TableRow>
             )}
@@ -401,6 +422,7 @@ export function ContactsPage() {
         </Table>
       </div>
 
+      {/* Log Interaction Dialog */}
       <Dialog open={logOpen} onOpenChange={setLogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -424,8 +446,8 @@ export function ContactsPage() {
             </div>
             <div className="space-y-2">
               <Label>Notes / Summary</Label>
-              <Input 
-                placeholder="Brief summary of what was discussed..." 
+              <Input
+                placeholder="Brief summary of what was discussed..."
                 value={formSummary}
                 onChange={(e) => setFormSummary(e.target.value)}
               />
@@ -456,9 +478,9 @@ export function ContactsPage() {
               )}
             </div>
             {viewContact && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="mt-4 w-full gap-2 border-primary/20 hover:bg-primary/10 hover:text-primary transition-all"
                 onClick={() => handleEditOpen(viewContact)}
               >
@@ -466,7 +488,7 @@ export function ContactsPage() {
               </Button>
             )}
           </SheetHeader>
-          
+
           <div className="py-6 space-y-8 h-full overflow-y-auto pr-2">
             {viewContact ? (
               <>
@@ -514,10 +536,10 @@ export function ContactsPage() {
                       <div>
                         <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight">LinkedIn Profile</p>
                         {viewContact.linkedIn ? (
-                          <a 
-                            href={viewContact.linkedIn} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                          <a
+                            href={viewContact.linkedIn}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm font-medium hover:text-primary transition-colors underline-offset-4 hover:underline break-all"
                           >
                             {viewContact.linkedIn.replace("https://", "")}
@@ -577,7 +599,7 @@ export function ContactsPage() {
               Edit Professional Contact
             </DialogTitle>
           </DialogHeader>
-          
+
           {editSuccess ? (
             <div className="flex flex-col items-center justify-center py-8 space-y-3">
               <CheckCircle2 className="h-16 w-16 text-emerald-400" />
@@ -588,14 +610,14 @@ export function ContactsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Full Name</Label>
-                  <Input 
+                  <Input
                     value={editData?.name || ""}
                     onChange={(e) => setEditData({...editData, name: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input 
+                  <Input
                     value={editData?.email || ""}
                     onChange={(e) => setEditData({...editData, email: e.target.value})}
                   />
@@ -608,7 +630,7 @@ export function ContactsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Job Title</Label>
-                  <Input 
+                  <Input
                     value={editData?.title || ""}
                     onChange={(e) => setEditData({...editData, title: e.target.value})}
                   />
@@ -616,16 +638,16 @@ export function ContactsPage() {
               </div>
               <div className="space-y-2">
                 <Label>LinkedIn URL</Label>
-                <Input 
-                    value={editData?.linkedIn || ""}
-                    onChange={(e) => setEditData({...editData, linkedIn: e.target.value})}
+                <Input
+                  value={editData?.linkedIn || ""}
+                  onChange={(e) => setEditData({...editData, linkedIn: e.target.value})}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Tags (comma separated)</Label>
-                <Input 
-                    value={editData?.tags || ""}
-                    onChange={(e) => setEditData({...editData, tags: e.target.value})}
+                <Input
+                  value={editData?.tags || ""}
+                  onChange={(e) => setEditData({...editData, tags: e.target.value})}
                 />
               </div>
               {error && (
@@ -635,7 +657,7 @@ export function ContactsPage() {
               )}
             </div>
           )}
-          
+
           {!editSuccess && (
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
@@ -653,7 +675,7 @@ export function ContactsPage() {
               <Plus className="h-5 w-5 text-primary" /> Add New Professional Contact
             </DialogTitle>
           </DialogHeader>
-          
+
           {success ? (
             <div className="flex flex-col items-center justify-center py-8 space-y-3 animate-in fade-in zoom-in duration-300">
               <CheckCircle2 className="h-16 w-16 text-emerald-400" />
@@ -667,68 +689,68 @@ export function ContactsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name <span className="text-red-400 font-bold">*</span></Label>
-                  <Input 
-                    id="name" 
-                    placeholder="e.g. Jane Doe" 
+                  <Input
+                    id="name"
+                    placeholder="e.g. Jane Doe"
                     value={newContact.name}
                     onChange={(e) => setNewContact({...newContact, name: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email <span className="text-red-400 font-bold">*</span></Label>
-                  <Input 
-                    id="email" 
+                  <Input
+                    id="email"
                     type="email"
-                    placeholder="jane@company.com" 
+                    placeholder="jane@company.com"
                     value={newContact.email}
                     onChange={(e) => setNewContact({...newContact, email: e.target.value})}
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="org">Organization <span className="text-red-400 font-bold">*</span></Label>
-                  <Input 
-                    id="org" 
-                    placeholder="e.g. Google" 
+                  <Input
+                    id="org"
+                    placeholder="e.g. Google"
                     value={newContact.organization}
                     onChange={(e) => setNewContact({...newContact, organization: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="title">Job Title</Label>
-                  <Input 
-                    id="title" 
-                    placeholder="e.g. Software Engineer" 
+                  <Input
+                    id="title"
+                    placeholder="e.g. Software Engineer"
                     value={newContact.title}
                     onChange={(e) => setNewContact({...newContact, title: e.target.value})}
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="linkedin">LinkedIn URL</Label>
                 <div className="relative">
                   <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="linkedin" 
+                  <Input
+                    id="linkedin"
                     className="pl-9"
-                    placeholder="https://linkedin.com/in/username" 
+                    placeholder="https://linkedin.com/in/username"
                     value={newContact.linkedIn}
                     onChange={(e) => setNewContact({...newContact, linkedIn: e.target.value})}
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="tags">Tags (comma separated)</Label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    id="tags" 
+                  <Input
+                    id="tags"
                     className="pl-9"
-                    placeholder="Potential Speaker, Tech, HR" 
+                    placeholder="Potential Speaker, Tech, HR"
                     value={newContact.tags}
                     onChange={(e) => setNewContact({...newContact, tags: e.target.value})}
                   />
@@ -743,7 +765,7 @@ export function ContactsPage() {
               )}
             </div>
           )}
-          
+
           {!success && (
             <DialogFooter>
               <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
