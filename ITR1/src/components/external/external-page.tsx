@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react"
+import React, { useState, useMemo, useCallback, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 import { useSponsors } from "@/context/sponsors-context"
 import {
@@ -124,93 +124,6 @@ export function ExternalPage() {
     totalInteractions: sponsors.reduce((sum, s) => sum + s.interactions.length, 0),
   }), [sponsors])
 
-<<<<<<< HEAD
-=======
-  function resetForm() {
-    setFormCompany("")
-    setFormTier("prospect")
-    setFormAmount("")
-    setFormIndustry(INDUSTRIES[0])
-    setFormContactName("")
-    setFormContactEmail("")
-    setFormContactTitle("")
-    setFormNotes("")
-  }
-
-  // Load sponsors from Supabase
-  useEffect(() => {
-    async function load() {
-      const { data, error } = await supabase.from("sponsors").select("*").order("created_at", { ascending: true })
-      if (error) {
-        console.error("Failed to load sponsors:", error)
-        setSponsors(SEED_SPONSORS)
-        return
-      }
-      if (data && data.length > 0) {
-        setSponsors(data.map(toSponsor))
-      } else {
-        const rows = SEED_SPONSORS.map(toRow)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: seeded, error: seedErr } = await supabase.from("sponsors").insert(rows as any).select()
-        if (seedErr) {
-          console.error("Failed to seed sponsors:", seedErr)
-          setSponsors(SEED_SPONSORS)
-        } else if (seeded) {
-          setSponsors(seeded.map(toSponsor))
-        }
-      }
-    }
-    load()
-  }, [])
-
-  // FIX: Inline the reset logic directly inside handleAdd instead of calling resetForm(),
-  // which was a stale closure reference not included in the dependency array.
-  const handleAdd = useCallback(async () => {
-    if (!formCompany.trim()) return
-    const newSponsor: Sponsor = {
-      id: `s${Date.now()}`,
-      company: formCompany.trim(),
-      tier: formTier,
-      status: formTier === "prospect" ? "prospect" : "pending",
-      amount: Number(formAmount) || 0,
-      startDate: new Date().toISOString().split("T")[0],
-      industry: formIndustry,
-      notes: formNotes.trim() || undefined,
-      contacts: formContactName.trim()
-        ? [{ id: `c${Date.now()}`, name: formContactName.trim(), title: formContactTitle.trim(), email: formContactEmail.trim(), phone: "" }]
-        : [],
-      interactions: [],
-    }
-    const row = toRow(newSponsor)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await supabase.from("sponsors").insert(row as any).select().single()
-    if (error) {
-      console.error("Failed to add sponsor:", error)
-      return
-    }
-    if (data) setSponsors((prev) => [...prev, toSponsor(data)])
-    setFormCompany("")
-    setFormTier("prospect")
-    setFormAmount("")
-    setFormIndustry(INDUSTRIES[0])
-    setFormContactName("")
-    setFormContactEmail("")
-    setFormContactTitle("")
-    setFormNotes("")
-    setAddOpen(false)
-  }, [formCompany, formTier, formAmount, formIndustry, formNotes, formContactName, formContactTitle, formContactEmail])
-
-  const handleDelete = useCallback(async (id: string) => {
-    const { error } = await supabase.from("sponsors").delete().eq("id", id)
-    if (error) {
-      console.error("Failed to delete sponsor:", error)
-      return
-    }
-    setSponsors((prev) => prev.filter((s) => s.id !== id))
-  }, [])
-
-  // Pipeline view — group by status
->>>>>>> shivam
   const pipeline: { status: SponsorStatus; sponsors: Sponsor[] }[] = [
     { status: "prospect", sponsors: filtered.filter((s) => s.status === "prospect") },
     { status: "pending",  sponsors: filtered.filter((s) => s.status === "pending")  },
@@ -288,7 +201,7 @@ export function ExternalPage() {
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-      {/* ── Hero Header — matches MembersPage ── */}
+      {/* Hero Header */}
       <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_35%),radial-gradient(circle_at_right,rgba(34,197,94,0.18),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.03),transparent_55%)]" />
         <div className="relative flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
@@ -306,7 +219,6 @@ export function ExternalPage() {
           </div>
 
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-stretch">
-            {/* Stat mini-card — active revenue at a glance */}
             <div className="flex min-w-[168px] flex-col justify-between rounded-2xl border border-border/60 bg-background/70 p-3 backdrop-blur">
               <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Active Revenue
@@ -322,7 +234,6 @@ export function ExternalPage() {
               </div>
             </div>
 
-            {/* Primary CTA */}
             <Button
               onClick={() => { resetForm(); setAddOpen(true) }}
               className="h-auto min-h-[96px] min-w-[184px] self-stretch gap-2 rounded-2xl px-5 text-sm font-semibold shadow-lg shadow-primary/15 sm:min-h-0"
@@ -334,10 +245,9 @@ export function ExternalPage() {
         </div>
       </section>
 
-      {/* ── Toolbar ── */}
+      {/* Toolbar */}
       <section className="rounded-2xl border border-border/50 bg-card/80 p-3.5 shadow-sm backdrop-blur">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Tab switcher */}
           <div className="flex items-center gap-1 bg-background/70 p-1 rounded-xl border border-border/60 self-start">
             {[
               { id: "pipeline",     label: "Pipeline",  icon: <TrendingUp className="h-4 w-4" /> },
@@ -360,7 +270,6 @@ export function ExternalPage() {
             ))}
           </div>
 
-          {/* Search + tier filter */}
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -395,17 +304,16 @@ export function ExternalPage() {
         </div>
       </section>
 
-      {/* ── Stat Cards — styled like Members stat row ── */}
+      {/* Stat Cards */}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard title="Active Revenue"  value={formatCurrency(stats.totalRevenue)}  sub={`${stats.activeCount} active`}       icon={<DollarSign />}    color="text-emerald-400" border="border-emerald-500/20" shadow="shadow-emerald-500/5" />
-        <StatCard title="Pipeline"        value={formatCurrency(stats.pipelineValue)} sub={`${stats.prospectCount} prospects`}  icon={<TrendingUp />}    color="text-blue-400"    border="border-blue-500/20"    shadow="shadow-blue-500/5"    />
-        <StatCard title="Top Tier"        value={stats.topTier}                       sub="Platinum & Gold"                     icon={<Crown />}         color="text-amber-400"   border="border-amber-500/20"   shadow="shadow-amber-500/5"   />
-        <StatCard title="Interactions"    value={stats.totalInteractions}             sub="Total logged"                        icon={<MessageSquare />} color="text-pink-400"    border="border-pink-500/20"    shadow="shadow-pink-500/5"    />
+        <StatCard title="Pipeline"        value={formatCurrency(stats.pipelineValue)} sub={`${stats.prospectCount} prospects`} icon={<TrendingUp />}    color="text-blue-400"    border="border-blue-500/20"    shadow="shadow-blue-500/5"    />
+        <StatCard title="Top Tier"        value={stats.topTier}                       sub="Platinum & Gold"                    icon={<Crown />}         color="text-amber-400"   border="border-amber-500/20"   shadow="shadow-amber-500/5"   />
+        <StatCard title="Interactions"    value={stats.totalInteractions}             sub="Total logged"                       icon={<MessageSquare />} color="text-pink-400"    border="border-pink-500/20"    shadow="shadow-pink-500/5"    />
       </div>
 
-      {/* ── Content ── */}
+      {/* Content */}
       <div>
-        {/* Pipeline board */}
         {activeTab === "pipeline" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {pipeline.map(({ status, sponsors: groupSponsors }) => (
@@ -429,7 +337,6 @@ export function ExternalPage() {
           </div>
         )}
 
-        {/* Directory table */}
         {activeTab === "directory" && (
           <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
             <Table>
@@ -474,7 +381,6 @@ export function ExternalPage() {
           </div>
         )}
 
-        {/* Activity feed */}
         {activeTab === "interactions" && (
           <div className="overflow-hidden rounded-2xl border border-border/50 bg-card p-6 shadow-sm">
             <div className="space-y-4">
@@ -504,7 +410,7 @@ export function ExternalPage() {
         )}
       </div>
 
-      {/* ── Add / Edit Sponsor Dialog ── */}
+      {/* Add / Edit Sponsor Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -564,7 +470,6 @@ export function ExternalPage() {
       </Dialog>
     </div>
   )
-<<<<<<< HEAD
 }
 
 // --- Internal Components ---
@@ -613,6 +518,4 @@ function SponsorCard({ sponsor, onClick }: { sponsor: Sponsor; onClick: () => vo
       </div>
     </div>
   )
-=======
->>>>>>> shivam
 }
