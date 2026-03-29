@@ -4,14 +4,12 @@ import { StatCard } from "../stat-card";
 import { Widget } from "../widget";
 import { ProgressBar } from "../progress-bar";
 import { DashboardList, DashboardListItem } from "../dashboard-list";
-import { Users, Calendar, AlertTriangle, CheckCircle, Activity, DollarSign } from "lucide-react";
+import { Users, Calendar, AlertTriangle, Activity, DollarSign } from "lucide-react";
 import { ExpandableTile } from "../insights/expandable-tile";
 import { OrgHealthPanel } from "../insights/panels/org-health-panel";
 import { MembersPanel } from "../insights/panels/members-panel";
 import { BudgetPanel } from "../insights/panels/budget-panel";
 import { EventsPanel } from "../insights/panels/events-panel";
-import { RisksPanel } from "../insights/panels/risks-panel";
-import { ApprovalsPanel } from "../insights/panels/approvals-panel";
 import { useEvents } from "@/context/events-context";
 import { useFinance } from "@/context/finance-context";
 import { useTasks } from "@/context/tasks-context";
@@ -21,24 +19,11 @@ import { useDashboardInsights } from "@/hooks/use-dashboard-insights";
 import { SortableWidget } from "../customization/sortable-widget";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
-import { Plus, Settings2, RotateCcw, Save, Loader2, Check } from "lucide-react";
-
-const WIDGET_TITLES: Record<string, string> = {
-  "org-health": "Org Health Score",
-  "active-members": "Active Members",
-  "budget": "Budget Remaining",
-  "upcoming-events": "Upcoming Events",
-  "risk-alerts": "Risk Alerts",
-  "approval-queue": "Approval Queue",
-};
+import { Loader2 } from "lucide-react";
+import { DashboardControls } from "../customization/dashboard-controls";
+import { ApprovalQueueWidget } from "../widgets/approval-queue-widget";
+import { RiskAlertsWidget } from "../widgets/risk-alerts-widget";
+import { PRESIDENT_WIDGET_TITLES, PRESIDENT_DEFAULT_WIDGETS } from "../widget-config";
 
 // Full API response type shape
 interface DashboardAPIResponse {
@@ -63,18 +48,9 @@ interface DashboardAPIResponse {
   };
 }
 
-const DEFAULT_WIDGETS = [
-  "org-health",
-  "active-members",
-  "budget",
-  "upcoming-events",
-  "risk-alerts",
-  "approval-queue"
-];
-
 export function PresidentDashboard() {
   return (
-    <DashboardLayoutProvider role="President" defaultWidgets={DEFAULT_WIDGETS}>
+    <DashboardLayoutProvider role="President" defaultWidgets={PRESIDENT_DEFAULT_WIDGETS}>
       <PresidentDashboardContent />
     </DashboardLayoutProvider>
   );
@@ -85,7 +61,7 @@ function PresidentDashboardContent() {
   // Live client-side insights — used as fallback when API is unavailable (local dev)
   const liveInsights = useDashboardInsights();
   const { session } = useAuth();
-  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout();
+  const { isCustomizing, layout, visibleWidgets } = useDashboardLayout();
 
   useEffect(() => {
     async function fetchStats() {
@@ -330,120 +306,21 @@ function PresidentDashboardContent() {
         );
       case "risk-alerts":
         return (
-          <ExpandableTile
-            title="Risk Alerts — Analysis & Recommendations"
-            subtitle="All active risks with severity, context & recommended actions"
-            insightPanel={<RisksPanel data={apiData?.insights?.risks ?? liveInsights.risks} />}
-          >
-            <Widget title="Risk Alerts" className="h-full">
-              <DashboardList>
-                {risks.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No active risks</p>}
-                {risks.map((r: any, i: number) => {
-                  const isActioning = actioningId === `task-${r.id}`;
-                  return (
-                    <DashboardListItem
-                      key={i}
-                      title={r.title}
-                      subtitle={r.sub}
-                      metadata={r.severity}
-                      icon={<AlertTriangle className={`h-4 w-4 ${r.severity === "High" ? "text-destructive" : "text-amber-500"}`} />}
-                      action={
-                        r.type === "task" ? (
-                          <Button 
-                            size="icon-xs" 
-                            variant="outline" 
-                            title="Mark Done"
-                            className="h-6 w-6 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
-                            disabled={isActioning}
-                            onClick={(e) => handleResolveTask(r.id, e)}
-                          >
-                            {isActioning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                          </Button>
-                        ) : undefined
-                      }
-                    />
-                  );
-                })}
-              </DashboardList>
-            </Widget>
-          </ExpandableTile>
+          <RiskAlertsWidget
+            risks={risks}
+            insightData={apiData?.insights?.risks ?? liveInsights.risks}
+            actioningId={actioningId}
+            onResolveTask={handleResolveTask}
+          />
         );
       case "approval-queue":
         return (
-          <ExpandableTile
-            className="md:col-span-2 lg:col-span-3"
-            title="Approval Queue — All Pending Items"
-            subtitle="Events, finance, marketing & budget changes awaiting your review"
-            insightPanel={<ApprovalsPanel data={apiData?.insights?.approvals ?? liveInsights.approvals} />}
-          >
-            <Widget
-              title="Approval Queue"
-              fullWidth
-              footer={
-                <span className="cursor-pointer hover:text-primary transition-colors italic">
-                  Click to expand — {pendingApprovals.length} items pending review →
-                </span>
-              }
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                <DashboardList>
-                  {pendingApprovals.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No pending approvals</p>}
-                  {pendingApprovals.slice(0, 2).map((a: any, i: number) => {
-                    const isActioning = actioningId === `approve-${a.id}`;
-                    return (
-                      <DashboardListItem
-                        key={i}
-                        title={a.title}
-                        subtitle={a.sub}
-                        metadata={a.type}
-                        icon={<DollarSign className="h-4 w-4 text-primary" />}
-                        action={
-                          <Button 
-                            size="icon-xs" 
-                            variant="outline" 
-                            title={`Approve ${a.type}`}
-                            className="h-6 w-6 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
-                            disabled={isActioning}
-                            onClick={(e) => handleApprove(a.id, a.rawType, e)}
-                          >
-                            {isActioning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                          </Button>
-                        }
-                      />
-                    );
-                  })}
-                </DashboardList>
-                {pendingApprovals.length > 2 && (
-                  <DashboardList>
-                    {pendingApprovals.slice(2, 4).map((a: any, i: number) => {
-                      const isActioning = actioningId === `approve-${a.id}`;
-                      return (
-                        <DashboardListItem
-                          key={i}
-                          title={a.title}
-                          subtitle={a.sub}
-                          metadata={a.type}
-                          icon={<DollarSign className="h-4 w-4 text-amber-500" />}
-                          action={
-                            <Button 
-                              size="icon-xs" 
-                              variant="outline" 
-                              title={`Approve ${a.type}`}
-                              className="h-6 w-6 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
-                              disabled={isActioning}
-                              onClick={(e) => handleApprove(a.id, a.rawType, e)}
-                            >
-                              {isActioning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                            </Button>
-                          }
-                        />
-                      );
-                    })}
-                  </DashboardList>
-                )}
-              </div>
-            </Widget>
-          </ExpandableTile>
+          <ApprovalQueueWidget
+            pendingApprovals={pendingApprovals}
+            insightData={apiData?.insights?.approvals ?? liveInsights.approvals}
+            actioningId={actioningId}
+            onApprove={handleApprove}
+          />
         );
       default:
         return null;
@@ -465,57 +342,10 @@ function PresidentDashboardContent() {
           </div>
         )}
         <div className="flex items-center gap-2">
-          {isCustomizing ? (
-            <>
-              {Array.from(visibleWidgets).length < DEFAULT_WIDGETS.length && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 border-dashed">
-                      <Plus className="h-4 w-4" />
-                      Add Widget
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {DEFAULT_WIDGETS.filter(id => !visibleWidgets.has(id)).map(id => (
-                      <DropdownMenuItem key={id} onClick={() => toggleWidgetVisibility(id)}>
-                        {WIDGET_TITLES[id] || id}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={resetLayout}
-                className="gap-2 transition-all duration-300"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Layout
-              </Button>
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={() => setIsCustomizing(false)}
-                className="gap-2 bg-primary text-black hover:bg-primary/90 transition-all duration-300"
-              >
-                <Save className="h-4 w-4" />
-                Stop Customizing
-              </Button>
-            </>
-          ) : (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setIsCustomizing(true)}
-              className="gap-2 transition-all duration-300"
-            >
-              <Settings2 className="h-4 w-4" />
-              Customize Workspace
-            </Button>
-          )}
+          <DashboardControls
+            defaultWidgets={PRESIDENT_DEFAULT_WIDGETS}
+            widgetTitles={PRESIDENT_WIDGET_TITLES}
+          />
         </div>
       </div>
 

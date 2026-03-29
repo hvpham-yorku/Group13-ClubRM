@@ -2,50 +2,27 @@ import { StatCard } from "../stat-card"
 import { Widget } from "../widget"
 import { ProgressBar } from "../progress-bar"
 import { DashboardList, DashboardListItem } from "../dashboard-list"
-import { CheckSquare, Calendar, Clock, Star, Settings2, RotateCcw, Save, Plus } from "lucide-react"
+import { CheckSquare, Calendar, Clock } from "lucide-react"
 import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider"
 import { SortableWidget } from "../customization/sortable-widget"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
 import { useTasks } from "@/context/tasks-context"
 import { useEvents } from "@/context/events-context"
 import { useAuth } from "@/context/auth-context"
 import { useMemo } from "react"
-
-const WIDGET_TITLES: Record<string, string> = {
-  "my-tasks": "My Tasks",
-  "events-attending": "Events Attending",
-  "hours-this-month": "Hours This Month",
-  "task-progress": "My Task Progress",
-  "upcoming-events": "Upcoming Events"
-}
-
-const DEFAULT_WIDGETS = [
-  "my-tasks",
-  "events-attending",
-  "hours-this-month",
-  "task-progress",
-  "upcoming-events"
-]
+import { DashboardControls } from "../customization/dashboard-controls"
+import { EXECUTIVE_WIDGET_TITLES, EXECUTIVE_DEFAULT_WIDGETS } from "../widget-config"
 
 export function ExecutiveDashboard() {
   return (
-    <DashboardLayoutProvider role="Executive" defaultWidgets={DEFAULT_WIDGETS}>
+    <DashboardLayoutProvider role="Executive" defaultWidgets={EXECUTIVE_DEFAULT_WIDGETS}>
       <ExecutiveDashboardContent />
     </DashboardLayoutProvider>
   )
 }
 
 function ExecutiveDashboardContent() {
-  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout()
+  const { isCustomizing, layout, visibleWidgets } = useDashboardLayout()
   const { tasks } = useTasks()
   const { events } = useEvents()
   const { user } = useAuth()
@@ -141,39 +118,10 @@ function ExecutiveDashboardContent() {
           <p className="text-sm text-muted-foreground">Track your tasks and upcoming events.</p>
         </div>
         <div className="flex items-center gap-2">
-          {isCustomizing ? (
-            <>
-              {Array.from(visibleWidgets).length < DEFAULT_WIDGETS.length && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 border-dashed text-primary hover:text-primary/80">
-                      <Plus className="h-4 w-4" />
-                      Add Widget
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {DEFAULT_WIDGETS.filter(id => !visibleWidgets.has(id)).map(id => (
-                      <DropdownMenuItem key={id} onClick={() => toggleWidgetVisibility(id)}>
-                        {WIDGET_TITLES[id] || id}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              <Button variant="outline" size="sm" onClick={resetLayout} className="gap-2 transition-all duration-300">
-                <RotateCcw className="h-4 w-4" /> Reset layout
-              </Button>
-              <Button variant="default" size="sm" onClick={() => setIsCustomizing(false)} className="gap-2 bg-primary text-black hover:bg-primary/90 transition-all duration-300">
-                <Save className="h-4 w-4" /> Stop customizing
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsCustomizing(true)} className="gap-2 transition-all duration-300">
-              <Settings2 className="h-4 w-4" /> Customize
-            </Button>
-          )}
+          <DashboardControls
+            defaultWidgets={EXECUTIVE_DEFAULT_WIDGETS}
+            widgetTitles={EXECUTIVE_WIDGET_TITLES}
+          />
         </div>
       </div>
 

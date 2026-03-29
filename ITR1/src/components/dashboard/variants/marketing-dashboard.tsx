@@ -2,42 +2,26 @@ import { StatCard } from "../stat-card"
 import { Widget } from "../widget"
 import { ProgressBar } from "../progress-bar"
 import { DashboardList, DashboardListItem } from "../dashboard-list"
-import { Eye, Heart, Share2, Megaphone, TrendingUp, Settings2, RotateCcw, Save, Plus } from "lucide-react"
+import { Eye, Heart, Share2, Megaphone, TrendingUp } from "lucide-react"
 import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider"
 import { SortableWidget } from "../customization/sortable-widget"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
 import { useTasks } from "@/context/tasks-context"
 import { useMemo } from "react"
-
-const DEFAULT_WIDGETS = ["total-reach", "engagement-rate", "active-campaigns", "campaign-performance", "top-posts", "scheduled-posts"]
-const WIDGET_TITLES: Record<string, string> = {
-  "total-reach": "Total Reach",
-  "engagement-rate": "Engagement Rate",
-  "active-campaigns": "Active Campaigns",
-  "campaign-performance": "Campaign Performance",
-  "top-posts": "Top Posts",
-  "scheduled-posts": "Scheduled Posts"
-}
+// Resolved: Using the centralized config from Taziz's refactor
+import { DashboardControls } from "../customization/dashboard-controls"
+import { MARKETING_WIDGET_TITLES, MARKETING_DEFAULT_WIDGETS } from "../widget-config"
 
 export function MarketingDashboard() {
   return (
-    <DashboardLayoutProvider role="Marketing" defaultWidgets={DEFAULT_WIDGETS}>
+    <DashboardLayoutProvider role="Marketing" defaultWidgets={MARKETING_DEFAULT_WIDGETS}>
       <MarketingDashboardContent />
     </DashboardLayoutProvider>
   )
 }
 
 function MarketingDashboardContent() {
-  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout()
+  const { isCustomizing, layout, visibleWidgets } = useDashboardLayout()
   const { tasks } = useTasks()
 
   const marketingTasks = useMemo(() => tasks.filter(t => t.section === "Marketing"), [tasks])
@@ -96,20 +80,11 @@ function MarketingDashboardContent() {
           <p className="text-sm text-muted-foreground font-medium">Manage your outreach and brand visibility.</p>
         </div>
         <div className="flex items-center gap-2">
-          {isCustomizing ? (
-            <>
-              <Button variant="outline" size="sm" onClick={resetLayout} className="rounded-lg font-bold">
-                <RotateCcw className="h-4 w-4 mr-2" /> Reset
-              </Button>
-              <Button size="sm" onClick={() => setIsCustomizing(false)} className="bg-primary text-primary-foreground font-bold rounded-lg shadow-lg shadow-primary/20">
-                <Save className="h-4 w-4 mr-2" /> Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsCustomizing(true)} className="rounded-lg font-bold">
-              <Settings2 className="h-4 w-4 mr-2" /> Customize
-            </Button>
-          )}
+          {/* Resolved: Replaced manual buttons with the refactored DashboardControls */}
+          <DashboardControls 
+            defaultWidgets={MARKETING_DEFAULT_WIDGETS} 
+            widgetTitles={MARKETING_WIDGET_TITLES} 
+          />
         </div>
       </div>
 

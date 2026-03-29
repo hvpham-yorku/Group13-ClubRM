@@ -2,50 +2,25 @@ import { StatCard } from "../stat-card"
 import { Widget } from "../widget"
 import { ProgressBar } from "../progress-bar"
 import { DashboardList, DashboardListItem } from "../dashboard-list"
-import { DollarSign, TrendingUp, AlertTriangle, CheckCircle, Wallet, Settings2, RotateCcw, Save, Plus } from "lucide-react"
+import { DollarSign, TrendingUp, AlertTriangle, CheckCircle, Wallet } from "lucide-react"
 import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider"
 import { SortableWidget } from "../customization/sortable-widget"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
 import { useFinance } from "@/context/finance-context"
 import { useMemo } from "react"
-
-const WIDGET_TITLES: Record<string, string> = {
-  "budget-remaining": "Budget Remaining",
-  "pending-approvals": "Pending Approvals",
-  "total-income": "Total Income",
-  "budget-category": "Budget by Category",
-  "pending-reimbursements": "Pending Reimbursements",
-  "recent-transactions": "Recent Transactions"
-}
-
-const DEFAULT_WIDGETS = [
-  "budget-remaining",
-  "pending-approvals",
-  "total-income",
-  "budget-category",
-  "pending-reimbursements",
-  "recent-transactions"
-]
+import { DashboardControls } from "../customization/dashboard-controls"
+import { VP_FINANCE_WIDGET_TITLES, VP_FINANCE_DEFAULT_WIDGETS } from "../widget-config"
 
 export function VPFinanceDashboard() {
   return (
-    <DashboardLayoutProvider role="VP Finance" defaultWidgets={DEFAULT_WIDGETS}>
+    <DashboardLayoutProvider role="VP Finance" defaultWidgets={VP_FINANCE_DEFAULT_WIDGETS}>
       <VPFinanceDashboardContent />
     </DashboardLayoutProvider>
   )
 }
 
 function VPFinanceDashboardContent() {
-  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout()
+  const { isCustomizing, layout, visibleWidgets } = useDashboardLayout()
   const { budget, expenses, income, reimbursements } = useFinance()
 
   const totalSpent = useMemo(() => expenses.filter(e => e.status === 'approved').reduce((sum, e) => sum + e.amount, 0), [expenses])
@@ -160,39 +135,10 @@ function VPFinanceDashboardContent() {
           <p className="text-sm text-muted-foreground">Monitor budget allocation and reimbursement requests.</p>
         </div>
         <div className="flex items-center gap-2">
-          {isCustomizing ? (
-            <>
-              {Array.from(visibleWidgets).length < DEFAULT_WIDGETS.length && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 border-dashed text-primary hover:text-primary/80">
-                      <Plus className="h-4 w-4" />
-                      Add Widget
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {DEFAULT_WIDGETS.filter(id => !visibleWidgets.has(id)).map(id => (
-                      <DropdownMenuItem key={id} onClick={() => toggleWidgetVisibility(id)}>
-                        {WIDGET_TITLES[id] || id}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              <Button variant="outline" size="sm" onClick={resetLayout} className="gap-2 transition-all duration-300">
-                <RotateCcw className="h-4 w-4" /> Reset layout
-              </Button>
-              <Button variant="default" size="sm" onClick={() => setIsCustomizing(false)} className="gap-2 bg-primary text-black hover:bg-primary/90 transition-all duration-300">
-                <Save className="h-4 w-4" /> Stop customizing
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsCustomizing(true)} className="gap-2 transition-all duration-300">
-              <Settings2 className="h-4 w-4" /> Customize
-            </Button>
-          )}
+          <DashboardControls
+            defaultWidgets={VP_FINANCE_DEFAULT_WIDGETS}
+            widgetTitles={VP_FINANCE_WIDGET_TITLES}
+          />
         </div>
       </div>
 

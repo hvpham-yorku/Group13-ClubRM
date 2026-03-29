@@ -2,50 +2,25 @@ import { StatCard } from "../stat-card"
 import { Widget } from "../widget"
 import { ProgressBar } from "../progress-bar"
 import { DashboardList, DashboardListItem } from "../dashboard-list"
-import { Calendar, Users, AlertTriangle, MapPin, Clock, CheckCircle, Settings2, RotateCcw, Save, Plus } from "lucide-react"
+import { Calendar, Users, AlertTriangle, MapPin, Clock, CheckCircle } from "lucide-react"
 import { DashboardLayoutProvider, useDashboardLayout } from "../customization/dashboard-layout-provider"
 import { SortableWidget } from "../customization/sortable-widget"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
 import { useEvents } from "@/context/events-context"
 import { useMemo } from "react"
-
-const WIDGET_TITLES: Record<string, string> = {
-  "upcoming-events-count": "Upcoming Events",
-  "total-registrations": "Total Registrations",
-  "volunteer-coverage": "Volunteer Coverage",
-  "event-readiness": "Event Readiness",
-  "volunteer-gaps": "Volunteer Gaps",
-  "venue-bookings": "Venue Bookings"
-}
-
-const DEFAULT_WIDGETS = [
-  "upcoming-events-count",
-  "total-registrations",
-  "volunteer-coverage",
-  "event-readiness",
-  "volunteer-gaps",
-  "venue-bookings"
-]
+import { DashboardControls } from "../customization/dashboard-controls"
+import { VP_EVENTS_WIDGET_TITLES, VP_EVENTS_DEFAULT_WIDGETS } from "../widget-config"
 
 export function VPEventsDashboard() {
   return (
-    <DashboardLayoutProvider role="VP Events" defaultWidgets={DEFAULT_WIDGETS}>
+    <DashboardLayoutProvider role="VP Events" defaultWidgets={VP_EVENTS_DEFAULT_WIDGETS}>
       <VPEventsDashboardContent />
     </DashboardLayoutProvider>
   )
 }
 
 function VPEventsDashboardContent() {
-  const { isCustomizing, setIsCustomizing, layout, visibleWidgets, resetLayout, toggleWidgetVisibility } = useDashboardLayout()
+  const { isCustomizing, layout, visibleWidgets } = useDashboardLayout()
   const { events } = useEvents()
 
   const upcomingEvents = useMemo(() => events.filter(e => new Date(e.startDate) > new Date()), [events])
@@ -159,39 +134,10 @@ function VPEventsDashboardContent() {
           <p className="text-sm text-muted-foreground">Monitor registration health and event logistics.</p>
         </div>
         <div className="flex items-center gap-2">
-          {isCustomizing ? (
-            <>
-              {Array.from(visibleWidgets).length < DEFAULT_WIDGETS.length && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 border-dashed text-primary hover:text-primary/80">
-                      <Plus className="h-4 w-4" />
-                      Add Widget
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>Available Widgets</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {DEFAULT_WIDGETS.filter(id => !visibleWidgets.has(id)).map(id => (
-                      <DropdownMenuItem key={id} onClick={() => toggleWidgetVisibility(id)}>
-                        {WIDGET_TITLES[id] || id}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              <Button variant="outline" size="sm" onClick={resetLayout} className="gap-2 transition-all duration-300">
-                <RotateCcw className="h-4 w-4" /> Reset layout
-              </Button>
-              <Button variant="default" size="sm" onClick={() => setIsCustomizing(false)} className="gap-2 bg-primary text-black hover:bg-primary/90 transition-all duration-300">
-                <Save className="h-4 w-4" /> Stop customizing
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsCustomizing(true)} className="gap-2 transition-all duration-300">
-              <Settings2 className="h-4 w-4" /> Customize
-            </Button>
-          )}
+          <DashboardControls
+            defaultWidgets={VP_EVENTS_DEFAULT_WIDGETS}
+            widgetTitles={VP_EVENTS_WIDGET_TITLES}
+          />
         </div>
       </div>
 
