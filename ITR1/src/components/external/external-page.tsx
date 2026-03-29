@@ -124,6 +124,93 @@ export function ExternalPage() {
     totalInteractions: sponsors.reduce((sum, s) => sum + s.interactions.length, 0),
   }), [sponsors])
 
+<<<<<<< HEAD
+=======
+  function resetForm() {
+    setFormCompany("")
+    setFormTier("prospect")
+    setFormAmount("")
+    setFormIndustry(INDUSTRIES[0])
+    setFormContactName("")
+    setFormContactEmail("")
+    setFormContactTitle("")
+    setFormNotes("")
+  }
+
+  // Load sponsors from Supabase
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await supabase.from("sponsors").select("*").order("created_at", { ascending: true })
+      if (error) {
+        console.error("Failed to load sponsors:", error)
+        setSponsors(SEED_SPONSORS)
+        return
+      }
+      if (data && data.length > 0) {
+        setSponsors(data.map(toSponsor))
+      } else {
+        const rows = SEED_SPONSORS.map(toRow)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: seeded, error: seedErr } = await supabase.from("sponsors").insert(rows as any).select()
+        if (seedErr) {
+          console.error("Failed to seed sponsors:", seedErr)
+          setSponsors(SEED_SPONSORS)
+        } else if (seeded) {
+          setSponsors(seeded.map(toSponsor))
+        }
+      }
+    }
+    load()
+  }, [])
+
+  // FIX: Inline the reset logic directly inside handleAdd instead of calling resetForm(),
+  // which was a stale closure reference not included in the dependency array.
+  const handleAdd = useCallback(async () => {
+    if (!formCompany.trim()) return
+    const newSponsor: Sponsor = {
+      id: `s${Date.now()}`,
+      company: formCompany.trim(),
+      tier: formTier,
+      status: formTier === "prospect" ? "prospect" : "pending",
+      amount: Number(formAmount) || 0,
+      startDate: new Date().toISOString().split("T")[0],
+      industry: formIndustry,
+      notes: formNotes.trim() || undefined,
+      contacts: formContactName.trim()
+        ? [{ id: `c${Date.now()}`, name: formContactName.trim(), title: formContactTitle.trim(), email: formContactEmail.trim(), phone: "" }]
+        : [],
+      interactions: [],
+    }
+    const row = toRow(newSponsor)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await supabase.from("sponsors").insert(row as any).select().single()
+    if (error) {
+      console.error("Failed to add sponsor:", error)
+      return
+    }
+    if (data) setSponsors((prev) => [...prev, toSponsor(data)])
+    setFormCompany("")
+    setFormTier("prospect")
+    setFormAmount("")
+    setFormIndustry(INDUSTRIES[0])
+    setFormContactName("")
+    setFormContactEmail("")
+    setFormContactTitle("")
+    setFormNotes("")
+    setAddOpen(false)
+  }, [formCompany, formTier, formAmount, formIndustry, formNotes, formContactName, formContactTitle, formContactEmail])
+
+  const handleDelete = useCallback(async (id: string) => {
+    const { error } = await supabase.from("sponsors").delete().eq("id", id)
+    if (error) {
+      console.error("Failed to delete sponsor:", error)
+      return
+    }
+    setSponsors((prev) => prev.filter((s) => s.id !== id))
+  }, [])
+
+  // Pipeline view — group by status
+>>>>>>> shivam
   const pipeline: { status: SponsorStatus; sponsors: Sponsor[] }[] = [
     { status: "prospect", sponsors: filtered.filter((s) => s.status === "prospect") },
     { status: "pending",  sponsors: filtered.filter((s) => s.status === "pending")  },
@@ -477,6 +564,7 @@ export function ExternalPage() {
       </Dialog>
     </div>
   )
+<<<<<<< HEAD
 }
 
 // --- Internal Components ---
@@ -525,4 +613,6 @@ function SponsorCard({ sponsor, onClick }: { sponsor: Sponsor; onClick: () => vo
       </div>
     </div>
   )
+=======
+>>>>>>> shivam
 }

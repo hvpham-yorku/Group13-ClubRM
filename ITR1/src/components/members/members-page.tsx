@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMembers } from "@/context/members-context";
@@ -7,6 +8,18 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+=======
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { useSearchParams } from "react-router-dom"
+import { useMembers } from "@/context/members-context"
+import { type Member, MEMBER_STATUSES, DEPARTMENTS, YEARS } from "./types"
+import type { Role } from "@/context/role-context"
+import { cn, getEntityColor } from "@/lib/utils"
+import { supabaseUntyped as db } from "@/lib/supabase"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+>>>>>>> shivam
 import {
   Dialog,
   DialogContent,
@@ -53,10 +66,20 @@ import {
   Eye,
   LayoutGrid,
   List,
+<<<<<<< HEAD
   Sparkles,
   SlidersHorizontal,
   ArrowUpRight,
 } from "lucide-react";
+=======
+  Instagram,
+  Facebook,
+  Linkedin,
+  Twitter,
+  Loader2,
+  UserCheck2,
+} from "lucide-react"
+>>>>>>> shivam
 
 const ALL_ROLES: Role[] = [
   "President",
@@ -111,6 +134,19 @@ function MemberAvatar({
   );
 }
 
+interface SocialProfile {
+  id: string
+  user_id: string
+  full_name: string | null
+  phone: string | null
+  bio: string | null
+  instagram: string | null
+  facebook: string | null
+  linkedin: string | null
+  twitter: string | null
+  tiktok: string | null
+}
+
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -120,6 +156,7 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
+<<<<<<< HEAD
 function getAvatarColor(name: string) {
   const colors = [
     "bg-rose-500/20 text-rose-400",
@@ -133,6 +170,23 @@ function getAvatarColor(name: string) {
   ];
   const idx = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return colors[idx % colors.length];
+=======
+function SocialBadge({ value, icon, color }: { value: string | null; icon: React.ReactNode; color: string }) {
+  if (!value) return null
+  return (
+    <span className={cn("flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-muted/50", color)}>
+      {icon} {value}
+    </span>
+  )
+}
+
+function stripToUsername(raw: string): string {
+  return raw
+    .replace(/https?:\/\/(www\.)?(instagram\.com|facebook\.com|linkedin\.com\/in|twitter\.com|x\.com|tiktok\.com\/@?)\/+/i, "")
+    .replace(/\/$/, "")
+    .replace(/^@/, "")
+    .trim()
+>>>>>>> shivam
 }
 
 export function MembersPage() {
@@ -160,6 +214,7 @@ export function MembersPage() {
   const [detailMember, setDetailMember] = useState<Member | null>(null);
   const [editMember, setEditMember] = useState<Member | null>(null);
 
+<<<<<<< HEAD
   // Add form state
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
@@ -167,6 +222,20 @@ export function MembersPage() {
   const [formRole, setFormRole] = useState<Role>("Executive");
   const [formDept, setFormDept] = useState<string>(DEPARTMENTS[0]);
   const [formYear, setFormYear] = useState<string>(YEARS[0]);
+=======
+  const [userSearch, setUserSearch] = useState("")
+  const [userSearchResults, setUserSearchResults] = useState<SocialProfile[]>([])
+  const [userSearchStatus, setUserSearchStatus] = useState<"idle" | "loading" | "done">("idle")
+  const [selectedProfile, setSelectedProfile] = useState<SocialProfile | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [formName, setFormName] = useState("")
+  const [formEmail, setFormEmail] = useState("")
+  const [formPhone, setFormPhone] = useState("")
+  const [formRole, setFormRole] = useState<Role>("Executive")
+  const [formDept, setFormDept] = useState<string>(DEPARTMENTS[0])
+  const [formYear, setFormYear] = useState<string>(YEARS[0])
+>>>>>>> shivam
 
   const filtered = useMemo(() => {
     return members.filter((m) => {
@@ -182,12 +251,73 @@ export function MembersPage() {
   }, [members, search, statusFilter, roleFilter]);
 
   function resetForm() {
+<<<<<<< HEAD
     setFormName("");
     setFormEmail("");
     setFormPhone("");
     setFormRole("Executive");
     setFormDept(DEPARTMENTS[0]);
     setFormYear(YEARS[0]);
+=======
+    setFormName("")
+    setFormEmail("")
+    setFormPhone("")
+    setFormRole("Executive")
+    setFormDept(DEPARTMENTS[0])
+    setFormYear(YEARS[0])
+    setUserSearch("")
+    setUserSearchResults([])
+    setUserSearchStatus("idle")
+    setSelectedProfile(null)
+  }
+
+  const runSearch = useCallback(async (value: string) => {
+    if (!value.trim()) {
+      setUserSearchResults([])
+      setUserSearchStatus("idle")
+      return
+    }
+
+    setUserSearchStatus("loading")
+    const raw = value.trim()
+    const stripped = stripToUsername(raw)
+
+    const { data, error } = await db
+      .from("socials")
+      .select("*")
+      .or(
+        `full_name.ilike.%${raw}%,phone.ilike.%${raw}%,instagram.ilike.%${stripped}%,facebook.ilike.%${stripped}%,linkedin.ilike.%${stripped}%,twitter.ilike.%${stripped}%,tiktok.ilike.%${stripped}%`
+      )
+      .limit(5)
+
+    if (error) {
+      console.error("User search failed:", error)
+      setUserSearchStatus("done")
+      return
+    }
+
+    setUserSearchResults((data as SocialProfile[]) ?? [])
+    setUserSearchStatus("done")
+  }, [])
+
+  const handleUserSearchInput = useCallback((value: string) => {
+    setUserSearch(value)
+    setSelectedProfile(null)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => runSearch(value), 300)
+  }, [runSearch])
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
+
+  function handleSelectProfile(profile: SocialProfile) {
+    setSelectedProfile(profile)
+    setFormName(profile.full_name ?? "")
+    setFormPhone(profile.phone ?? "")
+>>>>>>> shivam
   }
 
   function handleAdd() {
@@ -219,6 +349,7 @@ export function MembersPage() {
     MEMBER_STATUSES.find((s) => s.value === status);
 
   return (
+<<<<<<< HEAD
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-card">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.08),transparent_35%),radial-gradient(circle_at_right,rgba(34,197,94,0.18),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.03),transparent_55%)]" />
@@ -842,6 +973,12 @@ export function MembersPage() {
           )}
         </DialogContent>
       </Dialog>
+=======
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* ... (UI code for Header, Stats, Toolbar, Grid/Table - it's identical to what you had) ... */}
+      
+      {/* To save space, I'm skipping the repetitive UI blocks and jumping to the Edit Dialog you were fixing */}
+>>>>>>> shivam
 
       {/* Edit Member Dialog */}
       <Dialog open={!!editMember} onOpenChange={() => setEditMember(null)}>
@@ -872,12 +1009,16 @@ export function MembersPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Phone</Label>
+<<<<<<< HEAD
                   <Input
                     value={editMember.phone}
                     onChange={(e) =>
                       setEditMember({ ...editMember, phone: e.target.value })
                     }
                   />
+=======
+                  <Input value={editMember.phone || ""} onChange={(e) => setEditMember({ ...editMember, phone: e.target.value })} />
+>>>>>>> shivam
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -902,6 +1043,7 @@ export function MembersPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
+<<<<<<< HEAD
                     <Select
                       value={editMember.status}
                       onValueChange={(v) =>
@@ -914,6 +1056,10 @@ export function MembersPage() {
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
+=======
+                    <Select value={editMember.status} onValueChange={(v) => setEditMember({ ...editMember, status: v as any })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+>>>>>>> shivam
                       <SelectContent>
                         {MEMBER_STATUSES.map((s) => (
                           <SelectItem key={s.value} value={s.value}>
@@ -924,6 +1070,7 @@ export function MembersPage() {
                     </Select>
                   </div>
                 </div>
+<<<<<<< HEAD
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Department</Label>
@@ -966,6 +1113,8 @@ export function MembersPage() {
                     </Select>
                   </div>
                 </div>
+=======
+>>>>>>> shivam
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setEditMember(null)}>
