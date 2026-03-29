@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { useMembers } from "@/context/members-context"
 import { type Member, MEMBER_STATUSES, DEPARTMENTS, YEARS } from "./types"
 import type { Role } from "@/context/role-context"
 import { cn } from "@/lib/utils"
+import { supabaseUntyped as db } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -52,6 +53,12 @@ import {
   Eye,
   LayoutGrid,
   List,
+  Instagram,
+  Facebook,
+  Linkedin,
+  Twitter,
+  Loader2,
+  UserCheck2,
 } from "lucide-react"
 
 const ALL_ROLES: Role[] = [
@@ -76,6 +83,19 @@ const ROLE_COLORS: Record<string, string> = {
   Administrator: "bg-red-500/20 text-red-400 border-red-500/30",
 }
 
+interface SocialProfile {
+  id: string
+  user_id: string
+  full_name: string | null
+  phone: string | null
+  bio: string | null
+  instagram: string | null
+  facebook: string | null
+  linkedin: string | null
+  twitter: string | null
+  tiktok: string | null
+}
+
 function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
@@ -95,6 +115,24 @@ function getAvatarColor(name: string) {
   return colors[idx % colors.length]
 }
 
+function SocialBadge({ value, icon, color }: { value: string | null; icon: React.ReactNode; color: string }) {
+  if (!value) return null
+  return (
+    <span className={cn("flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-muted/50", color)}>
+      {icon} {value}
+    </span>
+  )
+}
+
+// Strip a full social URL down to just the username for matching
+function stripToUsername(raw: string): string {
+  return raw
+    .replace(/https?:\/\/(www\.)?(instagram\.com|facebook\.com|linkedin\.com\/in|twitter\.com|x\.com|tiktok\.com\/@?)\/+/i, "")
+    .replace(/\/$/, "")
+    .replace(/^@/, "")
+    .trim()
+}
+
 export function MembersPage() {
   const { members, addMember, updateMember, deleteMember, stats } = useMembers()
 
@@ -106,6 +144,14 @@ export function MembersPage() {
   const [detailMember, setDetailMember] = useState<Member | null>(null)
   const [editMember, setEditMember] = useState<Member | null>(null)
 
+  // User search state
+  const [userSearch, setUserSearch] = useState("")
+  const [userSearchResults, setUserSearchResults] = useState<SocialProfile[]>([])
+  const [userSearchStatus, setUserSearchStatus] = useState<"idle" | "loading" | "done">("idle")
+  const [selectedProfile, setSelectedProfile] = useState<SocialProfile | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Add form state
   const [formName, setFormName] = useState("")
   const [formEmail, setFormEmail] = useState("")
   const [formPhone, setFormPhone] = useState("")
@@ -133,6 +179,63 @@ export function MembersPage() {
     setFormRole("Executive")
     setFormDept(DEPARTMENTS[0])
     setFormYear(YEARS[0])
+    setUserSearch("")
+    setUserSearchResults([])
+    setUserSearchStatus("idle")
+    setSelectedProfile(null)
+  }
+
+  // Live search with debounce — fires 300ms after user stops typing
+  const runSearch = useCallback(async (value: string) => {
+    if (!value.trim()) {
+      setUserSearchResults([])
+      setUserSearchStatus("idle")
+      return
+    }
+
+    setUserSearchStatus("loading")
+
+    const raw = value.trim()
+    const stripped = stripToUsername(raw)
+
+    // Search both the raw input (for names/phone) and stripped username (for social handles)
+    const { data, error } = await db
+      .from("socials")
+      .select("*")
+      .or(
+        `full_name.ilike.%${raw}%,phone.ilike.%${raw}%,instagram.ilike.%${stripped}%,facebook.ilike.%${stripped}%,linkedin.ilike.%${stripped}%,twitter.ilike.%${stripped}%,tiktok.ilike.%${stripped}%`
+      )
+      .limit(5)
+
+    if (error) {
+      console.error("User search failed:", error)
+      setUserSearchStatus("done")
+      return
+    }
+
+    setUserSearchResults((data as SocialProfile[]) ?? [])
+    setUserSearchStatus("done")
+  }, [])
+
+  // Debounce the search so it doesn't fire on every keystroke
+  const handleUserSearchInput = useCallback((value: string) => {
+    setUserSearch(value)
+    setSelectedProfile(null)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => runSearch(value), 300)
+  }, [runSearch])
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
+
+  function handleSelectProfile(profile: SocialProfile) {
+    setSelectedProfile(profile)
+    setFormName(profile.full_name ?? "")
+    setFormPhone(profile.phone ?? "")
   }
 
   function handleAdd() {
@@ -223,9 +326,7 @@ export function MembersPage() {
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[130px]"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               {MEMBER_STATUSES.map((s) => (
@@ -234,9 +335,7 @@ export function MembersPage() {
             </SelectContent>
           </Select>
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Role" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Role" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
               {ALL_ROLES.map((r) => (
@@ -303,12 +402,8 @@ export function MembersPage() {
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/30 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <CheckSquare className="h-3 w-3" /> {member.tasksCompleted} tasks
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" /> {member.eventsAttended} events
-                </span>
+                <span className="flex items-center gap-1"><CheckSquare className="h-3 w-3" /> {member.tasksCompleted} tasks</span>
+                <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {member.eventsAttended} events</span>
               </div>
             </div>
           ))}
@@ -385,12 +480,91 @@ export function MembersPage() {
       )}
 
       {/* Add Member Dialog */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) resetForm(); setAddOpen(o) }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Member</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+
+            {/* Existing user search */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                Find Existing User
+              </Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                {userSearchStatus === "loading" && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                <Input
+                  value={userSearch}
+                  onChange={(e) => handleUserSearchInput(e.target.value)}
+                  placeholder="Search by name, @username, or paste a profile URL..."
+                  className="pl-9 pr-9"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Search by name, @username, or paste a full profile URL from any platform
+              </p>
+
+              {/* No results */}
+              {userSearchStatus === "done" && userSearchResults.length === 0 && (
+                <p className="text-xs text-muted-foreground italic">No matching accounts found.</p>
+              )}
+
+              {/* Results */}
+              {userSearchResults.length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {userSearchResults.map((profile) => (
+                    <div
+                      key={profile.id}
+                      onClick={() => handleSelectProfile(profile)}
+                      className={cn(
+                        "flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all",
+                        selectedProfile?.id === profile.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border/50 hover:border-primary/30 hover:bg-muted/30"
+                      )}
+                    >
+                      <div className={cn("h-9 w-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0", getAvatarColor(profile.full_name ?? "?"))}>
+                        {getInitials(profile.full_name ?? "?")}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{profile.full_name ?? "Unknown"}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <SocialBadge value={profile.instagram} icon={<Instagram className="h-2.5 w-2.5" />} color="text-pink-500" />
+                          <SocialBadge value={profile.linkedin} icon={<Linkedin className="h-2.5 w-2.5" />} color="text-[#0A66C2]" />
+                          <SocialBadge value={profile.twitter} icon={<Twitter className="h-2.5 w-2.5" />} color="text-sky-400" />
+                          <SocialBadge value={profile.facebook} icon={<Facebook className="h-2.5 w-2.5" />} color="text-blue-500" />
+                        </div>
+                      </div>
+                      {selectedProfile?.id === profile.id && (
+                        <UserCheck2 className="h-4 w-4 text-primary shrink-0" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {selectedProfile && (
+                <p className="text-xs text-emerald-500 flex items-center gap-1">
+                  <UserCheck2 className="h-3 w-3" />
+                  Profile selected — name and phone pre-filled below
+                </p>
+              )}
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border/50" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-background px-2 text-muted-foreground">member details</span>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Full Name *</Label>
               <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="John Doe" />
@@ -462,11 +636,9 @@ export function MembersPage() {
                     {statusMeta(detailMember.status)?.label}
                   </span>
                 </div>
-
                 {detailMember.bio && (
                   <p className="text-sm text-muted-foreground leading-relaxed">{detailMember.bio}</p>
                 )}
-
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-muted/30 rounded-lg p-3 space-y-1">
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Mail className="h-3 w-3" /> Email</p>
@@ -485,7 +657,6 @@ export function MembersPage() {
                     <p className="text-sm font-medium">{detailMember.year}</p>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-muted/30 rounded-lg p-3 text-center">
                     <p className="text-lg font-bold">{detailMember.tasksCompleted}</p>
