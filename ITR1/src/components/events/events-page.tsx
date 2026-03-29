@@ -10,9 +10,56 @@ import { EventModal } from "./event-modal"
 import { EventDetailPanel } from "./event-detail-panel"
 import { addMonths, addWeeks, addDays } from "date-fns"
 
+/**
+ * FIX for Activity 3: Extracted logic to a pure utility function.
+ * This resolves the "Logic Bloat" smell by decoupling search 
+ * processing from the React component lifecycle.
+ */
+const findMatchingEventDate = (query: string, events: CalendarEvent[]): Date | null => {
+  if (!query || events.length === 0) return null;
+  
+  const q = query.toLowerCase();
+  const match = events.find(e => 
+    e.title.toLowerCase().includes(q) || 
+    (e.description && e.description.toLowerCase().includes(q))
+  );
+  
+  return match ? new Date(match.startDate) : null;
+};
+
 export function EventsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const searchQuery = searchParams.get("search") || ""
+
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [view, setView] = useState<CalendarView>("month")
+  const { events, addEvent, updateEvent, deleteEvent } = useEvents()
+  const prevSearchRef = useRef<string>("")
+
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
+  const [defaultDate, setDefaultDate] = useState<Date | null>(null)
+
+  // Detail panel state
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+
+  // Auto-navigate to first match when search query changes
+  useEffect(() => {
+    if (searchQuery && searchQuery !== prevSearchRef.current) {
+      // Using the refactored utility function instead of inline logic
+      const matchDate = findMatchingEventDate(searchQuery, events);
+      
+      if (matchDate) {
+        setCurrentDate(matchDate);
+      }
+      
+      prevSearchRef.current = searchQuery;
+    } else if (!searchQuery) {
+      prevSearchRef.current = ""
+    }
+  }, [searchQuery, events])
 
   const handleSearchChange = useCallback((query: string) => {
     setSearchParams(prev => {
@@ -24,44 +71,6 @@ export function EventsPage() {
       return prev
     }, { replace: true })
   }, [setSearchParams])
-
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [view, setView] = useState<CalendarView>("month")
-  const { events, addEvent, updateEvent, deleteEvent } = useEvents()
-  const prevSearchRef = useRef<string>("")
-
-  // Auto-navigate to first match when search query changes
-  useEffect(() => {
-    // Only attempt to navigate if we have a query and it's different from the last processed one
-    if (searchQuery && searchQuery !== prevSearchRef.current) {
-      // Only process if events have loaded (avoid race condition on mount)
-      if (events.length > 0) {
-        const q = searchQuery.toLowerCase()
-        const match = events.find(e => 
-          e.title.toLowerCase().includes(q) || 
-          (e.description && e.description.toLowerCase().includes(q))
-        )
-        
-        if (match) {
-          setCurrentDate(new Date(match.startDate))
-        }
-        // Mark this query as processed regardless of whether a match was found
-        // to prevent getting stuck in a loop if no match exists.
-        prevSearchRef.current = searchQuery
-      }
-    } else if (!searchQuery) {
-       prevSearchRef.current = ""
-    }
-  }, [searchQuery, events])
-
-  // Modal state
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
-  const [defaultDate, setDefaultDate] = useState<Date | null>(null)
-
-  // Detail panel state
-  const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
 
   const handleNavigate = useCallback(
     (direction: "prev" | "next" | "today") => {
@@ -126,6 +135,7 @@ export function EventsPage() {
       } else {
         addEvent(event)
       }
+      setModalOpen(false)
     },
     [editingEvent, updateEvent, addEvent]
   )
@@ -133,6 +143,8 @@ export function EventsPage() {
   const handleDeleteEvent = useCallback(
     (id: string) => {
       deleteEvent(id)
+      setDetailOpen(false)
+      setModalOpen(false)
     },
     [deleteEvent]
   )
@@ -176,7 +188,6 @@ export function EventsPage() {
         )}
       </div>
 
-      {/* Event creation/edit modal */}
       <EventModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -186,7 +197,6 @@ export function EventsPage() {
         onDelete={handleDeleteEvent}
       />
 
-      {/* Event detail panel */}
       <EventDetailPanel
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
