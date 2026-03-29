@@ -659,7 +659,14 @@ export function MembersPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => { setDetailMember(null); setEditMember(detailMember) }}>
+                {/* FIX: Capture detailMember into a local variable before clearing state,
+                    to avoid a race condition where setDetailMember(null) could null out
+                    the reference before setEditMember receives it. */}
+                <Button variant="outline" onClick={() => {
+                  const member = detailMember
+                  setDetailMember(null)
+                  setEditMember(member)
+                }}>
                   <Pencil className="h-4 w-4 mr-2" /> Edit
                 </Button>
                 <Button variant="destructive" onClick={() => { deleteMember(detailMember.id); setDetailMember(null) }}>
