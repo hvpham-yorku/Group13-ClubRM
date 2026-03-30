@@ -41,6 +41,20 @@ interface NotificationPrefs {
 }
 
 const NOTIFICATION_PREFS_STORAGE_KEY = "clubrm-notification-prefs";
+const RECENT_SEARCHES_STORAGE_KEY = "recentSearches";
+const READ_NOTIFICATIONS_STORAGE_KEY = "readNotifs";
+const MIN_SEARCH_QUERY_LENGTH = 2;
+const MAX_RECENT_SEARCHES = 5;
+const SEARCH_RESULT_LIMITS = {
+  events: 3,
+  tasks: 3,
+  members: 3,
+  expenses: 2,
+  reimbursements: 2,
+  income: 2,
+  documents: 3,
+  sponsors: 3,
+} as const;
 const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   emailDigest: true,
   taskAssigned: true,
@@ -80,6 +94,18 @@ const SEARCH_TYPE_CONFIG: Record<string, { color: string; icon: React.ReactNode 
   Document: { color: "bg-violet-500/20 text-violet-400", icon: <FileText   className="h-3 w-3" /> },
   Sponsor:  { color: "bg-sky-500/20 text-sky-400",      icon: <Building2   className="h-3 w-3" /> },
 };
+
+type SearchResult = { type: string; label: string; sub: string; route: string };
+
+function appendSearchMatches<T>(
+  results: SearchResult[],
+  items: T[],
+  predicate: (item: T) => boolean,
+  limit: number,
+  mapper: (item: T) => SearchResult,
+) {
+  items.filter(predicate).slice(0, limit).forEach((item) => results.push(mapper(item)));
+}
 
 export function TopBar() {
   const { role, setRole } = useRole();
@@ -166,13 +192,13 @@ export function TopBar() {
 
   const [readNotifs, setReadNotifs] = useState<Set<string>>(() => {
     try {
-      const stored = localStorage.getItem("readNotifs");
+      const stored = localStorage.getItem(READ_NOTIFICATIONS_STORAGE_KEY);
       return stored ? new Set(JSON.parse(stored)) : new Set();
     } catch { return new Set(); }
   });
 
   useEffect(() => {
-    localStorage.setItem("readNotifs", JSON.stringify(Array.from(readNotifs)));
+    localStorage.setItem(READ_NOTIFICATIONS_STORAGE_KEY, JSON.stringify(Array.from(readNotifs)));
   }, [readNotifs]);
 
   const [notifOpen, setNotifOpen] = useState(false);
@@ -188,7 +214,7 @@ export function TopBar() {
 
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem("recentSearches");
+      const stored = localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch { return []; }
   });
@@ -197,8 +223,8 @@ export function TopBar() {
     if (!query.trim()) return;
     setRecentSearches((prev) => {
       const filtered = prev.filter((q) => q.toLowerCase() !== query.toLowerCase());
-      const updated = [query, ...filtered].slice(0, 5);
-      localStorage.setItem("recentSearches", JSON.stringify(updated));
+      const updated = [query, ...filtered].slice(0, MAX_RECENT_SEARCHES);
+      localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, []);
@@ -206,7 +232,7 @@ export function TopBar() {
   const clearRecentSearches = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setRecentSearches([]);
-    localStorage.removeItem("recentSearches");
+    localStorage.removeItem(RECENT_SEARCHES_STORAGE_KEY);
     searchInputRef.current?.focus();
   }, []);
 
@@ -237,33 +263,73 @@ export function TopBar() {
   }, []);
 
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2) return [];
+    if (!searchQuery.trim() || searchQuery.length < MIN_SEARCH_QUERY_LENGTH) return [];
     const q = searchQuery.toLowerCase();
-    const results: { type: string; label: string; sub: string; route: string }[] = [];
+    const results: SearchResult[] = [];
 
-    events.filter((e) => e.title.toLowerCase().includes(q) || (e.location || "").toLowerCase().includes(q)).slice(0, 3)
-      .forEach((e) => results.push({ type: "Event", label: e.title, sub: e.location || "No location", route: "/events" }));
+    appendSearchMatches(
+      results,
+      events,
+      (event) => event.title.toLowerCase().includes(q) || (event.location || "").toLowerCase().includes(q),
+      SEARCH_RESULT_LIMITS.events,
+      (event) => ({ type: "Event", label: event.title, sub: event.location || "No location", route: "/events" }),
+    );
 
-    tasks.filter((t) => t.title.toLowerCase().includes(q)).slice(0, 3)
-      .forEach((t) => results.push({ type: "Task", label: t.title, sub: t.status, route: "/tasks" }));
+    appendSearchMatches(
+      results,
+      tasks,
+      (task) => task.title.toLowerCase().includes(q),
+      SEARCH_RESULT_LIMITS.tasks,
+      (task) => ({ type: "Task", label: task.title, sub: task.status, route: "/tasks" }),
+    );
 
-    members.filter((m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)).slice(0, 3)
-      .forEach((m) => results.push({ type: "Member", label: m.name, sub: m.role, route: "/members" }));
+    appendSearchMatches(
+      results,
+      members,
+      (member) => member.name.toLowerCase().includes(q) || member.email.toLowerCase().includes(q),
+      SEARCH_RESULT_LIMITS.members,
+      (member) => ({ type: "Member", label: member.name, sub: member.role, route: "/members" }),
+    );
 
-    expenses.filter((e) => e.description.toLowerCase().includes(q)).slice(0, 2)
-      .forEach((e) => results.push({ type: "Finance", label: e.description, sub: `Expense • $${e.amount}`, route: "/finance" }));
+    appendSearchMatches(
+      results,
+      expenses,
+      (expense) => expense.description.toLowerCase().includes(q),
+      SEARCH_RESULT_LIMITS.expenses,
+      (expense) => ({ type: "Finance", label: expense.description, sub: `Expense • $${expense.amount}`, route: "/finance" }),
+    );
 
-    reimbursements.filter((r) => r.description.toLowerCase().includes(q)).slice(0, 2)
-      .forEach((r) => results.push({ type: "Finance", label: r.description, sub: `Reimbursement • $${r.amount}`, route: "/finance" }));
+    appendSearchMatches(
+      results,
+      reimbursements,
+      (reimbursement) => reimbursement.description.toLowerCase().includes(q),
+      SEARCH_RESULT_LIMITS.reimbursements,
+      (reimbursement) => ({ type: "Finance", label: reimbursement.description, sub: `Reimbursement • $${reimbursement.amount}`, route: "/finance" }),
+    );
 
-    income.filter((i) => i.source.toLowerCase().includes(q)).slice(0, 2)
-      .forEach((i) => results.push({ type: "Finance", label: i.source, sub: `Income • $${i.amount}`, route: "/finance" }));
+    appendSearchMatches(
+      results,
+      income,
+      (entry) => entry.source.toLowerCase().includes(q),
+      SEARCH_RESULT_LIMITS.income,
+      (entry) => ({ type: "Finance", label: entry.source, sub: `Income • $${entry.amount}`, route: "/finance" }),
+    );
 
-    searchDocs.filter((d) => d.name.toLowerCase().includes(q)).slice(0, 3)
-      .forEach((d) => results.push({ type: "Document", label: d.name, sub: d.category, route: "/documents" }));
+    appendSearchMatches(
+      results,
+      searchDocs,
+      (doc) => doc.name.toLowerCase().includes(q),
+      SEARCH_RESULT_LIMITS.documents,
+      (doc) => ({ type: "Document", label: doc.name, sub: doc.category, route: "/documents" }),
+    );
 
-    searchSponsors.filter((s) => s.company.toLowerCase().includes(q)).slice(0, 3)
-      .forEach((s) => results.push({ type: "Sponsor", label: s.company, sub: s.industry, route: "/external" }));
+    appendSearchMatches(
+      results,
+      searchSponsors,
+      (sponsor) => sponsor.company.toLowerCase().includes(q),
+      SEARCH_RESULT_LIMITS.sponsors,
+      (sponsor) => ({ type: "Sponsor", label: sponsor.company, sub: sponsor.industry, route: "/external" }),
+    );
 
     return results;
   }, [searchQuery, events, tasks, members, expenses, reimbursements, income, searchDocs, searchSponsors]);

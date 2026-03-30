@@ -29,7 +29,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from "recharts"
-import {
+import { 
   Search, Plus, Megaphone, BarChart3, ChevronRight, 
   Calendar, DollarSign, Activity, Target, ArrowUpRight,
   Clock, CheckCircle2
@@ -45,15 +45,76 @@ const CHART_COLORS = [
   "#2dd4bf"  // Teal
 ]
 
+type CampaignTab = "campaigns" | "analytics" | "calendar" | "live-feed"
+
+const MARKETING_TABS: { id: CampaignTab; label: string; icon: JSX.Element }[] = [
+  { id: "campaigns", label: "Campaigns", icon: <Megaphone className="h-4 w-4" /> },
+  { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-4 w-4" /> },
+  { id: "calendar", label: "Calendar", icon: <Calendar className="h-4 w-4" /> },
+  { id: "live-feed", label: "Live Feed", icon: <Activity className="h-4 w-4" /> },
+]
+
+const MARKETING_PLATFORMS: PostPlatform[] = ["instagram", "twitter", "linkedin", "tiktok"]
+
+type TooltipEntry = { color: string; name: string; value: number }
+type TooltipProps = { active?: boolean; payload?: TooltipEntry[]; label?: string }
+
+function CustomTooltip({ active, payload, label }: TooltipProps) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-card border border-border/80 p-3 rounded-xl shadow-2xl backdrop-blur-md">
+        <p className="text-xs font-bold mb-2 text-foreground">{label}</p>
+        <div className="space-y-1">
+          {payload.map((entry, index) => (
+            <div key={`${entry.name}-${index}`} className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                <span className="text-[10px] font-medium text-muted-foreground">{entry.name}:</span>
+              </div>
+              <span className="text-[10px] font-bold text-foreground">{formatNumber(entry.value)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
+function toCampaign(row: Record<string, unknown>): Campaign {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    description: row.description as string,
+    status: row.status as Campaign["status"],
+    startDate: row.start_date as string,
+    endDate: row.end_date as string,
+    posts: (row.posts as Campaign["posts"]) || [],
+    budget: Number(row.budget),
+    spent: Number(row.spent),
+    reach: Number(row.reach),
+    engagement: Number(row.engagement),
+    tags: (row.tags as string[]) || [],
+  }
+}
+
 export function MarketingPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [activeTab, setActiveTab] = useState<"campaigns" | "analytics" | "calendar" | "live-feed">("campaigns")
+  const [activeTab, setActiveTab] = useState<CampaignTab>("campaigns")
   const [searchParams, setSearchParams] = useSearchParams()
   const search = searchParams.get("search") || ""
   
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [addOpen, setAddOpen] = useState(false)
+
+  function handleSearchChange(value: string) {
+    setSearchParams((prev) => {
+      if (value) prev.set("search", value)
+      else prev.delete("search")
+      return prev
+    })
+  }
 
   useEffect(() => {
     async function load() {
@@ -84,35 +145,11 @@ export function MarketingPage() {
   })), [campaigns])
 
   const platformData = useMemo(() => {
-    const platforms: PostPlatform[] = ["instagram", "twitter", "linkedin", "tiktok"]
-    return platforms.map(p => ({
+    return MARKETING_PLATFORMS.map(p => ({
       name: PLATFORM_CONFIG[p].label,
       value: publishedPosts.filter(post => post.platform === p).reduce((sum, post) => sum + post.impressions, 0)
     })).filter(d => d.value > 0)
   }, [publishedPosts])
-
-  // Custom Tooltip for better readability
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-card border border-border/80 p-3 rounded-xl shadow-2xl backdrop-blur-md">
-          <p className="text-xs font-bold mb-2 text-foreground">{label}</p>
-          <div className="space-y-1">
-            {payload.map((entry: any, index: number) => (
-              <div key={index} className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                  <span className="text-[10px] font-medium text-muted-foreground">{entry.name}:</span>
-                </div>
-                <span className="text-[10px] font-bold text-foreground">{formatNumber(entry.value)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )
-    }
-    return null
-  }
 
   return (
     <div className="flex flex-col gap-6 p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -150,19 +187,14 @@ export function MarketingPage() {
       {/* Navigation */}
       <div className="flex flex-col gap-4 p-2 border rounded-2xl bg-muted/5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-1 bg-background/50 p-1 rounded-xl border border-border/50">
-            {[
-              { id: "campaigns", label: "Campaigns", icon: <Megaphone className="h-4 w-4" /> },
-              { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-4 w-4" /> },
-              { id: "calendar", label: "Calendar", icon: <Calendar className="h-4 w-4" /> },
-              { id: "live-feed", label: "Live Feed", icon: <Activity className="h-4 w-4" /> },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all",
-                  activeTab === tab.id 
+            <div className="flex items-center gap-1 bg-background/50 p-1 rounded-xl border border-border/50">
+              {MARKETING_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all",
+                    activeTab === tab.id 
                     ? "bg-primary text-primary-foreground shadow-sm" 
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
@@ -179,7 +211,7 @@ export function MarketingPage() {
               <input 
                 placeholder="Search campaigns..." 
                 value={search} 
-                onChange={(e) => setSearchParams({ search: e.target.value })} 
+                onChange={(e) => handleSearchChange(e.target.value)} 
                 className="pl-9 h-10 w-[220px] bg-background rounded-xl border border-input text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
               />
             </div>
@@ -353,21 +385,4 @@ export function MarketingPage() {
       </Dialog>
     </div>
   )
-}
-
-function toCampaign(row: any): Campaign {
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    status: row.status,
-    startDate: row.start_date,
-    endDate: row.end_date,
-    posts: row.posts || [],
-    budget: Number(row.budget),
-    spent: Number(row.spent),
-    reach: Number(row.reach),
-    engagement: Number(row.engagement),
-    tags: row.tags || [],
-  }
 }
