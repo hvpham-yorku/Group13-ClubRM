@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { 
   type Campaign, 
+  type CampaignStatus,
   type PostPlatform,
   SEED_CAMPAIGNS, 
   CAMPAIGN_STATUS_CONFIG, 
@@ -12,11 +12,13 @@ import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import {
   Select,
@@ -35,14 +37,13 @@ import {
   Clock, CheckCircle2
 } from "lucide-react"
 
-// Diverse palette for visual separation
 const CHART_COLORS = [
   "hsl(var(--primary))", 
-  "#38bdf8", // Sky
-  "#fb7185", // Rose
-  "#fbbf24", // Amber
-  "#a78bfa", // Violet
-  "#2dd4bf"  // Teal
+  "#38bdf8",
+  "#fb7185",
+  "#fbbf24",
+  "#a78bfa",
+  "#2dd4bf"
 ]
 
 type CampaignTab = "campaigns" | "analytics" | "calendar" | "live-feed"
@@ -98,35 +99,98 @@ function toCampaign(row: Record<string, unknown>): Campaign {
   }
 }
 
+function toRow(c: Campaign) {
+  return {
+    name: c.name,
+    description: c.description,
+    status: c.status,
+    start_date: c.startDate,
+    end_date: c.endDate,
+    posts: JSON.parse(JSON.stringify(c.posts)),
+    budget: c.budget,
+    spent: c.spent,
+    reach: c.reach,
+    engagement: c.engagement,
+    tags: c.tags,
+  }
+}
+
 export function MarketingPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [activeTab, setActiveTab] = useState<CampaignTab>("campaigns")
-  const [searchParams, setSearchParams] = useSearchParams()
-  const search = searchParams.get("search") || ""
-  
+  const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
-  const [addOpen, setAddOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)  // ← new
 
-  function handleSearchChange(value: string) {
-    setSearchParams((prev) => {
-      if (value) prev.set("search", value)
-      else prev.delete("search")
-      return prev
-    })
+  // Add form state  ← new
+  const [formName, setFormName] = useState("")
+  const [formDesc, setFormDesc] = useState("")
+  const [formBudget, setFormBudget] = useState("")
+  const [formStart, setFormStart] = useState("")
+  const [formEnd, setFormEnd] = useState("")
+
+  function resetForm() {  // ← new
+    setFormName("")
+    setFormDesc("")
+    setFormBudget("")
+    setFormStart("")
+    setFormEnd("")
   }
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from("campaigns").select("*").order("created_at", { ascending: true })
+      const { data, error } = await supabase.from("campaigns").select("*").order("created_at", { ascending: true })
+      if (error) {
+        console.error("Failed to load campaigns:", error)
+        setCampaigns(SEED_CAMPAIGNS)
+        return
+      }
       if (data && data.length > 0) {
         setCampaigns(data.map(toCampaign))
       } else {
-        setCampaigns(SEED_CAMPAIGNS)
+        const rows = SEED_CAMPAIGNS.map(toRow)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: seeded, error: seedErr } = await supabase.from("campaigns").insert(rows as any).select()
+        if (seedErr) {
+          console.error("Failed to seed campaigns:", seedErr)
+          setCampaigns(SEED_CAMPAIGNS)
+        } else if (seeded) {
+          setCampaigns(seeded.map(toCampaign))
+        }
       }
     }
     load()
   }, [])
+
+  // ← new: ported directly from old code
+  const handleAdd = useCallback(async () => {
+    if (!formName.trim()) return
+    const newCampaign: Campaign = {
+      id: `camp${Date.now()}`,
+      name: formName.trim(),
+      description: formDesc.trim(),
+      status: "draft",
+      startDate: formStart || new Date().toISOString().split("T")[0],
+      endDate: formEnd || "",
+      budget: Number(formBudget) || 0,
+      spent: 0,
+      reach: 0,
+      engagement: 0,
+      tags: [],
+      posts: [],
+    }
+    const row = toRow(newCampaign)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await supabase.from("campaigns").insert(row as any).select().single()
+    if (error) {
+      console.error("Failed to add campaign:", error)
+      return
+    }
+    if (data) setCampaigns((prev) => [...prev, toCampaign(data)])
+    resetForm()
+    setAddOpen(false)
+  }, [formName, formDesc, formStart, formEnd, formBudget])
 
   const filtered = useMemo(() => {
     return campaigns.filter((c) => {
@@ -174,7 +238,7 @@ export function MarketingPage() {
             </div>
 
             <Button 
-              onClick={() => setAddOpen(true)}
+              onClick={() => setAddOpen(true)}  // ← fixed
               className="h-auto min-h-[80px] min-w-[180px] gap-2 rounded-2xl px-6 text-sm font-bold transition-all duration-300 bg-primary text-primary-foreground hover:brightness-110 shadow-lg shadow-primary/20"
             >
               <Plus className="h-5 w-5" />
@@ -187,14 +251,14 @@ export function MarketingPage() {
       {/* Navigation */}
       <div className="flex flex-col gap-4 p-2 border rounded-2xl bg-muted/5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-1 bg-background/50 p-1 rounded-xl border border-border/50">
-              {MARKETING_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all",
-                    activeTab === tab.id 
+          <div className="flex items-center gap-1 bg-background/50 p-1 rounded-xl border border-border/50">
+            {MARKETING_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all",
+                  activeTab === tab.id 
                     ? "bg-primary text-primary-foreground shadow-sm" 
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
@@ -211,7 +275,7 @@ export function MarketingPage() {
               <input 
                 placeholder="Search campaigns..." 
                 value={search} 
-                onChange={(e) => handleSearchChange(e.target.value)} 
+                onChange={(e) => setSearch(e.target.value)} 
                 className="pl-9 h-10 w-[220px] bg-background rounded-xl border border-input text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
               />
             </div>
@@ -230,6 +294,7 @@ export function MarketingPage() {
         </div>
       </div>
 
+      {/* Tab Content — unchanged */}
       <div className="flex-1">
         {activeTab === "campaigns" && (
           <div className="grid gap-3 animate-in fade-in duration-300">
@@ -304,7 +369,7 @@ export function MarketingPage() {
             </h3>
             <div className="space-y-4">
               {filtered.length > 0 ? (
-                filtered.map((campaign, index) => (
+                filtered.map((campaign) => (
                   <div key={campaign.id} className="group flex items-center gap-5 p-4 rounded-xl border border-border/50 bg-muted/10 hover:bg-muted/40 transition-all hover:border-primary/30">
                     <div className="flex flex-col items-center justify-center py-2 px-4 bg-background rounded-lg border shadow-sm min-w-[70px]">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -363,6 +428,7 @@ export function MarketingPage() {
         )}
       </div>
 
+      {/* Campaign Detail Dialog — unchanged */}
       <Dialog open={!!selectedCampaign} onOpenChange={() => setSelectedCampaign(null)}>
         <DialogContent className="sm:max-w-md rounded-3xl">
           <DialogHeader>
@@ -381,6 +447,41 @@ export function MarketingPage() {
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Campaign Dialog ← ported from old code */}
+      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { resetForm(); setAddOpen(false) } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>New Campaign</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Campaign Name *</Label>
+              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Spring Recruitment" />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Brief description of the campaign..." />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Input type="date" value={formStart} onChange={(e) => setFormStart(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>End Date</Label>
+                <Input type="date" value={formEnd} onChange={(e) => setFormEnd(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Budget ($)</Label>
+              <Input type="number" value={formBudget} onChange={(e) => setFormBudget(e.target.value)} placeholder="0" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { resetForm(); setAddOpen(false) }}>Cancel</Button>
+            <Button onClick={handleAdd} disabled={!formName.trim()}>Create Campaign</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
