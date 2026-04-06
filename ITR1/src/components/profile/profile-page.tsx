@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/context/auth-context"
 import { supabaseUntyped as db } from "@/lib/supabase"
-import { cn } from "@/lib/utils"
+import { cn, getInitials } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,10 +40,6 @@ interface ProfileData {
   bio: string
   phone: string
   socials: SocialLinks
-}
-
-function getInitials(name: string) {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
 
 function getAvatarColor(name: string) {

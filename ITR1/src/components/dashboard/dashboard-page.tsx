@@ -6,6 +6,7 @@ import { useEvents } from "@/context/events-context"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { Sparkles, Loader2, RotateCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { AI_FALLBACK_BRIEFS, AI_FALLBACK_DELAY_MS } from "./fallbacks"
 
 // Dashboard Variants
 import { PresidentDashboard } from "./variants/president-dashboard"
@@ -60,20 +61,11 @@ export function DashboardPage() {
 
     } catch (error: any) {
       console.error("AI Error:", error);
+      console.warn("Gemini API unavailable — using fallback brief for role:", role);
       
-      // EMERGENCY FALLBACK LOGIC
-      // This ensures the demo looks perfect even if the API is rate-limited.
-      const fallbacks: Record<string, string> = {
-        "President": "Operations are currently optimized with high organizational health. Prioritize the upcoming event logistics to maintain member engagement levels.",
-        "VP Internal": "Internal productivity is stable at 60%. Focus on clearing the pending task bottlenecks to ensure the project pipeline remains fluid.",
-        "VP Finance": "Budget utilization is currently at 84% remaining. Recommend reviewing upcoming event costs to ensure long-term fiscal stability.",
-        "default": "Workstation is synchronized with the latest club data. Review your active task list to ensure all end-of-term objectives are met."
-      };
-
-      // Brief delay to simulate "thinking" before showing the fallback
       setTimeout(() => {
-        setAiSummary(fallbacks[role as string] || fallbacks["default"]);
-      }, 800);
+        setAiSummary(AI_FALLBACK_BRIEFS[role as string] || AI_FALLBACK_BRIEFS["default"]);
+      }, AI_FALLBACK_DELAY_MS);
 
     } finally {
       setIsGenerating(false)

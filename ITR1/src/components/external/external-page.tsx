@@ -10,7 +10,7 @@ import {
   INDUSTRIES,
   formatCurrency,
 } from "./types"
-import { cn } from "@/lib/utils"
+import { cn, getInitials, getEntityColor } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -55,24 +55,6 @@ import {
 } from "lucide-react"
 
 // --- Helper Functions ---
-function getCompanyInitials(name: string) {
-  return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
-}
-
-function getCompanyColor(name: string) {
-  const colors = [
-    "bg-rose-500/20 text-rose-400",
-    "bg-orange-500/20 text-orange-400",
-    "bg-emerald-500/20 text-emerald-400",
-    "bg-cyan-500/20 text-cyan-400",
-    "bg-blue-500/20 text-blue-400",
-    "bg-violet-500/20 text-violet-400",
-    "bg-pink-500/20 text-pink-400",
-  ]
-  const idx = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return colors[idx % colors.length]
-}
-
 const INTERACTION_ICON_MAP: Record<string, React.ReactNode> = {
   email:    <Mail className="h-3.5 w-3.5" />,
   call:     <Phone className="h-3.5 w-3.5" />,
@@ -354,8 +336,8 @@ export function ExternalPage() {
                   <TableRow key={sponsor.id} className="cursor-pointer group" onClick={() => setDetailSponsor(sponsor)}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-bold", getCompanyColor(sponsor.company))}>
-                          {getCompanyInitials(sponsor.company)}
+                        <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-bold", getEntityColor(sponsor.company))}>
+                          {getInitials(sponsor.company)}
                         </div>
                         <span className="font-medium text-sm">{sponsor.company}</span>
                       </div>
@@ -502,8 +484,8 @@ function SponsorCard({ sponsor, onClick }: { sponsor: Sponsor; onClick: () => vo
       className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10 cursor-pointer"
     >
       <div className="flex items-start gap-3">
-        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0", getCompanyColor(sponsor.company))}>
-          {getCompanyInitials(sponsor.company)}
+        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0", getEntityColor(sponsor.company))}>
+          {getInitials(sponsor.company)}
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{sponsor.company}</h4>

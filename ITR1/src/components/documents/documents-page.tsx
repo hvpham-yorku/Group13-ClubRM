@@ -93,14 +93,14 @@ export function DocumentsPage() {
       const filePath = `${user.id}/${fileName}`
 
       // Uploading to "documents" bucket
-      const { error: uploadError } = await db.storage
+      const { error: storageError } = await db.storage
         .from("documents") 
         .upload(filePath, selectedFile, {
           cacheControl: '3600',
           upsert: false
         })
 
-      if (uploadError) throw new Error(`Storage Error: ${uploadError.message}`)
+      if (storageError) throw new Error(`Storage Error: ${storageError.message}`)
 
       // FINAL FIX: All keys converted to snake_case to match DB schema
       const newDoc = {

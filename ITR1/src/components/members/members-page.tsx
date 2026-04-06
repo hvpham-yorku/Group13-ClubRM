@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { useMembers } from "@/context/members-context"
 import { type Member, MEMBER_STATUSES, DEPARTMENTS, YEARS } from "./types"
 import type { Role } from "@/context/role-context"
-import { cn, getEntityColor } from "@/lib/utils"
+import { cn, getEntityColor, getInitials } from "@/lib/utils"
 import { supabaseUntyped as db } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -95,11 +95,6 @@ interface SocialProfile {
   twitter: string | null
   tiktok: string | null
 }
-
-function getInitials(name: string) {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-}
-
 
 function SocialBadge({ value, icon, color }: { value: string | null; icon: React.ReactNode; color: string }) {
   if (!value) return null
