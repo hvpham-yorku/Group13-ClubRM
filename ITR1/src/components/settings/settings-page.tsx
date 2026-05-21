@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
+import type { Json } from "@/lib/database.types"
 import { useTheme, type AccentColor } from "@/context/theme-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -138,7 +139,7 @@ export function SettingsPage() {
       university: org.university,
       term: org.term,
       timezone: org.timezone,
-      notification_prefs: notifications as Json,
+      notification_prefs: notifications as unknown as Json,
       theme,
     }
 
