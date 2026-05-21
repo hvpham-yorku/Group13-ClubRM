@@ -120,7 +120,7 @@ export function SettingsPage() {
           timezone: data.timezone || "America/Toronto",
         })
         if (data.notification_prefs && typeof data.notification_prefs === "object") {
-          setNotifications((prev) => ({ ...prev, ...data.notification_prefs }))
+          setNotifications((prev) => ({ ...prev, ...(data.notification_prefs as Record<string, unknown>) }))
         }
         if (data.theme) setTheme(data.theme as "dark" | "light" | "system")
       }
@@ -138,15 +138,15 @@ export function SettingsPage() {
       university: org.university,
       term: org.term,
       timezone: org.timezone,
-      notification_prefs: notifications,
+      notification_prefs: notifications as Json,
       theme,
     }
 
     if (settingsId) {
-      const { error } = await db.from("org_settings").update(payload).eq("id", settingsId)
+      const { error } = await supabase.from("org_settings").update(payload).eq("id", settingsId)
       if (error) console.error("Failed to save settings:", error)
     } else {
-      const { data, error } = await db.from("org_settings").insert(payload).select().single()
+      const { data, error } = await supabase.from("org_settings").insert(payload).select().single()
       if (error) console.error("Failed to create settings:", error)
       if (data) setSettingsId(data.id)
     }
