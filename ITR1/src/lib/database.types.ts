@@ -446,6 +446,183 @@ export interface Database {
         }
         Relationships: []
       }
+      org_settings: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          description: string
+          email: string
+          website: string
+          university: string
+          term: string
+          timezone: string
+          notification_prefs: Json
+          theme: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          description?: string
+          email: string
+          website?: string
+          university?: string
+          term?: string
+          timezone?: string
+          notification_prefs?: Json
+          theme?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          name?: string
+          slug?: string
+          description?: string
+          email?: string
+          website?: string
+          university?: string
+          term?: string
+          timezone?: string
+          notification_prefs?: Json
+          theme?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      member_invites: {
+        Row: {
+          id: string
+          organization_id: string | null
+          organization_name: string | null
+          role: string
+          email: string | null
+          token: string
+          expires_at: string | null
+          used_at: string | null
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id?: string | null
+          organization_name?: string | null
+          role: string
+          email?: string | null
+          token: string
+          expires_at?: string | null
+          used_at?: string | null
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          organization_id?: string | null
+          organization_name?: string | null
+          role?: string
+          email?: string | null
+          token?: string
+          expires_at?: string | null
+          used_at?: string | null
+          created_by?: string
+        }
+        Relationships: []
+      }
+      event_rsvps: {
+        Row: {
+          id: string
+          event_id: string
+          name: string
+          email: string
+          rsvped_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          name: string
+          email: string
+          rsvped_at?: string
+        }
+        Update: {
+          event_id?: string
+          name?: string
+          email?: string
+          rsvped_at?: string
+        }
+        Relationships: []
+      }
+      sponsor_contacts: {
+        Row: {
+          id: string
+          sponsor_id: string
+          name: string
+          email: string
+          title: string
+          phone: string
+          organization: string
+          tags: string[]
+          notes: string | null
+          last_contact: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          sponsor_id: string
+          name: string
+          email: string
+          title: string
+          phone: string
+          organization: string
+          tags?: string[]
+          notes?: string | null
+          last_contact?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          sponsor_id?: string
+          name?: string
+          email?: string
+          title?: string
+          phone?: string
+          organization?: string
+          tags?: string[]
+          notes?: string | null
+          last_contact?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stripe_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          session_id: string
+          amount: number
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          session_id: string
+          amount: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          session_id?: string
+          amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {}
     Functions: {}

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
-// Use supabaseUntyped to bypass strict type checking for org_settings
-import { supabaseUntyped as db } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase"
 import { useTheme, type AccentColor } from "@/context/theme-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -98,7 +97,7 @@ export function SettingsPage() {
   // Load settings from Supabase
   useEffect(() => {
     async function load() {
-      const { data, error } = await db.from("org_settings").select("*").limit(1).single()
+      const { data, error } = await supabase.from("org_settings").select("*").limit(1).single()
 
       if (error) {
         // If the table is empty (PGRST116), we just stop here and use the defaults
