@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react"
+import { logError } from "@/lib/logger"
 import { useRole } from "@/context/role-context"
 import { useAuth } from "@/context/auth-context" 
 import { useTasks } from "@/context/tasks-context"
@@ -60,7 +61,7 @@ export function DashboardPage() {
       setAiSummary(text);
 
     } catch (error: any) {
-      console.error("AI Error:", error);
+      logError("AI Error", 'DashboardPage', error);
       console.warn("Gemini API unavailable — using fallback brief for role:", role);
       
       setTimeout(() => {

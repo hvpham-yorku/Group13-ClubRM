@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
+import { logError } from "@/lib/logger"
 import { type CalendarEvent } from "@/components/events/types"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "./auth-context"
 
 const today = new Date()
 const year = today.getFullYear()
@@ -258,23 +260,29 @@ const EventsContext = createContext<EventsContextType | undefined>(undefined)
 
 export function EventsProvider({ children, initialEvents = [] }: { children: React.ReactNode, initialEvents?: CalendarEvent[] }) {
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
+  const { user } = useAuth()
+  const orgId = user?.id
 
   useEffect(() => {
     if (initialEvents.length > 0) return
     async function load() {
-      const { data, error } = await supabase.from("events").select("*").order("start_date", { ascending: true })
+      const query = supabase.from("events").select("*").order("start_date", { ascending: true })
+      if (orgId) {
+        query.eq("organization_id", orgId)
+      }
+      const { data, error } = await query
       if (error) {
-        console.error("Failed to load events:", error)
+        logError("Failed to load events", 'EventsContext', error)
         setEvents(SEED_EVENTS)
         return
       }
       if (data && data.length > 0) {
         setEvents(data.map(toEvent))
       } else {
-        const rows = SEED_EVENTS.map(toRow)
+        const rows = SEED_EVENTS.map(e => ({ ...toRow(e), organization_id: orgId }))
         const { data: seeded, error: seedErr } = await supabase.from("events").insert(rows).select()
         if (seedErr) {
-          console.error("Failed to seed events:", seedErr)
+          logError("Failed to seed events", 'EventsContext', seedErr)
           setEvents(SEED_EVENTS)
         } else if (seeded) {
           setEvents(seeded.map(toEvent))
@@ -282,36 +290,40 @@ export function EventsProvider({ children, initialEvents = [] }: { children: Rea
       }
     }
     load()
-  }, [])
+  }, [orgId, initialEvents.length])
 
   const addEvent = useCallback(async (event: CalendarEvent) => {
-    const row = toRow(event)
+    const row = { ...toRow(event), organization_id: orgId }
     const { data, error } = await supabase.from("events").insert(row).select().single()
     if (error) {
-      console.error("Failed to add event:", error)
+      logError("Failed to add event", 'EventsContext', error)
       return
     }
     if (data) setEvents((prev) => [...prev, toEvent(data)])
-  }, [])
+  }, [orgId])
 
   const updateEvent = useCallback(async (event: CalendarEvent) => {
-    const row = toRow(event)
+    const row = { ...toRow(event), organization_id: orgId }
     const { error } = await supabase.from("events").update(row).eq("id", event.id)
     if (error) {
-      console.error("Failed to update event:", error)
+      logError("Failed to update event", 'EventsContext', error)
       return
     }
     setEvents((prev) => prev.map((e) => (e.id === event.id ? event : e)))
-  }, [])
+  }, [orgId])
 
   const deleteEvent = useCallback(async (id: string) => {
-    const { error } = await supabase.from("events").delete().eq("id", id)
+    const query = supabase.from("events").delete().eq("id", id)
+    if (orgId) {
+      query.eq("organization_id", orgId)
+    }
+    const { error } = await query
     if (error) {
-      console.error("Failed to delete event:", error)
+      logError("Failed to delete event", 'EventsContext', error)
       return
     }
     setEvents((prev) => prev.filter((e) => e.id !== id))
-  }, [])
+  }, [orgId])
 
   const getEventsForDate = useCallback(
     (date: Date) => {

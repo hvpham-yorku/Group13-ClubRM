@@ -1,3 +1,4 @@
+import { logError } from "@/lib/logger"
 import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
@@ -103,7 +104,7 @@ export function SettingsPage() {
       if (error) {
         // If the table is empty (PGRST116), we just stop here and use the defaults
         if (error.code !== "PGRST116") {
-          console.error("Failed to load settings:", error)
+          logError("Failed to load settings", 'SettingsPage', error)
         }
         return
       }
@@ -145,10 +146,10 @@ export function SettingsPage() {
 
     if (settingsId) {
       const { error } = await supabase.from("org_settings").update(payload).eq("id", settingsId)
-      if (error) console.error("Failed to save settings:", error)
+      if (error) logError("Failed to save settings", 'SettingsPage', error)
     } else {
       const { data, error } = await supabase.from("org_settings").insert(payload).select().single()
-      if (error) console.error("Failed to create settings:", error)
+      if (error) logError("Failed to create settings", 'SettingsPage', error)
       if (data) setSettingsId(data.id)
     }
     setSaved(true)

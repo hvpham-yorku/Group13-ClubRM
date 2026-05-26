@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react"
+import { logError } from "@/lib/logger"
 import { type Member, SEED_MEMBERS } from "@/components/members/types"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "./auth-context"
 
 interface MembersContextType {
   members: Member[]
@@ -57,12 +59,18 @@ function toRow(m: Member) {
 export function MembersProvider({ children }: { children: React.ReactNode }) {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const orgId = user?.id
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase.from("members").select("*").order("created_at", { ascending: true })
+      const query = supabase.from("members").select("*").order("created_at", { ascending: true })
+      if (orgId) {
+        query.eq("organization_id", orgId)
+      }
+      const { data, error } = await query
       if (error) {
-        console.error("Failed to load members:", error)
+        logError("Failed to load members", 'MembersContext', error)
         setMembers(SEED_MEMBERS)
         setLoading(false)
         return
@@ -71,10 +79,10 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
         setMembers(data.map(toMember))
       } else {
         // Seed the database on first run
-        const rows = SEED_MEMBERS.map((m) => toRow(m))
+        const rows = SEED_MEMBERS.map((m) => ({ ...toRow(m), organization_id: orgId }))
         const { data: seeded, error: seedErr } = await supabase.from("members").insert(rows).select()
         if (seedErr) {
-          console.error("Failed to seed members:", seedErr)
+          logError("Failed to seed members", 'MembersContext', seedErr)
           setMembers(SEED_MEMBERS)
         } else if (seeded) {
           setMembers(seeded.map(toMember))
@@ -83,51 +91,65 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [orgId])
 
   const addMember = useCallback(async (member: Member) => {
-    const row = toRow(member)
+    const row = { ...toRow(member), organization_id: orgId }
     const { data, error } = await supabase.from("members").insert(row).select().single()
     if (error) {
-      console.error("Failed to add member:", error)
+      logError("Failed to add member", 'MembersContext', error)
       return
     }
     if (data) setMembers((prev) => [...prev, toMember(data)])
-  }, [])
+  }, [orgId])
 
   const updateMember = useCallback(async (member: Member) => {
-    const row = toRow(member)
+    const row = { ...toRow(member), organization_id: orgId }
     const { error } = await supabase.from("members").update(row).eq("id", member.id)
     if (error) {
-      console.error("Failed to update member:", error)
+      logError("Failed to update member", 'MembersContext', error)
       return
     }
     setMembers((prev) => prev.map((m) => (m.id === member.id ? member : m)))
-  }, [])
+  }, [orgId])
 
   const deleteMember = useCallback(async (id: string) => {
-    const { error } = await supabase.from("members").delete().eq("id", id)
+    const query = supabase.from("members").delete().eq("id", id)
+    if (orgId) {
+      query.eq("organization_id", orgId)
+    }
+    const { error } = await query
     if (error) {
-      console.error("Failed to delete member:", error)
+      logError("Failed to delete member", 'MembersContext', error)
       return
     }
     setMembers((prev) => prev.filter((m) => m.id !== id))
-  }, [])
+  }, [orgId])
 
   const getMember = useCallback(
     (id: string) => members.find((m) => m.id === id),
     [members]
   )
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: members.length,
     active: members.filter((m) => m.status === "active").length,
     inactive: members.filter((m) => m.status === "inactive").length,
     alumni: members.filter((m) => m.status === "alumni").length,
-  }
+  }), [members])
+
+  const contextValue = useMemo(() => ({
+    members,
+    addMember,
+    updateMember,
+    deleteMember,
+    getMember,
+    loading,
+    stats,
+  }), [members, addMember, updateMember, deleteMember, getMember, loading, stats])
 
   return (
-    <MembersContext.Provider value={{ members, addMember, updateMember, deleteMember, getMember, loading, stats }}>
+    <MembersContext.Provider value={contextValue}>
       {children}
     </MembersContext.Provider>
   )

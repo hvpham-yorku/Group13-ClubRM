@@ -1,4 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { logError } from "@/lib/logger"
+import type { Database } from "@/lib/database.types"
 import { 
   type Campaign, 
   type CampaignStatus,
@@ -36,15 +38,10 @@ import {
   Calendar, DollarSign, Activity, Target, ArrowUpRight,
   Clock, CheckCircle2
 } from "lucide-react"
-
-const CHART_COLORS = [
-  "hsl(var(--primary))", 
-  "#38bdf8",
-  "#fb7185",
-  "#fbbf24",
-  "#a78bfa",
-  "#2dd4bf"
-]
+import { CHART_COLORS } from "./marketing-constants"
+import { CustomTooltip } from "./marketing-tooltip"
+import { AddCampaignDialog } from "./add-campaign-dialog"
+import { CampaignDetailDialog } from "./campaign-detail-dialog"
 
 type CampaignTab = "campaigns" | "analytics" | "calendar" | "live-feed"
 
@@ -56,31 +53,6 @@ const MARKETING_TABS: { id: CampaignTab; label: string; icon: JSX.Element }[] = 
 ]
 
 const MARKETING_PLATFORMS: PostPlatform[] = ["instagram", "twitter", "linkedin", "tiktok"]
-
-type TooltipEntry = { color: string; name: string; value: number }
-type TooltipProps = { active?: boolean; payload?: TooltipEntry[]; label?: string }
-
-function CustomTooltip({ active, payload, label }: TooltipProps) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-card border border-border/80 p-3 rounded-xl shadow-2xl backdrop-blur-md">
-        <p className="text-xs font-bold mb-2 text-foreground">{label}</p>
-        <div className="space-y-1">
-          {payload.map((entry, index) => (
-            <div key={`${entry.name}-${index}`} className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                <span className="text-[10px] font-medium text-muted-foreground">{entry.name}:</span>
-              </div>
-              <span className="text-[10px] font-bold text-foreground">{formatNumber(entry.value)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-  return null
-}
 
 function toCampaign(row: Record<string, unknown>): Campaign {
   return {
@@ -99,14 +71,14 @@ function toCampaign(row: Record<string, unknown>): Campaign {
   }
 }
 
-function toRow(c: Campaign) {
+function toRow(c: Campaign): Database['public']['Tables']['campaigns']['Insert'] {
   return {
     name: c.name,
     description: c.description,
     status: c.status,
     start_date: c.startDate,
     end_date: c.endDate,
-    posts: JSON.parse(JSON.stringify(c.posts)),
+    posts: JSON.parse(JSON.stringify(c.posts)) as Database['public']['Tables']['campaigns']['Row']['posts'],
     budget: c.budget,
     spent: c.spent,
     reach: c.reach,
@@ -142,7 +114,7 @@ export function MarketingPage() {
     async function load() {
       const { data, error } = await supabase.from("campaigns").select("*").order("created_at", { ascending: true })
       if (error) {
-        console.error("Failed to load campaigns:", error)
+        logError("Failed to load campaigns", 'MarketingPage', error)
         setCampaigns(SEED_CAMPAIGNS)
         return
       }
@@ -150,10 +122,9 @@ export function MarketingPage() {
         setCampaigns(data.map(toCampaign))
       } else {
         const rows = SEED_CAMPAIGNS.map(toRow)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: seeded, error: seedErr } = await supabase.from("campaigns").insert(rows as any).select()
+        const { data: seeded, error: seedErr } = await supabase.from("campaigns").insert(rows).select()
         if (seedErr) {
-          console.error("Failed to seed campaigns:", seedErr)
+          logError("Failed to seed campaigns", 'MarketingPage', seedErr)
           setCampaigns(SEED_CAMPAIGNS)
         } else if (seeded) {
           setCampaigns(seeded.map(toCampaign))
@@ -181,10 +152,9 @@ export function MarketingPage() {
       posts: [],
     }
     const row = toRow(newCampaign)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await supabase.from("campaigns").insert(row as any).select().single()
+    const { data, error } = await supabase.from("campaigns").insert(row).select().single()
     if (error) {
-      console.error("Failed to add campaign:", error)
+      logError("Failed to add campaign", 'MarketingPage', error)
       return
     }
     if (data) setCampaigns((prev) => [...prev, toCampaign(data)])
@@ -428,62 +398,30 @@ export function MarketingPage() {
         )}
       </div>
 
-      {/* Campaign Detail Dialog — unchanged */}
-      <Dialog open={!!selectedCampaign} onOpenChange={() => setSelectedCampaign(null)}>
-        <DialogContent className="sm:max-w-md rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">{selectedCampaign?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <p className="text-sm text-muted-foreground leading-relaxed">{selectedCampaign?.description}</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-muted/30 rounded-2xl border border-border/40">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Total Reach</p>
-                <p className="text-2xl font-black mt-1 text-primary">{formatNumber(selectedCampaign?.reach || 0)}</p>
-              </div>
-              <div className="p-4 bg-muted/30 rounded-2xl border border-border/40">
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Engagement</p>
-                <p className="text-2xl font-black mt-1 text-primary">{formatNumber(selectedCampaign?.engagement || 0)}</p>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Campaign Detail Dialog */}
+      <CampaignDetailDialog
+        open={!!selectedCampaign}
+        onOpenChange={() => setSelectedCampaign(null)}
+        campaign={selectedCampaign}
+      />
 
-      {/* Add Campaign Dialog ← ported from old code */}
-      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { resetForm(); setAddOpen(false) } }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>New Campaign</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Campaign Name *</Label>
-              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Spring Recruitment" />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Brief description of the campaign..." />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Input type="date" value={formStart} onChange={(e) => setFormStart(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input type="date" value={formEnd} onChange={(e) => setFormEnd(e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Budget ($)</Label>
-              <Input type="number" value={formBudget} onChange={(e) => setFormBudget(e.target.value)} placeholder="0" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { resetForm(); setAddOpen(false) }}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={!formName.trim()}>Create Campaign</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Add Campaign Dialog */}
+      <AddCampaignDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        formName={formName}
+        onFormNameChange={setFormName}
+        formDesc={formDesc}
+        onFormDescChange={setFormDesc}
+        formStart={formStart}
+        onFormStartChange={setFormStart}
+        formEnd={formEnd}
+        onFormEndChange={setFormEnd}
+        formBudget={formBudget}
+        onFormBudgetChange={setFormBudget}
+        onAdd={handleAdd}
+        onReset={resetForm}
+      />
     </div>
   )
 }
